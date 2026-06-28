@@ -10,8 +10,7 @@ public class CardCSVLoader
     {
         //[resourcePath]에 있는 파일을 읽음
         TextAsset asset = Resources.Load<TextAsset>(resourcePath);
-        //949인코딩 (UTF-8)으로 불러서 한글도 읽게 함
-        string text = Encoding.GetEncoding(949).GetString(asset.bytes);
+        string text = Encoding.UTF8.GetString(asset.bytes);
 
         return text;
     }
