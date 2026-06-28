@@ -60,15 +60,34 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 - `LoadPitchers()` — PitcherCards.csv → List\<PitcherMasterData\>
 
 📝 주요 설계 결정:
-- 인코딩: CP949 (`Encoding.GetEncoding(949)`) — 엑셀 기본 저장 인코딩 그대로 사용
-- 파일 관리: `HitterCards.xlsx` / `PitcherCards.xlsx` 로 편집 → CSV로 저장해서 `Assets/Resources/Data/` 에 배치
+- 인코딩: **UTF-8** (`Encoding.UTF8`) — 구글 스프레드시트 CSV 내보내기 기본값
+- 파일 관리: **구글 스프레드시트**로 편집 → CSV 내보내기 → `Assets/Resources/Data/` 에 배치 (xlsx 방식 폐기)
 - `TextAsset.bytes` 사용 — `.text`는 Unity가 UTF-8로 해석해버리므로 raw 바이트로 받아 직접 디코딩
 - 파일명: `BatterCards` → `HitterCards` 로 변경 (C# 클래스명 `HitterMasterData`와 일관성)
 
 ---
 
+### 세션 4 (2026-06-28) — CSV 배치 & 로더 동작 확인
+
+- `Assets/Resources/Data/HitterCards.csv` / `PitcherCards.csv` 배치 완료
+- `Assets/ScriptsTest/CSVParseTest.cs` 작성 → Unity 플레이 모드에서 정상 로드 확인
+- Name / OVR / TeamName 출력 동작 확인
+
+---
+
+### 세션 4 계속 (2026-06-28) — CardInstance 설계 완성
+
+**완성된 파일**
+- `Assets/Scripts/Cards/CardInstance.cs`
+
+📝 주요 설계 결정:
+- `cardId`만 참조 (CardMasterData 직접 참조 X) — 직렬화 단순화, 역할 분리
+- 전 필드 `{ get; private set; }` — 외부 읽기 허용, 수정 차단
+- 생성자 매개변수: `instanceId`, `cardId` 두 개만 / 나머지는 초기값 고정
+- `trainDelta = new int[4]` — 훈련 스탯 분배값 4종 (같은 레벨이어도 분배 다를 수 있음)
+
+---
+
 ## ⏭️ 다음 할 일
 
-1. **CSV 파일 준비** — `HitterCards.xlsx` / `PitcherCards.xlsx` 에서 CSV로 저장 → `Assets/Resources/Data/` 에 배치
-2. **로더 동작 테스트** — 테스트용 MonoBehaviour로 `CardCSVLoader.LoadHitters()` / `LoadPitchers()` 호출, 데이터 정상 로드 확인
-3. `CardInstance` 설계 (보유 카드 — 강화/훈련 상태 포함)
+1. **CardDataManager 설계** — 마스터 데이터 로드 & 전역 접근 담당 (싱글톤 or static)
