@@ -88,6 +88,27 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 5 (2026-07-03) — OVR CSV 이관 & CardDataManager 완성
+
+**변경 사항**
+- OVR을 C# 코드 계산(`CalculateOVR`) → CSV에서 직접 파싱으로 변경
+  - `GetStatSum()` / `CalculateOVR()` 제거
+  - `CardMasterData`에 `OVR { get; private set; }` 추가, 생성자로 주입
+  - `HitterMasterData` / `PitcherMasterData` — `GetStatSum()` override 제거, 생성자에 `ovr` 추가
+  - `CardCSVLoader.ParseBaseCardData` — `headers["OVR"]` 파싱 추가
+  - CSV 컬럼: 스탯 오른쪽에 `OVR` 열 추가 (Google Sheets에서 `=INT(AVERAGE(...))` 권장)
+
+**완성된 파일**
+- `Assets/Scripts/Cards/CardDataManager.cs` — 싱글톤 MonoBehaviour
+
+📝 주요 설계 결정:
+- 싱글톤 MonoBehaviour + `DontDestroyOnLoad` (씬 추가 대비)
+- `Dictionary<int, HitterMasterData>` / `Dictionary<int, PitcherMasterData>` 분리 — 타입 안전, O(1) 조회
+- `LoadCardMasterData()` — Awake 내 `if (Instance == null)` 블록 안에서만 호출
+- `GetHitter(id)` / `GetPitcher(id)` — `TryGetValue` + `LogWarning` + `null` 반환
+
+---
+
 ## ⏭️ 다음 할 일
 
-1. **CardDataManager 설계** — 마스터 데이터 로드 & 전역 접근 담당 (싱글톤 or static)
+1. **인벤토리 시스템** — 보유 카드 목록(`List<CardInstance>`) 관리, 필터/정렬, 잠금
