@@ -8,10 +8,11 @@ public abstract class CardMasterData
     public CardType     CardType    { get; private set; }
     public CardGrade    CardGrade   { get; private set; }
     public string       Position    { get; private set; }
+    public int          OVR         {  get; private set; }
 
 
 
-    public CardMasterData(int cardId, string name, string teamName, int year, CardType cardType, CardGrade cardGrade, string position)
+    public CardMasterData(int cardId, string name, string teamName, int year, CardType cardType, CardGrade cardGrade, string position, int ovr)
     {
         CardId = cardId;
         Name = name;
@@ -20,14 +21,6 @@ public abstract class CardMasterData
         CardType = cardType;
         CardGrade = cardGrade;
         Position = position;
+        OVR = ovr;
     }
-
-
-
-
-    //카드 스탯을 합산하는 메소드
-    protected abstract int GetStatSum();
-
-    //카드 스탯의 평균 OVR을 계산하는 메소드
-    public int CalculateOVR() => GetStatSum() / 4;
 }

@@ -64,7 +64,7 @@ public class CardCSVLoader
 
     //선수 데이터의 공통 속성을 파싱하는 메소드
     private (int cardId, string name, string teamName, int year, 
-        CardType cardType, CardGrade cardGrade, string position)
+        CardType cardType, CardGrade cardGrade, string position, int ovr)
         ParseBaseCardData(string[] cols, Dictionary<string, int> headers)
     {
         int cardId = int.Parse(cols[headers["cardId"]]);
@@ -74,8 +74,9 @@ public class CardCSVLoader
         CardType cardType = ParseCardType(cols[headers["cardType"]]);
         CardGrade cardGrade = ParseCardGrade(cols[headers["grade"]]);
         string position = cols[headers["position"]];
+        int ovr = int.Parse(cols[headers["OVR"]]);
 
-        return (cardId, name, teamName, year, cardType, cardGrade, position);
+        return (cardId, name, teamName, year, cardType, cardGrade, position, ovr);
     }
 
     private string[] ReadAllLines(string resourcePath)
@@ -103,7 +104,7 @@ public class CardCSVLoader
             if (string.IsNullOrEmpty(line)) continue;
             string[] cols = line.Split(',');
 
-            var (cardId, name, teamName, year, cardType, cardGrade, position)
+            var (cardId, name, teamName, year, cardType, cardGrade, position, ovr)
                  = ParseBaseCardData(cols, headers);
 
             int power = int.Parse(cols[headers["power"]]);
@@ -111,7 +112,7 @@ public class CardCSVLoader
             int run = int.Parse(cols[headers["run"]]);
             int defense = int.Parse(cols[headers["defense"]]);
 
-            result.Add(new HitterMasterData(cardId, name, teamName, year, cardType, cardGrade, position, power, contact, run, defense));
+            result.Add(new HitterMasterData(cardId, name, teamName, year, cardType, cardGrade, position, power, contact, run, defense, ovr));
         }
         return result;
     }
@@ -135,7 +136,7 @@ public class CardCSVLoader
             if (string.IsNullOrEmpty(line)) continue;
             string[] cols = line.Split(',');
 
-            var (cardId, name, teamName, year, cardType, cardGrade, position)
+            var (cardId, name, teamName, year, cardType, cardGrade, position, ovr)
                  = ParseBaseCardData(cols, headers);
 
             int velocity = int.Parse(cols[headers["velo"]]);
@@ -143,7 +144,7 @@ public class CardCSVLoader
             int control = int.Parse(cols[headers["control"]]);
             int stamina = int.Parse(cols[headers["stamina"]]);
 
-            result.Add(new PitcherMasterData(cardId, name, teamName, year, cardType, cardGrade, position, velocity, stuff, control, stamina));
+            result.Add(new PitcherMasterData(cardId, name, teamName, year, cardType, cardGrade, position, velocity, stuff, control, stamina, ovr));
         }
         return result;
     }

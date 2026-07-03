@@ -8,14 +8,12 @@ public class HitterMasterData : CardMasterData
 
     public HitterMasterData(int cardId, string name, string teamName, int year, 
         CardType cardType, CardGrade cardGrade, string position, 
-        int power, int contact, int run, int defense) 
-        : base(cardId, name, teamName, year, cardType, cardGrade, position)
+        int power, int contact, int run, int defense, int ovr) 
+        : base(cardId, name, teamName, year, cardType, cardGrade, position, ovr)
     {
         Power = power;
         Contact = contact;
         Run = run;
         Defense = defense;
     }
-
-    protected override int GetStatSum() => Power + Contact + Run + Defense;
 }
