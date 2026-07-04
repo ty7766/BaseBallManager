@@ -109,6 +109,33 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+---
+
+### 세션 6 (2026-07-05) — 인벤토리 시스템 기초 구현 (진행 중)
+
+**완성된 파일**
+- `Assets/Scripts/Cards/CardGrade.cs` — `None = 0` 추가
+- `Assets/Scripts/Cards/CardType.cs` — `None = 0` 추가
+- `Assets/Scripts/Inventory/PlayerTypeFilter.cs` — enum { All, HitterOnly, PitcherOnly }
+- `Assets/Scripts/Inventory/CardFilter.cs` — 필터 조건 데이터 클래스
+- `Assets/Scripts/Inventory/InventoryManager.cs` — 싱글톤 MonoBehaviour (부분 완성)
+
+📝 주요 설계 결정:
+- nullable(`bool?`, `CardGrade?`) 대신 enum + `None = 0` 센티넬 방식 — 박싱/GC 회피
+- `PlayerTypeFilter` enum 별도 파일 분리 — SRP
+- `Count`, `IsFull` 계산 프로퍼티(`=>`) — 별도 변수 관리 없이 항상 실시간 계산
+- `_maxCapacity` `[SerializeField]` 노출 — 인스펙터에서 조정 가능
+- `AddCard` : 한도 초과 시 `LogWarning` + `return` (early return 패턴)
+- `RemoveCard` : `Find` 결과를 변수에 저장 후 null 체크 → `Remove` (Find 중복 호출 방지)
+
+**🔧 미완성**
+- `SetLocked(int instanceId, bool locked)` — `CardInstance.IsLocked`가 `private set`이라 `CardInstance`에 `SetLocked(bool)` 메서드 추가 필요
+- `GetFiltered(CardFilter filter)`
+- `ExpandCapacity(int amount)`
+
+---
+
 ## ⏭️ 다음 할 일
 
-1. **인벤토리 시스템** — 보유 카드 목록(`List<CardInstance>`) 관리, 필터/정렬, 잠금
+1. `CardInstance.SetLocked(bool)` 메서드 추가
+2. `InventoryManager.SetLocked` / `ExpandCapacity` / `GetFiltered` 완성
