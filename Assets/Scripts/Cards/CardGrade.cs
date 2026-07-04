@@ -1,0 +1,1 @@
+public enum CardGrade { Star3 = 3, Star4 = 4, Star5 = 5};

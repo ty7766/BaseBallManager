@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\hyojo\\\\Desktop\\\\Unity Proj\\\\BaseBallManager\\\\CardStats.csv\"\\); $bytes[0..10] -join ',')"
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\hyojo\\\\Desktop\\\\Unity Proj\\\\BaseBallManager\\\\CardStats.csv\"\\); $bytes[0..10] -join ',')",
+      "Bash(echo \"\")",
+      "Bash(echo \"# Excel 임시파일\")",
+      "Bash(echo \"~\\\\$*\")",
+      "Bash(echo \"# xlsx 원본\")",
+      "Bash(echo \"*.xlsx\")"
     ]
   }
 }
