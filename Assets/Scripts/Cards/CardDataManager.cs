@@ -62,4 +62,18 @@ public class CardDataManager : MonoBehaviour
         Debug.LogWarning($"[CardDataManager] : PitcherMasterData not found : {cardId}");
         return null;
     }
+
+    //Card 데이터를 반환
+    public CardMasterData GetCardMasterData(int cardId)
+    {
+        if (_hitters.TryGetValue(cardId, out HitterMasterData hdata))
+            return hdata;
+        else if (_pitchers.TryGetValue(cardId, out PitcherMasterData pdata))
+            return pdata;
+        else
+        {
+            Debug.LogWarning("[CardDataManager] : 필터에 해당하는 카드가 없습니다.");
+            return null;
+        }
+    }
 }
