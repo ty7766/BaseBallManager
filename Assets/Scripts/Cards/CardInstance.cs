@@ -19,4 +19,10 @@ public class CardInstance
         IsLocked = false;
         BreakthroughUsed = false;
     }
+
+    //외부 접근용
+    public void SetLocked(bool locked)
+    {
+        IsLocked = locked;
+    }
 }

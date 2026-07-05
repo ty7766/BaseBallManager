@@ -109,6 +109,39 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+---
+
+### 세션 6 (2026-07-05) — 인벤토리 시스템 완성
+
+**완성된 파일**
+- `Assets/Scripts/Cards/CardGrade.cs` — `None = 0` 추가
+- `Assets/Scripts/Cards/CardType.cs` — `None = 0` 추가
+- `Assets/Scripts/Inventory/PlayerTypeFilter.cs` — enum { All, HitterOnly, PitcherOnly }
+- `Assets/Scripts/Inventory/CardFilter.cs` — 필터 조건 데이터 클래스
+- `Assets/Scripts/Cards/CardInstance.cs` — `SetLocked(bool)` 추가
+- `Assets/Scripts/Cards/CardDataManager.cs` — `GetCardMasterData(int)` 추가
+- `Assets/Scripts/Inventory/InventoryManager.cs` — 싱글톤 MonoBehaviour 완성
+
+**완성된 메서드 목록 (InventoryManager)**
+- `AddCard(int cardId)` — 한도 초과 시 차단
+- `RemoveCard(int instanceId)` — instanceId로 카드 찾아 제거
+- `SetLocked(int instanceId, bool locked)` — 잠금 상태 변경
+- `ExpandCapacity(int amount)` — 보유 한도 확장 (0 이하 방어)
+- `GetFiltered(CardFilter filter)` — 4개 조건 필터링 (PlayerType / Grade / Type / TeamName)
+
+📝 주요 설계 결정:
+- nullable(`bool?`, `CardGrade?`) 대신 enum + `None = 0` 센티넬 방식 — 박싱/GC 회피
+- `PlayerTypeFilter` enum 별도 파일 분리 — SRP
+- `Count`, `IsFull` 계산 프로퍼티(`=>`) — 별도 변수 관리 없이 항상 실시간 계산
+- `_maxCapacity` `[SerializeField]` 노출 — 인스펙터에서 조정 가능
+- `GetCardMasterData` — 타자/투수 구분 없이 공통 마스터 데이터 조회, 경고 스팸 방지
+- `GetFiltered` — `is HitterMasterData`로 타입 판별, early continue 패턴
+
+---
+
 ## ⏭️ 다음 할 일
 
-1. **인벤토리 시스템** — 보유 카드 목록(`List<CardInstance>`) 관리, 필터/정렬, 잠금
+1. 뽑기 시스템 구현 (로드맵 3단계)
+   - 확률 테이블 설계
+   - 천장(Pity) 카운터
+   - 1연차 / 10연차
