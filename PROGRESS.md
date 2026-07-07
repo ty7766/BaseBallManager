@@ -139,7 +139,7 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
-### 세션 7 (2026-07-06) — 기획서 최종본 업데이트
+### 세션 7 (2026-07-06) — 기획서 최종본 업데이트 + GitHub 마일스톤 생성
 
 📝 주요 변경/확정 사항:
 - `8.6` 신규: 교체 모드(자동/수동) + 일시정지 인터럽트(1/3이닝 경계), 대타·투수 교체 규칙
@@ -154,11 +154,40 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 - 투수 역할(SP/RP/CP) CSV 고정, 해당 슬롯에만 배치 명시
 - 카드 UI & 렌더링 파이프라인 → 별도 문서 예정 (오프라인 누끼 전처리 + 런타임 레이어 합성)
 
+**GitHub 마일스톤 생성 (12개)**
+- 데이터 레이어 / 인벤토리 / 뽑기 / 강화 / 훈련 / 라인업
+- 경기 시뮬레이션 / 리그 / UI / 골든글러브 제작 / 카드 분해 / 튜토리얼
+
+---
+
+### 세션 8 (2026-07-08) — 뽑기 시스템 핵심 로직 완성
+
+**완성된 파일 목록**
+- `Assets/Scripts/Gacha/GachaType.cs` — enum { Normal, Signature }
+- `Assets/Scripts/Gacha/GachaResult.cs` — 1회 뽑기 결과 데이터 (CardId / Grade / Type)
+- `Assets/Scripts/Gacha/GachaManager.cs` — 싱글톤 MonoBehaviour
+- `Assets/Scripts/Cards/CardDataManager.cs` — GetAllHitters() / GetAllPitchers() 추가
+
+**완성된 메서드 목록 (GachaManager)**
+- `Roll1(gachaType)` — 인벤 꽉 찼으면 차단, RollOnce 후 AddCard
+- `Roll10(gachaType)` — 10장 공간 체크, 10회 RollOnce, 10연 천장, 일괄 AddCard
+- `RollOnce(gachaType)` — DecideGrade → PickCardFromPool → 천장 카운터 증가 → GachaResult 반환
+- `DecideGrade(gachaType)` — 확률표 기반 누적 비교로 등급 결정
+- `PickCardFromPool(gachaType, grade)` — 등급·타입 필터 후 랜덤 cardId 반환
+- `IncrementAndCheckPity(gachaType)` — 종류별 카운터 증가, 50 도달 시 리셋 후 true
+
+📝 주요 설계 결정:
+- 확률 필드 `[SerializeField]` 노출 — 인스펙터에서 튜닝 가능
+- 시그니쳐 5성 분기는 `PickCardFromPool` 내부에서 처리 (`_gradeSigProbabilitySig = 0.15f`)
+- 10연 천장 강제 등급: 뽑기 타입별 Star4/Star5 상대 비율로 결정
+- 50연 천장 카운터는 세이브 연동 예정 (현재 메모리에만 존재)
+
 ---
 
 ## ⏭️ 다음 할 일
 
-1. 뽑기 시스템 구현 (로드맵 3단계)
-   - 확률 테이블 설계
-   - 천장(50연 / 10연) 카운터
-   - 1연차 / 10연차
+1. 뽑기 시스템 테스트 (`GachaTest.cs` 작성 → Unity 플레이 모드 확인)
+   - Roll1 / Roll10 정상 동작 확인
+   - 10연 천장 보장 확인
+   - 인벤토리 한도 초과 차단 확인
+2. 50연 천장 — 자팀 확정 카드 교체 로직 구현
