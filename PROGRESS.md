@@ -184,10 +184,26 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 9 (2026-07-08) — 뽑기 시스템 완성 + PlayerDataManager
+
+**완성된 파일 목록**
+- `Assets/Scripts/Player/PlayerDataManager.cs` — 플레이어 선택 팀 보관 싱글톤
+- `Assets/Scripts/Gacha/GachaManager.cs` — 50연 천장 처리 추가
+
+**추가/수정된 내용**
+- `PlayerDataManager`: `PlayerTeamName { get; private set; }` + `SetPlayerTeam(string)` (IsNullOrEmpty 방어)
+- `GachaManager.RollOnce()`: `IncrementAndCheckPity` true 시 `PickTeamConfirmedCard()` 호출 → cardId + grade 교체
+- `GachaManager.PickTeamConfirmedCard()`: 자기 팀 + 타입 + 5성 필터로 풀 구성 후 랜덤 반환
+
+📝 주요 설계 결정:
+- 50연 천장 발동 시 grade도 Star5로 강제 교체 — 팀 확정 카드는 항상 5성이므로 GachaResult 등급 정합성 보장
+- PlayerDataManager를 별도 분리 — 팀 정보는 리그·AI 배치 등 다른 시스템에서도 필요하므로 SRP 적용
+
+---
+
 ## ⏭️ 다음 할 일
 
-1. 뽑기 시스템 테스트 (`GachaTest.cs` 작성 → Unity 플레이 모드 확인)
-   - Roll1 / Roll10 정상 동작 확인
-   - 10연 천장 보장 확인
-   - 인벤토리 한도 초과 차단 확인
-2. 50연 천장 — 자팀 확정 카드 교체 로직 구현
+로드맵 4번: **육성 시스템 (강화 → 훈련 → 돌파)**
+1. 강화 시스템 (`EnhanceManager.cs`)
+2. 훈련 시스템 (`TrainManager.cs`)
+3. 훈련돌파 (`BreakthroughManager.cs`)

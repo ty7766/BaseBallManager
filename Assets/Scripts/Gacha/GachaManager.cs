@@ -132,15 +132,78 @@ public class GachaManager : MonoBehaviour
         CardGrade grade = DecideGrade(gachaType);
         int cardId = PickCardFromPool(gachaType, grade);
 
+        bool isPity = IncrementAndCheckPity(gachaType);
+
+        if (isPity)
+        {
+            int confirmedId = PickTeamConfirmedCard(gachaType);
+            if (confirmedId != -1)
+            {
+                cardId = confirmedId;
+                grade = CardGrade.Star5;
+            }
+        }
+
         if (cardId == -1)
             return null;
 
         CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardId);
         CardType cardType = masterData.CardType;
 
-        IncrementAndCheckPity(gachaType);
-
         return new GachaResult(cardId, grade, cardType);
+    }
+
+    private int PickTeamConfirmedCard(GachaType gachaType)
+    {
+        string teamName = PlayerDataManager.Instance.PlayerTeamName;
+        CardType targetType;
+        CardGrade targetGrade;
+
+        if (string.IsNullOrEmpty(teamName))
+        {
+            Debug.LogWarning("[GachaManager] 플레이어 팀 이름이 설정되지 않았습니다.");
+            return -1;
+        }
+
+        //일반 뽑기인 경우 천장 시 자팀 노말 5성 확정
+        if (gachaType == GachaType.Normal)
+        {
+            targetGrade = CardGrade.Star5;
+            targetType = CardType.Normal;
+        }
+        else
+        {
+            targetGrade = CardGrade.Star5;
+            targetType = CardType.Signature;
+        }
+
+        List<int> pool = new List<int>();
+        CardDataManager dataManager = CardDataManager.Instance;
+        
+        foreach(HitterMasterData hitter in dataManager.GetAllHitters())
+        {
+            if (hitter.TeamName == teamName && hitter.CardGrade == targetGrade && hitter.CardType == targetType)
+            {
+                pool.Add(hitter.CardId);
+            }
+        }
+        foreach (PitcherMasterData pitcher in dataManager.GetAllPitchers())
+        {
+            if (pitcher.TeamName == teamName && pitcher.CardGrade == targetGrade && pitcher.CardType == targetType)
+            {
+                pool.Add(pitcher.CardId);
+            }
+        }
+
+        //리스트가 비었음을 방지
+        if (pool.Count == 0)
+        {
+            Debug.LogWarning("[GachaManager] : 현재 가챠 리스트가 비어있습니다.");
+            return -1;
+        }
+
+        //랜덤으로 리스트에서 하나 선택
+        return pool[Random.Range(0, pool.Count)];
     }
 
     //확률 기반으로 등급 결정
