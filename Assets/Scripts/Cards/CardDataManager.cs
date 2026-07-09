@@ -76,4 +76,16 @@ public class CardDataManager : MonoBehaviour
             return null;
         }
     }
+
+    //전체 타자 목록 반환
+    public IEnumerable<HitterMasterData> GetAllHitters()
+    {
+        return _hitters.Values;
+    }
+
+    //전체 투수 목록 반환
+    public IEnumerable<PitcherMasterData> GetAllPitchers()
+    {
+        return _pitchers.Values;
+    }
 }

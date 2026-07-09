@@ -31,6 +31,12 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
+    //maxCapacity 전달용
+    public int GetMaxCapacity()
+    {
+        return _maxCapacity;
+    }
+
     //인벤토리에 카드 추가
     public void AddCard(int cardId)
     {
