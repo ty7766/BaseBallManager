@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 public class InventoryManager : MonoBehaviour
 {
@@ -128,5 +129,23 @@ public class InventoryManager : MonoBehaviour
         }
 
         return result;
+    }
+    
+    //인벤토리에서 카드 반환
+    public CardInstance GetCard(int instanceId)
+    {
+        CardInstance card = _cards.Find(card => card.InstanceId == instanceId);
+        if (card == null)
+        {
+            return null;
+        }
+
+        return card;
+    }
+
+    //인벤토리에서 전체 카드 반환
+    public IReadOnlyList<CardInstance> GetAllCards()
+    {
+        return _cards;
     }
 }

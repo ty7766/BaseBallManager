@@ -20,9 +20,32 @@ public class CardInstance
         BreakthroughUsed = false;
     }
 
-    //외부 접근용
+    /// <summary>
+    /// (외부 접근용) 카드의 인게임 속성을 관리 및 호출
+    /// </summary>
+
+    //카드 잠금 설정
     public void SetLocked(bool locked)
     {
         IsLocked = locked;
+    }
+
+    //강화 레벨 1 증가
+    public void ApplyEnhance()
+    {
+        EnhanceLevel++;
+    }
+
+    //훈련 레벨 1 증가 + 스탯 분배 반영
+    //delta : 이번 레벨 업에서 오른 각 스탯 증가량
+    public void ApplyTrain(int[] delta)
+    {
+     
+    }
+
+    //돌파 완료 표시
+    public void ApplyBreakthrough()
+    {
+
     }
 }
