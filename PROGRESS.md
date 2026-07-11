@@ -201,9 +201,44 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 10 (2026-07-09) — 강화 시스템 부분 구현
+
+**완성된 파일 목록**
+- `Assets/Scripts/Enhance/EnhanceManager.cs` — 싱글톤 MonoBehaviour (부분 완성)
+- `Assets/Scripts/Inventory/InventoryManager.cs` — `GetCard(int)` / `GetAllCards()` 추가
+
+**완성된 메서드 목록 (EnhanceManager)**
+- `CanEnhance(targetInstanceId)` — 카드 존재 여부 + 최대 강화 레벨 체크
+- `GetIdenticalCards(targetInstanceId)` — 동일 종류·이름·팀 카드 목록 반환 (잠금 카드·자기 자신 제외)
+
+📝 주요 설계 결정:
+- `GetAllCards()` 반환 타입 `IReadOnlyList<CardInstance>` — 외부 수정 차단
+- 컬렉션 반환 메서드는 `null` 대신 빈 리스트 반환 (호출자 null 체크 불필요)
+- 강화 전용 카드(5장) 경로는 CardType 확장 후 추가 예정. 현재는 동일 카드 1장 경로만 구현
+
+---
+
+### 세션 11 (2026-07-10) — 강화 시스템 완성
+
+**완성된 파일 목록**
+- `Assets/Scripts/Cards/CardInstance.cs` — `ApplyEnhance()` 구현
+- `Assets/Scripts/Enhance/EnhanceManager.cs` — `ValidateMaterials` / `Enhance` 완성
+
+**완성된 메서드 목록**
+- `CardInstance.ApplyEnhance()` — `EnhanceLevel++`
+- `EnhanceManager.ValidateMaterials(target, materials)` — 재료 유효성 최종 검사
+- `EnhanceManager.Enhance(targetInstanceId, materialInstanceIds)` — 강화 전체 흐름 (ID→인스턴스 변환 → 검증 → 재료 소멸 → ApplyEnhance)
+
+📝 주요 설계 결정:
+- `ApplyEnhance()`를 `CardInstance`에 둔 이유 — `EnhanceLevel`이 `private set`이라 외부에서 직접 변경 불가. Tell, Don't Ask 원칙
+- `ValidateMaterials`는 강화 직전 최종 방어선 — `GetIdenticalCards`(UI 후보 조회)와 역할 분리
+- `materials.Count != 1` 체크 — 현재 동일 카드 1장 경로만 지원, 전용 카드 5장 경로 추가 시 조건 확장 예정
+
+---
+
 ## ⏭️ 다음 할 일
 
 로드맵 4번: **육성 시스템 (강화 → 훈련 → 돌파)**
-1. 강화 시스템 (`EnhanceManager.cs`)
+1. ✅ 강화 시스템 (`EnhanceManager.cs`) — 동일 카드 1장 경로 완성
 2. 훈련 시스템 (`TrainManager.cs`)
 3. 훈련돌파 (`BreakthroughManager.cs`)
