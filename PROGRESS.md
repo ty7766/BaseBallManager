@@ -236,9 +236,38 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 12 (2026-07-11) — 훈련 시스템 완성
+
+**완성된 파일 목록**
+- `Assets/Scripts/Cards/CardInstance.cs` — `ApplyTrain()` / `ApplyBreakthrough()` 구현, `_trainDelta` private 필드 + `IReadOnlyList<int>` 노출로 변경
+- `Assets/Scripts/Train/TrainManager.cs` — 싱글톤 MonoBehaviour 완성
+- `Assets/Scripts/Train/BreakthroughManager.cs` — 싱글톤 MonoBehaviour 완성
+
+**완성된 메서드 목록 (TrainManager)**
+- `CanTrain(instanceId)` — 카드 존재 여부 + 돌파 여부 기반 상한(30/50) 체크
+- `GetTrainCost(trainLevel)` — 레벨 비례 포인트·훈련 카드 비용 반환 (튜플)
+- `Train(instanceId)` — `for 2회 Random(0..3)` 랜덤 분배 → `ApplyTrain(delta)` 호출
+- `GetMaxTrainLevel()` — `_maxTrainLevel` 외부 노출 (BreakthroughManager 참조용)
+
+**완성된 메서드 목록 (BreakthroughManager)**
+- `CanBreakthrough(instanceId)` — 카드 존재 여부 + 이미 돌파 여부 + TrainLevel == 30 체크
+- `GetBreakthroughCost(instanceId)` — CardType·CardGrade switch expression으로 필요 돌파 카드 수 반환
+- `Breakthrough(instanceId)` — `CanBreakthrough` 검증 → `ApplyBreakthrough()` 호출
+
+📝 주요 설계 결정:
+- `_trainDelta`를 `private int[]` + `public IReadOnlyList<int> TrainDelta =>` 로 분리 — `private set`만으로는 배열 요소 외부 수정을 막을 수 없어 요소 쓰기를 컴파일 타임 차단
+- `TrainManager` / `BreakthroughManager` SRP 분리 — 훈련(레벨업)과 돌파(상한 해금)는 다른 책임
+- 돌파 카드 비용 차감 미구현 (`CurrencyManager` 추후 연동)
+- `GetBreakthroughCost`에서 `instanceId` → `CardId` 경유해 마스터 데이터 조회 (`instanceId`와 `cardId`는 다른 개념)
+
+---
+
 ## ⏭️ 다음 할 일
 
-로드맵 4번: **육성 시스템 (강화 → 훈련 → 돌파)**
-1. ✅ 강화 시스템 (`EnhanceManager.cs`) — 동일 카드 1장 경로 완성
-2. 훈련 시스템 (`TrainManager.cs`)
-3. 훈련돌파 (`BreakthroughManager.cs`)
+로드맵 5번: **라인업 시스템**
+- 포지션 제약 (포지션별 슬롯, 해당 포지션 카드만 배치)
+- 투수 세부 역할(SP/RP/CP) 슬롯 분리
+- 야수 벤치 5칸 (선택 슬롯)
+- 타순(1~9번) 직접 지정
+- 카드 중복 배치 불가
+- 야수 9 + 투수 11 모두 채워야 리그 입장 가능
