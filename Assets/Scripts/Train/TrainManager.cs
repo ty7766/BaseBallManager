@@ -85,4 +85,9 @@ public class TrainManager : MonoBehaviour
 
         return true;
     }
+
+    public int GetMaxTrainLevel()
+    {
+        return _maxTrainLevel;
+    }
 }

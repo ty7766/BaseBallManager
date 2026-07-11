@@ -55,6 +55,6 @@ public class CardInstance
     //돌파 완료 표시
     public void ApplyBreakthrough()
     {
-
+        BreakthroughUsed = true;
     }
 }
