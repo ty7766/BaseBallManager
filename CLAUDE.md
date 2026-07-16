@@ -35,6 +35,7 @@
 - 작성자가 짠 코드를 보고 **부족한 부분 / 고칠 부분 / 버그 / 위험 요소**를 짚는다.
 - **반드시 이유를 세세히** 설명한다: 왜 문제인지, 어떤 상황에서 터지는지, 더 나은 대안과 근거.
 - 칭찬만 늘어놓지 않는다. 솔직하게 지적하되, 학습자임을 고려해 친절하게.
+- **코드 확인은 Read 툴로 파일을 직접 읽는다. 작성자에게 코드를 붙여넣어 달라고 요청하지 않는다.**
 
 ---
 
@@ -69,7 +70,58 @@
 - enum 타입·멤버: `PascalCase`
 - 파일 1개 = 주요 타입 1개. 폴더는 기능별로 (예: `Data/`, `Cards/`, `Gacha/`, `Simulation/`, `League/`, `UI/`).
 
-### 3-2. OOP · 확장성 · 클린 코드 원칙
+### 3-2. 오류 처리 (확정)
+
+세 단계로 명확히 구분한다.
+
+| 상황 | 처리 방식 |
+|---|---|
+| 예상 가능한 실패 (인벤 꽉 참, null 카드 조회 등) | `Debug.LogWarning(...)` + `return false` / `return null` |
+| 데이터 불일치·버그 의심 (cardId 없음 등) | `Debug.LogError(...)` + `return false` / `return null` |
+| 외부 경계 파서 (문자열 → enum 변환 등) | `throw new ArgumentException(...)` |
+
+- 컬렉션을 반환하는 메서드는 실패 시 `null` 대신 **빈 컬렉션** 반환.
+- 단일 객체를 반환하는 메서드는 실패 시 `null` 반환 허용.
+
+### 3-3. switch expression (확정)
+
+- **값 하나를 반환하는 단순 분기** → `switch expression` 사용.
+- **로직(여러 문장)이 들어가는 분기** → 기존 `switch문` 유지.
+
+```csharp
+// switch expression 예시 (단순 반환)
+string label = grade switch
+{
+    CardGrade.Star3 => "3성",
+    CardGrade.Star4 => "4성",
+    CardGrade.Star5 => "5성",
+    _ => throw new ArgumentException($"알 수 없는 등급: {grade}")
+};
+
+// switch문 유지 (로직 포함)
+switch (gachaType)
+{
+    case GachaType.Normal:
+        // 여러 문장 처리
+        break;
+}
+```
+
+### 3-4. 멤버 선언 순서 (확정)
+
+파일 내 멤버는 아래 순서로 선언한다.
+
+```
+① 싱글톤 Instance (있는 경우)
+② public 프로퍼티
+③ [SerializeField] private 필드
+④ private 필드
+⑤ 생명주기 메서드 (Awake / Start / Update 순)
+⑥ public 메서드
+⑦ private 메서드
+```
+
+### 3-5. OOP · 확장성 · 클린 코드 원칙
 모든 파일명·클래스명·코드 제안은 아래 기준을 따른다.
 
 - **SRP** (단일 책임): 클래스 하나는 역할 하나만. 파일명이 그 역할을 즉시 드러내야 한다.
@@ -122,3 +174,4 @@ feature/<브랜치명>: <브랜치에서 한 일 한 줄 요약>
 ## 6. 일반 태도
 - 기획서를 **완벽히 숙지**하고, 현재 코드가 기획 방향과 어긋나면 **미리 경고**한다.
 - 위 규칙을 **항상 성실히 준수**한다.
+- 작성자에게 **항상 존댓말**을 사용한다.

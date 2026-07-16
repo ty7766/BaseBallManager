@@ -262,12 +262,57 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 13 (2026-07-12) — 코드 스타일 확정 + 라인업 시스템 착수
+
+**CLAUDE.md 추가 항목**
+- 3-2. 오류 처리 3원칙 (LogWarning / LogError / throw 구분 기준)
+- 3-3. switch expression 사용 기준 (단순 반환 → expression, 로직 포함 → 문)
+- 3-4. 멤버 선언 순서 확정
+- 코드 확인 시 Read 툴로 직접 읽기 (붙여넣기 요청 금지) 명문화
+
+**완성된 파일 목록**
+- `Assets/Scripts/Line Up/Hitters/HitterPosition.cs` — enum + HitterPositionParser (Parse / TryParse)
+- `Assets/Scripts/Line Up/Pitchers/PitcherPosition.cs` — enum (SP/RP/CP) + PitcherPositionParser (Parse / TryParse)
+- `Assets/Scripts/Line Up/LineUpManager.cs` — 싱글톤 MonoBehaviour (뼈대 + Awake 초기화 + AssignHitter 완성)
+
+**완성된 메서드 목록 (LineUpManager)**
+- `Awake()` — 싱글톤 + 슬롯 전체 초기화 (_hitterSlots 9칸 / _benchSlots 5칸 / _pitcherSlots SP5·RP5·CP1, 전부 -1)
+- `AssignHitter(slot, instanceId, battingOrder)` — 카드 존재 · 타자 여부 · 타순 범위 · 중복 배치 · 포지션 일치(DH 예외) 검증 후 배치
+
+📝 주요 설계 결정:
+- 폴더명: `Line Up/Hitters/`, `Line Up/Pitchers/` (사용자 선택)
+- 포지션 enum: `FB/SB/TB` (FirstBase/SecondBase/ThirdBase 약어) — 통일성 우선
+- 투수는 `PitcherRole` 대신 `PitcherPosition`으로 통일 — 타자/투수 네이밍 일관성
+- 야수 슬롯: `Dictionary<HitterPosition, (int instanceId, int battingOrder)>` (안 B)
+- 포지션 불일치 시 LogWarning 없이 silent return false — UI에서 사전 필터링하므로 도달 불가능한 경로
+
+---
+
+### 세션 14 (2026-07-16) — 라인업 시스템 완성
+
+**완성된 파일 목록**
+- `Assets/Scripts/Line Up/LineUpManager.cs` — 전체 메서드 구현 완료
+
+**완성된 메서드 목록 (LineUpManager)**
+- `IsCardAssigned(instanceId)` — 야수/벤치/투수 슬롯 전체 순회, 중복 배치 여부 반환
+- `RemoveHitter(slot)` — 슬롯 비어있는지 체크 후 (-1, 0) 초기화
+- `AssignBench(benchIndex, instanceId)` — 인덱스 범위 · 슬롯 · 카드 존재 · 타자 여부 · 중복 배치 검증 후 배치
+- `RemoveBench(benchIndex)` — 인덱스 범위 · 슬롯 비어있는지 체크 후 -1 초기화
+- `AssignPitcher(position, slotIndex, instanceId)` — 인덱스 범위 · 슬롯 · 카드 존재 · 투수 여부 · 포지션 일치 · 중복 배치 검증 후 배치
+- `RemovePitcher(position, slotIndex)` — 인덱스 범위 · 슬롯 비어있는지 체크 후 -1 초기화
+- `SetBattingOrder(slot, order)` — 슬롯 비어있는지 · 타순 범위 체크 후 instanceId 유지, battingOrder만 교체
+- `IsLineupComplete()` — 야수 9 + 투수 11 슬롯 전부 -1 없으면 true (벤치 제외)
+
+---
+
+## ✅ 완료
+
+로드맵 5번: **라인업 시스템** — LineUpManager 구현 완료
+
+## 🔧 진행 중
+
+없음
+
 ## ⏭️ 다음 할 일
 
-로드맵 5번: **라인업 시스템**
-- 포지션 제약 (포지션별 슬롯, 해당 포지션 카드만 배치)
-- 투수 세부 역할(SP/RP/CP) 슬롯 분리
-- 야수 벤치 5칸 (선택 슬롯)
-- 타순(1~9번) 직접 지정
-- 카드 중복 배치 불가
-- 야수 9 + 투수 11 모두 채워야 리그 입장 가능
+로드맵 6번: **경기 시뮬레이션 엔진** — 순수 C# 코어 설계 착수
