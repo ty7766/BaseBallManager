@@ -345,16 +345,43 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 - `GameState.AddRun()` — 9회 이상 말이닝 득점 후 홈팀 리드 시 즉시 끝내기(`IsGameOver = true`)
 - 베이스 주자는 `bool` 대신 `int instanceId`(-1=없음) — 진루 처리 시 주자 스탯 조회가 필요하므로
 
+---
+
+### 세션 17 (2026-07-19) — 타석 확률 모델 구현
+
+**브랜치**: `feature/Simulation_BattingProbabilitySystemModel`
+
+**완성된 파일 목록**
+- `Assets/Scripts/ProbabilityModels/BatterOutcomeCalculator.cs` — 타석 결과 확률 산출 클래스
+
+**완성된 메서드 목록**
+- `Calculate(state, hitter, pitcher, avgDefense)` — 삼진→볼넷→홈런→실책→안타/아웃 순 단계별 탈락 판정, 최종 BatterOutcome 반환
+- `CalcStrikeOutProb()` — 투수 구위/구속 vs 타자 정확, 범위 5~40%
+- `CalcWalkProb()` — 타자 정확 vs 투수 제구, 범위 2~20%
+- `CalcHomeRunProb()` — 타자 파워 vs 투수 구위/구속, 범위 0.5~30%
+- `CalcHitProb()` — 타자 정확 vs 투수 구위 (BABIP), 범위 15~45%
+- `CalcErrorProb(avgDefense)` — 수비팀 평균 수비 기반, 범위 0.3~3%
+- `Roll(probability)` — 0~1 난수로 확률 판정
+
+📝 주요 설계 결정:
+- `ProbabilityModels/` 폴더 신설 — 스탯→확률 변환 클래스 전용 (시뮬레이션 상태 클래스와 분리)
+- 안타 종류 분배: 파워/주루 기반 `longHitBonus` 보정으로 장타형/컨택형 타자 차별화. 난수 하나로 구간 분배 (3루타/2루타/단타)
+- 아웃 종류 분배: `canDoublePlay` 조건(1루 주자 + 2아웃 미만) 판단 후 누적 분기
+- 희생플라이: 뜬공 판정 시 `state.ThirdBase != -1 && state.OutCount < 2` 조건 체크
+- 고정 상수(0.22f 등)는 기획서 초안 수치 — 시뮬 루프 완성 후 KBO 평균 지표 기준 튜닝 예정
+
 ## ✅ 완료
 
 로드맵 5번: **라인업 시스템** — LineUpManager 구현 완료
 
 로드맵 6번 1단계: **시뮬레이션 데이터 구조** — `feature/Simulation_Data-Structure` 브랜치 완료
 
+로드맵 6번 2단계: **타석 확률 모델** — `BatterOutcomeCalculator` 구현 완료
+
 ## 🔧 진행 중
 
-없음
+로드맵 6번 2단계 계속: `feature/Simulation_BattingProbabilitySystemModel` 브랜치 — 진루 처리(8.3) 미완성
 
 ## ⏭️ 다음 할 일
 
-로드맵 6번 2단계: `simulation-atbat` 브랜치 — 타석 판정 로직 (기획서 8.2 확률 모델)
+`BaseRunningCalculator.cs` — 기획서 8.3 진루 처리 로직 (타구 종류별 주자 이동 규칙)
