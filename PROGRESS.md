@@ -305,9 +305,51 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+---
+
+### 세션 15 (2026-07-17) — 시뮬레이션 데이터 구조 착수
+
+**브랜치**: `feature/simulation-data-structures`
+
+**브랜치 분할 계획 (로드맵 6번)**
+- `simulation-data-structures` — 상태 클래스 설계 (현재)
+- `simulation-atbat` — 타석 판정 (8.2)
+- `simulation-baserunning` — 진루 처리 (8.3)
+- `simulation-pitcher` — 투수 체력·교체 (8.4)
+- `simulation-game-loop` — 경기 루프 통합 (8.1)
+
+**완성된 파일 목록**
+- `Assets/Scripts/Simulation/HitterSnapshot.cs` — 타자 유효 스탯 스냅샷 (struct)
+- `Assets/Scripts/Simulation/PitcherSnapshot.cs` — 투수 유효 스탯 스냅샷 (struct)
+- `Assets/Scripts/Simulation/SimulationBatterLog.cs` — 타석 1회 결과 로그 (enum BatterOutcome + class)
+
+📝 주요 설계 결정:
+- 스냅샷을 struct로 분리 — 시뮬 코어가 Cards 레이어에 의존하지 않도록, 강화·훈련 반영 최종값만 주입
+- `SimulationBatterLog`는 경기 단위 임시 데이터 — 다음 경기 시작/나가기 시 폐기
+- 시즌 누적 기록(`HitterSeasonStats` 등)은 별도 구조로 추후 구현 예정
+
+---
+
+### 세션 16 (2026-07-19) — 시뮬레이션 데이터 구조 완성
+
+**완성된 파일 목록**
+- `Assets/Scripts/Simulation/SimulationContext.cs` — 경기 시작 시 구성되는 불변 입력 데이터 (양 팀 타자/투수 스냅샷 배열, 홈/원정 여부)
+- `Assets/Scripts/Simulation/PitcherState.cs` — 현재 등판 투수의 경기 내 상태 (체력, 투구 수, 이닝 실점)
+- `Assets/Scripts/Simulation/GameState.cs` — 경기 진행 중 변하는 전체 상태 (이닝, 아웃, 베이스, 득점, 타순, 투수 상태, 경기 종료 여부)
+
+📝 주요 설계 결정:
+- `SimulationContext` — 불변 입력 데이터. 배열 길이 검증(타자 9명/투수 7명)을 생성자에서 `ArgumentException`으로 방어
+- `PitcherState.GetFatigueRatio()` — `(float)CurrentStamina / Snapshot.Stamina`. 피로 패널티(8.4) 계산의 기반값
+- `PitcherState.ConsumePitches()` — `Math.Max(0, ...)` 로 체력 음수 방지
+- `GameState.AddOut()` — 3아웃 시 잔루 소멸(-1 초기화) + 이닝 전환 + 투수 `ResetInningStats()` 호출까지 캡슐화
+- `GameState.AddRun()` — 9회 이상 말이닝 득점 후 홈팀 리드 시 즉시 끝내기(`IsGameOver = true`)
+- 베이스 주자는 `bool` 대신 `int instanceId`(-1=없음) — 진루 처리 시 주자 스탯 조회가 필요하므로
+
 ## ✅ 완료
 
 로드맵 5번: **라인업 시스템** — LineUpManager 구현 완료
+
+로드맵 6번 1단계: **시뮬레이션 데이터 구조** — `feature/Simulation_Data-Structure` 브랜치 완료
 
 ## 🔧 진행 중
 
@@ -315,4 +357,4 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ## ⏭️ 다음 할 일
 
-로드맵 6번: **경기 시뮬레이션 엔진** — 순수 C# 코어 설계 착수
+로드맵 6번 2단계: `simulation-atbat` 브랜치 — 타석 판정 로직 (기획서 8.2 확률 모델)
