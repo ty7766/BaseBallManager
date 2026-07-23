@@ -370,6 +370,47 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 - 희생플라이: 뜬공 판정 시 `state.ThirdBase != -1 && state.OutCount < 2` 조건 체크
 - 고정 상수(0.22f 등)는 기획서 초안 수치 — 시뮬 루프 완성 후 KBO 평균 지표 기준 튜닝 예정
 
+### 세션 18 (2026-07-20) — 진루 처리 착수
+
+**완성된 파일 목록**
+- `Assets/Scripts/ProbabilityModels/BaseRunningCalculator.cs` — 뼈대 + 보조 메서드 구현
+
+**완성된 메서드**
+- `Score(state)` — `state.AddRun()` 위임
+- `TryAdvance(runner)` — 주루 스탯 기반 추가 진루 확률 판정 (`pRun = clamp(0.40 + 0.6 * (주루̂ - 0.5), 0.25, 0.90)`)
+
+**미완성**
+- `Apply()` — 타구 종류별 베이스/득점/아웃 갱신 로직 미구현
+
+---
+
+### 세션 19 (2026-07-23) — 진루 처리 Apply() 부분 구현
+
+**수정된 파일 목록**
+- `Assets/Scripts/Simulation/GameState.cs` — `SetFirstBase()` / `SetSecondBase()` / `SetThirdBase()` 추가
+- `Assets/Scripts/ProbabilityModels/BaseRunningCalculator.cs` — Apply() 시그니처 수정 + 부분 구현
+
+**Apply() 시그니처 수정**
+- `SimulationContext context` 매개변수 추가 — 주자 스냅샷 조회를 위해
+
+**완성된 헬퍼 메서드**
+- `FindRunnerSnapshot(instanceId, context, isTopInning)` — 공격팀 라인업에서 instanceId로 스냅샷 탐색, 미발견 시 `default` 반환
+
+**완성된 Apply() 케이스**
+- `HomeRun` — 전원 득점 + 베이스 전체 클리어
+- `Triple` — 전원 득점 + 타자 3루
+- `Double` — 3루/2루 주자 득점, 1루 주자 `TryAdvance`(득점 or 3루), 타자 2루
+- `Single` — 3루 주자 득점, 2루 주자 `TryAdvance`(득점 or 3루), 1루 주자 `TryAdvance`(3루 or 2루), 타자 1루
+- `Walk` — 밀어내기만 (TryAdvance 없음), 만루 시 3루 주자 득점
+
+**미완성 케이스**
+- `Error` / `SacrificeFly` / `DoublePlay` / `StrikeOut` / `GroundOut` / `FlyOut`
+
+📝 주요 설계 결정:
+- 베이스 이동 순서: 기존 주자 역순(3루→2루→1루) 처리 후 타자 배치 — 덮어쓰기 오류 방지
+- `Walk`는 `state.SecondBase` / `state.FirstBase` 값을 그대로 이동 — `FindRunnerSnapshot` 불필요
+- 2루 주자 처리 후 `SetSecondBase(-1)` 클리어 필수 — 1루 주자 없을 때 잔류 버그 방지
+
 ## ✅ 완료
 
 로드맵 5번: **라인업 시스템** — LineUpManager 구현 완료
@@ -380,8 +421,8 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ## 🔧 진행 중
 
-로드맵 6번 2단계 계속: `feature/Simulation_BattingProbabilitySystemModel` 브랜치 — 진루 처리(8.3) 미완성
+로드맵 6번 3단계: `feature/Simulation_BattingProbabilitySystemModel` 브랜치 — `BaseRunningCalculator.Apply()` 구현 중
 
 ## ⏭️ 다음 할 일
 
-`BaseRunningCalculator.cs` — 기획서 8.3 진루 처리 로직 (타구 종류별 주자 이동 규칙)
+`BaseRunningCalculator.Apply()` 나머지 케이스 — `Error` / `SacrificeFly` / `DoublePlay` / `StrikeOut` / `GroundOut` / `FlyOut`
