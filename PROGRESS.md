@@ -400,7 +400,7 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 - `HomeRun` — 전원 득점 + 베이스 전체 클리어
 - `Triple` — 전원 득점 + 타자 3루
 - `Double` — 3루/2루 주자 득점, 1루 주자 `TryAdvance`(득점 or 3루), 타자 2루
-- `Single` — 3루 주자 득점, 2루 주자 `TryAdvance`(득점 or 3루), 1루 주자 `TryAdvance`(3루 or 2루), 타자 1루
+- `Single` — 3루 주자 득점, 2루 주자 `TryAdvance`(득점 or 3루), 1루 주자 `TryAdvance`(3루 or 2루, 베이스 충돌 방지 포함), 타자 1루
 - `Walk` — 밀어내기만 (TryAdvance 없음), 만루 시 3루 주자 득점
 
 **미완성 케이스**
@@ -410,6 +410,27 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 - 베이스 이동 순서: 기존 주자 역순(3루→2루→1루) 처리 후 타자 배치 — 덮어쓰기 오류 방지
 - `Walk`는 `state.SecondBase` / `state.FirstBase` 값을 그대로 이동 — `FindRunnerSnapshot` 불필요
 - 2루 주자 처리 후 `SetSecondBase(-1)` 클리어 필수 — 1루 주자 없을 때 잔류 버그 방지
+- 1루 주자 TryAdvance 성공 시 `state.ThirdBase == -1` 확인 후 분기 — 베이스 충돌 방지
+
+---
+
+### 세션 20 (2026-07-25) — 진루 처리 Apply() 완성
+
+**수정된 파일 목록**
+- `Assets/Scripts/ProbabilityModels/BaseRunningCalculator.cs` — Apply() 전체 케이스 완성
+
+**완성된 Apply() 케이스 추가**
+- `StrikeOut` / `GroundOut` / `FlyOut` — `state.AddOut()` 한 번 (주자 진루 없음)
+- `SacrificeFly` — `state.AddOut()` + `TryAdvance`로 태그업 판정, 성공 시만 득점 + 3루 클리어
+- `DoublePlay` — `SetFirstBase(-1)` + `state.AddOut()` 두 번 (1루 주자·타자 동시 아웃, 나머지 주자 정지)
+- `Error` — Walk와 동일한 강제 +1베이스 로직
+
+📝 의도적 미구현 항목 (향후 고도화 시 재검토):
+- FlyOut 시 1·2루 주자 태그업 시도 — SacrificeFly(3루 태그업)로 단순화
+- 태그업 중 아웃 — TryAdvance는 Safe/Stay만 반환, Out 없음
+- 에러 후 2베이스 이상 추가 진루 — 강제 +1베이스로 단순화
+- 삼중살 — 발생 빈도 극히 낮아 생략
+- 유기적 수비 시나리오(병살 중 에러 등) — 현 구조에서 표현 불가, 생략
 
 ## ✅ 완료
 
@@ -419,10 +440,12 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 로드맵 6번 2단계: **타석 확률 모델** — `BatterOutcomeCalculator` 구현 완료
 
+로드맵 6번 3단계: **진루 처리** — `BaseRunningCalculator` 구현 완료 (`feature/Simulation_BattingProbabilitySystemModel` 브랜치)
+
 ## 🔧 진행 중
 
-로드맵 6번 3단계: `feature/Simulation_BattingProbabilitySystemModel` 브랜치 — `BaseRunningCalculator.Apply()` 구현 중
+없음
 
 ## ⏭️ 다음 할 일
 
-`BaseRunningCalculator.Apply()` 나머지 케이스 — `Error` / `SacrificeFly` / `DoublePlay` / `StrikeOut` / `GroundOut` / `FlyOut`
+로드맵 6번 4단계: `simulation-pitcher` 브랜치 — 투수 체력·교체 (기획서 8.4)

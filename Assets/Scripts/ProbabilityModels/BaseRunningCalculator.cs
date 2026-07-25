@@ -7,7 +7,7 @@ using UnityEngine;
 public class BaseRunningCalculator
 {
     //∫£¿ÃΩ∫, µÊ¡°, æ∆øÙ ∞ªΩ≈
-    public void Apply(BatterOutcome outcome, int batterInstanceId, HitterSnapshot hitterSnap, GameState state, SimulationContext context)
+    public void Apply(BatterOutcome outcome, int batterInstanceId, GameState state, SimulationContext context)
     {
         switch(outcome)
         {
@@ -79,9 +79,15 @@ public class BaseRunningCalculator
                     }
                     if (state.FirstBase != -1)
                     {
-                        HitterSnapshot runner = FindRunnerSnapshot(state.FirstBase, context, state.IsTopInning);
+                        HitterSnapshot runner = FindRunnerSnapshot(state.FirstBase, context,
+                    state.IsTopInning);
                         if (TryAdvance(runner))
-                            state.SetThirdBase(runner.InstanceId);
+                        {
+                            if (state.ThirdBase == -1)
+                                state.SetThirdBase(runner.InstanceId);
+                            else
+                                state.SetSecondBase(runner.InstanceId);
+                        }
                         else
                             state.SetSecondBase(runner.InstanceId);
                     }
@@ -89,6 +95,65 @@ public class BaseRunningCalculator
                 }
                 break;
             case BatterOutcome.Walk:
+                {
+                    if (state.FirstBase != -1)
+                    {
+                        if (state.SecondBase != -1)
+                        {
+                            if (state.ThirdBase != -1)
+                            {
+                                Score(state);
+                            }
+                            state.SetThirdBase(state.SecondBase);
+                            state.SetSecondBase(state.FirstBase);
+                            state.SetFirstBase(batterInstanceId);
+                        }
+                        else
+                        {
+                            state.SetSecondBase(state.FirstBase);
+                            state.SetFirstBase(batterInstanceId);
+                        }
+                    }
+                    else
+                    {
+                        state.SetFirstBase(batterInstanceId);
+                    }
+                }
+                break;
+            case BatterOutcome.StrikeOut:
+                {
+                    state.AddOut();
+                }
+                break;
+            case BatterOutcome.GroundOut:
+                {
+                    state.AddOut();
+                }
+                break;
+            case BatterOutcome.FlyOut:
+                {
+                    state.AddOut();
+                }
+                break;
+            case BatterOutcome.SacrificeFly:
+                {
+                    state.AddOut();
+                    HitterSnapshot runner = FindRunnerSnapshot(state.ThirdBase, context, state.IsTopInning);
+                    if (TryAdvance(runner))
+                    {
+                        state.SetThirdBase(-1);
+                        Score(state);
+                    }
+                }
+                break;
+            case BatterOutcome.DoublePlay:
+                 {
+                    state.SetFirstBase(-1);
+                    state.AddOut();
+                    state.AddOut();
+                }
+                break;
+            case BatterOutcome.Error:
                 {
                     if (state.FirstBase != -1)
                     {
