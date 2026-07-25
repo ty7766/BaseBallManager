@@ -118,4 +118,22 @@ public class GameState
             AwayPitcherState = new PitcherState(context.AwayPitchers[newSlotIndex], newSlotIndex);
         }
     }
+
+    //1风 林磊 技泼
+    public void SetFirstBase(int instanceId)
+    {
+        FirstBase = instanceId;
+    }
+
+    //2风 林磊 技泼
+    public void SetSecondBase(int instanceId)
+    {
+        SecondBase = instanceId;
+    }
+
+    //3风 林磊 技泼
+    public void SetThirdBase(int instanceId)
+    {
+        ThirdBase = instanceId;
+    }
 }

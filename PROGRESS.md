@@ -345,11 +345,102 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 - `GameState.AddRun()` — 9회 이상 말이닝 득점 후 홈팀 리드 시 즉시 끝내기(`IsGameOver = true`)
 - 베이스 주자는 `bool` 대신 `int instanceId`(-1=없음) — 진루 처리 시 주자 스탯 조회가 필요하므로
 
+---
+
+### 세션 17 (2026-07-19) — 타석 확률 모델 구현
+
+**브랜치**: `feature/Simulation_BattingProbabilitySystemModel`
+
+**완성된 파일 목록**
+- `Assets/Scripts/ProbabilityModels/BatterOutcomeCalculator.cs` — 타석 결과 확률 산출 클래스
+
+**완성된 메서드 목록**
+- `Calculate(state, hitter, pitcher, avgDefense)` — 삼진→볼넷→홈런→실책→안타/아웃 순 단계별 탈락 판정, 최종 BatterOutcome 반환
+- `CalcStrikeOutProb()` — 투수 구위/구속 vs 타자 정확, 범위 5~40%
+- `CalcWalkProb()` — 타자 정확 vs 투수 제구, 범위 2~20%
+- `CalcHomeRunProb()` — 타자 파워 vs 투수 구위/구속, 범위 0.5~30%
+- `CalcHitProb()` — 타자 정확 vs 투수 구위 (BABIP), 범위 15~45%
+- `CalcErrorProb(avgDefense)` — 수비팀 평균 수비 기반, 범위 0.3~3%
+- `Roll(probability)` — 0~1 난수로 확률 판정
+
+📝 주요 설계 결정:
+- `ProbabilityModels/` 폴더 신설 — 스탯→확률 변환 클래스 전용 (시뮬레이션 상태 클래스와 분리)
+- 안타 종류 분배: 파워/주루 기반 `longHitBonus` 보정으로 장타형/컨택형 타자 차별화. 난수 하나로 구간 분배 (3루타/2루타/단타)
+- 아웃 종류 분배: `canDoublePlay` 조건(1루 주자 + 2아웃 미만) 판단 후 누적 분기
+- 희생플라이: 뜬공 판정 시 `state.ThirdBase != -1 && state.OutCount < 2` 조건 체크
+- 고정 상수(0.22f 등)는 기획서 초안 수치 — 시뮬 루프 완성 후 KBO 평균 지표 기준 튜닝 예정
+
+### 세션 18 (2026-07-20) — 진루 처리 착수
+
+**완성된 파일 목록**
+- `Assets/Scripts/ProbabilityModels/BaseRunningCalculator.cs` — 뼈대 + 보조 메서드 구현
+
+**완성된 메서드**
+- `Score(state)` — `state.AddRun()` 위임
+- `TryAdvance(runner)` — 주루 스탯 기반 추가 진루 확률 판정 (`pRun = clamp(0.40 + 0.6 * (주루̂ - 0.5), 0.25, 0.90)`)
+
+**미완성**
+- `Apply()` — 타구 종류별 베이스/득점/아웃 갱신 로직 미구현
+
+---
+
+### 세션 19 (2026-07-23) — 진루 처리 Apply() 부분 구현
+
+**수정된 파일 목록**
+- `Assets/Scripts/Simulation/GameState.cs` — `SetFirstBase()` / `SetSecondBase()` / `SetThirdBase()` 추가
+- `Assets/Scripts/ProbabilityModels/BaseRunningCalculator.cs` — Apply() 시그니처 수정 + 부분 구현
+
+**Apply() 시그니처 수정**
+- `SimulationContext context` 매개변수 추가 — 주자 스냅샷 조회를 위해
+
+**완성된 헬퍼 메서드**
+- `FindRunnerSnapshot(instanceId, context, isTopInning)` — 공격팀 라인업에서 instanceId로 스냅샷 탐색, 미발견 시 `default` 반환
+
+**완성된 Apply() 케이스**
+- `HomeRun` — 전원 득점 + 베이스 전체 클리어
+- `Triple` — 전원 득점 + 타자 3루
+- `Double` — 3루/2루 주자 득점, 1루 주자 `TryAdvance`(득점 or 3루), 타자 2루
+- `Single` — 3루 주자 득점, 2루 주자 `TryAdvance`(득점 or 3루), 1루 주자 `TryAdvance`(3루 or 2루, 베이스 충돌 방지 포함), 타자 1루
+- `Walk` — 밀어내기만 (TryAdvance 없음), 만루 시 3루 주자 득점
+
+**미완성 케이스**
+- `Error` / `SacrificeFly` / `DoublePlay` / `StrikeOut` / `GroundOut` / `FlyOut`
+
+📝 주요 설계 결정:
+- 베이스 이동 순서: 기존 주자 역순(3루→2루→1루) 처리 후 타자 배치 — 덮어쓰기 오류 방지
+- `Walk`는 `state.SecondBase` / `state.FirstBase` 값을 그대로 이동 — `FindRunnerSnapshot` 불필요
+- 2루 주자 처리 후 `SetSecondBase(-1)` 클리어 필수 — 1루 주자 없을 때 잔류 버그 방지
+- 1루 주자 TryAdvance 성공 시 `state.ThirdBase == -1` 확인 후 분기 — 베이스 충돌 방지
+
+---
+
+### 세션 20 (2026-07-25) — 진루 처리 Apply() 완성
+
+**수정된 파일 목록**
+- `Assets/Scripts/ProbabilityModels/BaseRunningCalculator.cs` — Apply() 전체 케이스 완성
+
+**완성된 Apply() 케이스 추가**
+- `StrikeOut` / `GroundOut` / `FlyOut` — `state.AddOut()` 한 번 (주자 진루 없음)
+- `SacrificeFly` — `state.AddOut()` + `TryAdvance`로 태그업 판정, 성공 시만 득점 + 3루 클리어
+- `DoublePlay` — `SetFirstBase(-1)` + `state.AddOut()` 두 번 (1루 주자·타자 동시 아웃, 나머지 주자 정지)
+- `Error` — Walk와 동일한 강제 +1베이스 로직
+
+📝 의도적 미구현 항목 (향후 고도화 시 재검토):
+- FlyOut 시 1·2루 주자 태그업 시도 — SacrificeFly(3루 태그업)로 단순화
+- 태그업 중 아웃 — TryAdvance는 Safe/Stay만 반환, Out 없음
+- 에러 후 2베이스 이상 추가 진루 — 강제 +1베이스로 단순화
+- 삼중살 — 발생 빈도 극히 낮아 생략
+- 유기적 수비 시나리오(병살 중 에러 등) — 현 구조에서 표현 불가, 생략
+
 ## ✅ 완료
 
 로드맵 5번: **라인업 시스템** — LineUpManager 구현 완료
 
 로드맵 6번 1단계: **시뮬레이션 데이터 구조** — `feature/Simulation_Data-Structure` 브랜치 완료
+
+로드맵 6번 2단계: **타석 확률 모델** — `BatterOutcomeCalculator` 구현 완료
+
+로드맵 6번 3단계: **진루 처리** — `BaseRunningCalculator` 구현 완료 (`feature/Simulation_BattingProbabilitySystemModel` 브랜치)
 
 ## 🔧 진행 중
 
@@ -357,4 +448,4 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ## ⏭️ 다음 할 일
 
-로드맵 6번 2단계: `simulation-atbat` 브랜치 — 타석 판정 로직 (기획서 8.2 확률 모델)
+로드맵 6번 4단계: `simulation-pitcher` 브랜치 — 투수 체력·교체 (기획서 8.4)
