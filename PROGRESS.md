@@ -444,8 +444,21 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ## 🔧 진행 중
 
-없음
+로드맵 6번 4단계: `simulation-pitcher` 브랜치 — 투수 체력·교체 (기획서 8.4)
+
+**완성된 파일**
+- `Assets/Scripts/ProbabilityModels/PitchCountCalculator.cs` — 타석당 투구 수 계산
+
+**완성된 메서드 (PitchCountCalculator)**
+- `Calculate(outcome, hitter, pitcher)` — CalcBasePitches + CalcFouls 합산 반환
+- `CalcBasePitches(outcome)` — 삼진→3, 볼넷→4, 인플레이→가중 랜덤 {1:15%/2:25%/3:30%/4:20%/5:10%}
+- `CalcFouls(hitter, pitcher)` — foulChance 기반 while 루프, 상한 18개
+
+📝 주요 설계 결정:
+- 파울 상한: 기획서 12개 → **18개로 변경** (튜닝 결정)
 
 ## ⏭️ 다음 할 일
 
-로드맵 6번 4단계: `simulation-pitcher` 브랜치 — 투수 체력·교체 (기획서 8.4)
+`simulation-pitcher` 브랜치 계속:
+- `PitcherState.GetFatiguedSnapshot()` — 피로 패널티 적용 스냅샷 반환 (퀘스트 안내 완료, 구현 전)
+- `PitcherChangeEvaluator.cs` — 교체 판단 + 불펜 운영
