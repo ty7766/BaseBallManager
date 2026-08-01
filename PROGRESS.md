@@ -491,11 +491,34 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 - 리드 계산: 절댓값 대신 부호 있는 값 — 지고 있는 팀이 CP를 쓰는 오류 방지
 - CP 소진 후(슬롯 6)에서 추가 교체 필요 시 → `PitcherSlotIndex + 1 = 7` (범위 초과)는 게임 루프에서 방어 예정
 
+### 세션 24 (2026-08-01) — 경기 루프 통합 완성
+
+**브랜치**: `feature/simulation_game_loop`
+
+**완성된 파일**
+- `Assets/Scripts/Simulation/GameResult.cs` — 경기 결과 데이터 (점수 + 타석 로그)
+- `Assets/Scripts/Simulation/GameSimulator.cs` — 경기 시뮬 코어 (순수 C#)
+
+**완성된 메서드 (GameSimulator)**
+- `GameSimulator(pullThreshold)` — 4개 계산기(`BatterOutcomeCalculator` / `BaseRunningCalculator` / `PitchCountCalculator` / `PitcherChangeEvaluator`) 필드 초기화
+- `SimulateGame(context)` — `GameState` + 로그 리스트 초기화 → `while (!IsGameOver)` 루프 → `GameResult` 반환
+- `SimulateAtBat(gameState, context, logs)` — 타석 1회 처리 (① isTopInning 캡처 → ② 타자/투수 스냅샷 → ③ avgDefense → ④ outcome → ⑤ pitchCount + ConsumePitches → ⑥ scoreBefore 캡처 + Apply + AddInningRun → ⑦ AdvanceBatter + 로그 → ⑧ ShouldChange → SubstitutePitcher)
+- `CalcAverageDefense(lineup)` — 9명 Defense 합산 / 9 / 100f (0~1 정규화)
+
+📝 주요 설계 결정:
+- `GameSimulator`는 순수 C# 클래스 — MonoBehaviour 배제로 리그 일괄 시뮬 시 UI 없이 고속 반복 가능 (기획서 시뮬 코어 분리 원칙)
+- 계산기는 필드로 1회 생성 후 재사용 — 매 타석 GC 압박 회피
+- `isTopInning` / `scoreBefore`를 `Apply()` 전에 캡처 — `Apply()` 내부 `AddOut()`이 3아웃 시 `IsTopInning` 반전 + 이닝 스탯 리셋을 수행하므로 이후 참조 시 엉뚱한 팀의 상태를 읽는 버그 방지
+- `BaseRunningCalculator.Apply()` 시그니처에 `batterInstanceId` 추가 인자 필요 → `hitter.InstanceId` 전달
+- `AdvanceBatter()`를 `Apply()` 앞으로 배치 — `Apply()` 후엔 3아웃 시 `IsTopInning`이 반전되어 엉뚱한 팀 타순이 전진하는 버그 방지 (`Apply()`는 배팅 인덱스 미참조하므로 순서 변경 안전)
+
 ## ✅ 완료
 
 로드맵 6번 4단계: **투수 체력·자동 교체** — `feature/Simulation_PitchingProbabilitySystemModel` 브랜치 완료 (기획서 8.4)
 
+로드맵 6번 5단계: **경기 루프 통합** — `feature/simulation_game_loop` 브랜치 완료 (기획서 8.1). 로드맵 6번(경기 시뮬레이션 엔진) 전체 완료
+
 ## ⏭️ 다음 할 일
 
-`feature/simulation-game-loop` 브랜치 신규:
-- 경기 루프 통합 (기획서 8.1) — BatterOutcomeCalculator + BaseRunningCalculator + PitchCountCalculator + PitcherChangeEvaluator를 묶는 `GameSimulator` 구현
+로드맵 7번: **경기 중 인터럽트/수동 교체** (기획서 8.6) — 일시정지 인터럽트, 대타 교체, 수동 투수 교체
+- 또는: 전체 시뮬 동작 검증용 테스트 스크립트 (Unity 플레이 모드 실행)
