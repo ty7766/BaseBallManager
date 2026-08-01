@@ -442,13 +442,31 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 로드맵 6번 3단계: **진루 처리** — `BaseRunningCalculator` 구현 완료 (`feature/Simulation_BattingProbabilitySystemModel` 브랜치)
 
-### 세션 21 (2026-07-29) — 투수 피로 패널티 + 교체 판단 부분 구현
+### 세션 21 (2026-07-25) — 투구 수 산출 구현
+
+**브랜치**: `feature/Simulation_PitchingProbabilitySystemModel`
 
 **완성된 파일**
-- `Assets/Scripts/Simulation/PitcherState.cs` — `GetFatiguedSnapshot()` 추가
-- `Assets/Scripts/ProbabilityModels/PitcherChangeEvaluator.cs` — `ShouldChange()` 구현 (뼈대 + 생성자)
+- `Assets/Scripts/ProbabilityModels/PitchCountCalculator.cs` — 타석당 투구 수 산출
+
+**완성된 메서드 (PitchCountCalculator)**
+- `Calculate(outcome, hitter, pitcher)` — 기본 투구 수 + 파울 수 합산 반환
+- `CalcBasePitches(outcome)` — 결과별 기본 투구 수 (삼진 3구/볼넷 4구/인플레이 가중 랜덤 1~5구)
+- `CalcFouls(hitter, pitcher)` — 파울 발생 확률(`foulChance = clamp(0.28 + 0.40 * (정확̂ - 구위̂), 0.10, 0.55)`) 기반 반복 판정, 상한 18구
+
+📝 주요 설계 결정:
+- `PitchCountCalculator`는 순수 C# 클래스 — 타석 결과·스냅샷만 받아 투구 수 계산 (시뮬 상태에 무의존)
+
+---
+
+### 세션 22 (2026-07-29) — 투수 피로 패널티 + 교체 판단 부분 구현
+
+**완성된 파일**
+- `Assets/Scripts/Simulation/PitcherState.cs` — `ConsumePitches()` / `GetFatiguedSnapshot()` 추가
+- `Assets/Scripts/ProbabilityModels/PitcherChangeEvaluator.cs` — 생성자 + `ShouldChange()` 구현
 
 **완성된 메서드 (PitcherState)**
+- `ConsumePitches(pitchCount)` — 투구 수 누적 + `Math.Max(0, ...)` 로 체력 차감 (음수 방지)
 - `GetFatiguedSnapshot()` — staminaRatio 기반 피로 계수(fatigue) 계산 후 Velo/Stuff/Control에 적용한 새 PitcherSnapshot 반환. 체력 50% 초과 시 패널티 없음, 이하 시 Mathf.Lerp(1.0, 0.80, t)
 
 **완성된 메서드 (PitcherChangeEvaluator)**
@@ -458,11 +476,26 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 - `PitcherChangeEvaluator`는 순수 C# 클래스 유지 — 생성자로 `_pullThreshold` 주입 (기본값 3)
 - Inspector 튜닝은 나중에 만들 GameSimulator(MonoBehaviour)에서 `[SerializeField]`로 노출 후 생성자에 전달
 
-## 🔧 진행 중
+---
 
-로드맵 6번 4단계: `feature/Simulation_PitchingProbabilitySystemModel` 브랜치 — 투수 체력·교체 (기획서 8.4)
+### 세션 23 (2026-08-01) — 불펜 운영 로직 완성
+
+**완성된 파일**
+- `Assets/Scripts/ProbabilityModels/PitcherChangeEvaluator.cs` — `GetNextPitcherSlot()` 추가
+
+**완성된 메서드 (PitcherChangeEvaluator)**
+- `GetNextPitcherSlot(currentState, gameState)` — 세이브 상황(9회 이상 + 투구팀 1~3점 리드) 시 6(CP) 반환, 그 외 `PitcherSlotIndex + 1`(다음 RP) 반환
+
+📝 주요 설계 결정:
+- 투구팀 판별: `IsTopInning`으로 추론 (앞이닝=홈 투구, 뒷이닝=원정 투구)
+- 리드 계산: 절댓값 대신 부호 있는 값 — 지고 있는 팀이 CP를 쓰는 오류 방지
+- CP 소진 후(슬롯 6)에서 추가 교체 필요 시 → `PitcherSlotIndex + 1 = 7` (범위 초과)는 게임 루프에서 방어 예정
+
+## ✅ 완료
+
+로드맵 6번 4단계: **투수 체력·자동 교체** — `feature/Simulation_PitchingProbabilitySystemModel` 브랜치 완료 (기획서 8.4)
 
 ## ⏭️ 다음 할 일
 
-`feature/Simulation_PitchingProbabilitySystemModel` 브랜치 계속:
-- `PitcherChangeEvaluator.GetNextPitcherSlot()` — 불펜 운영 로직 (순차 RP 투입 + 세이브 상황 CP 투입)
+`feature/simulation-game-loop` 브랜치 신규:
+- 경기 루프 통합 (기획서 8.1) — BatterOutcomeCalculator + BaseRunningCalculator + PitchCountCalculator + PitcherChangeEvaluator를 묶는 `GameSimulator` 구현
