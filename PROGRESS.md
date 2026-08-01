@@ -442,23 +442,27 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 로드맵 6번 3단계: **진루 처리** — `BaseRunningCalculator` 구현 완료 (`feature/Simulation_BattingProbabilitySystemModel` 브랜치)
 
-## 🔧 진행 중
-
-로드맵 6번 4단계: `simulation-pitcher` 브랜치 — 투수 체력·교체 (기획서 8.4)
+### 세션 21 (2026-07-29) — 투수 피로 패널티 + 교체 판단 부분 구현
 
 **완성된 파일**
-- `Assets/Scripts/ProbabilityModels/PitchCountCalculator.cs` — 타석당 투구 수 계산
+- `Assets/Scripts/Simulation/PitcherState.cs` — `GetFatiguedSnapshot()` 추가
+- `Assets/Scripts/ProbabilityModels/PitcherChangeEvaluator.cs` — `ShouldChange()` 구현 (뼈대 + 생성자)
 
-**완성된 메서드 (PitchCountCalculator)**
-- `Calculate(outcome, hitter, pitcher)` — CalcBasePitches + CalcFouls 합산 반환
-- `CalcBasePitches(outcome)` — 삼진→3, 볼넷→4, 인플레이→가중 랜덤 {1:15%/2:25%/3:30%/4:20%/5:10%}
-- `CalcFouls(hitter, pitcher)` — foulChance 기반 while 루프, 상한 18개
+**완성된 메서드 (PitcherState)**
+- `GetFatiguedSnapshot()` — staminaRatio 기반 피로 계수(fatigue) 계산 후 Velo/Stuff/Control에 적용한 새 PitcherSnapshot 반환. 체력 50% 초과 시 패널티 없음, 이하 시 Mathf.Lerp(1.0, 0.80, t)
+
+**완성된 메서드 (PitcherChangeEvaluator)**
+- `ShouldChange(pitcherState, gameState)` — 체력(+1/+2) + 이닝 실점 + 득점권 위기(+1) 점수 합산, forcePull 또는 _pullThreshold 이상 시 true 반환
 
 📝 주요 설계 결정:
-- 파울 상한: 기획서 12개 → **18개로 변경** (튜닝 결정)
+- `PitcherChangeEvaluator`는 순수 C# 클래스 유지 — 생성자로 `_pullThreshold` 주입 (기본값 3)
+- Inspector 튜닝은 나중에 만들 GameSimulator(MonoBehaviour)에서 `[SerializeField]`로 노출 후 생성자에 전달
+
+## 🔧 진행 중
+
+로드맵 6번 4단계: `feature/Simulation_PitchingProbabilitySystemModel` 브랜치 — 투수 체력·교체 (기획서 8.4)
 
 ## ⏭️ 다음 할 일
 
-`simulation-pitcher` 브랜치 계속:
-- `PitcherState.GetFatiguedSnapshot()` — 피로 패널티 적용 스냅샷 반환 (퀘스트 안내 완료, 구현 전)
-- `PitcherChangeEvaluator.cs` — 교체 판단 + 불펜 운영
+`feature/Simulation_PitchingProbabilitySystemModel` 브랜치 계속:
+- `PitcherChangeEvaluator.GetNextPitcherSlot()` — 불펜 운영 로직 (순차 RP 투입 + 세이브 상황 CP 투입)
