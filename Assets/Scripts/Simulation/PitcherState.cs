@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 /// <summary>
 /// 시뮬레이션 내 등판 중인 투수의 상태 추적
@@ -51,5 +52,31 @@ public class PitcherState
     public void ResetInningStats()
     {
         CurrentInningRuns = 0;
+    }
+    
+    //투구 수로 인한 투수 체력 갱신
+    public PitcherSnapshot GetFatiguedSnapshot()
+    {
+        //1. 현재 체력 비율
+        float staminaRatio = GetFatigueRatio();
+        float fatigue;
+
+        //2. 비율에 따라 피로 계수 계산
+        if (staminaRatio > 0.5f)
+        {
+            fatigue = 1.0f;
+        }
+        else
+        {
+            float t = (0.5f - staminaRatio) * 2.0f;
+            fatigue = Mathf.Lerp(1.0f, 0.80f, t);
+        }
+
+        //3. 체력 소진으로 인한 스탯 업데이트
+        int fatiguedVelo = (int) (Snapshot.Velo * fatigue);
+        int fatiguedStuff = (int) (Snapshot.Stuff * fatigue);
+        int fatiguedControl = (int) (Snapshot.Control * fatigue);
+
+        return new PitcherSnapshot(Snapshot.InstanceId, Snapshot.Name, fatiguedVelo, fatiguedStuff, fatiguedControl, Snapshot.Stamina);
     }
 }
