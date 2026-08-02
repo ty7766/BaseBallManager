@@ -518,7 +518,57 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 로드맵 6번 5단계: **경기 루프 통합** — `feature/simulation_game_loop` 브랜치 완료 (기획서 8.1). 로드맵 6번(경기 시뮬레이션 엔진) 전체 완료
 
+### 세션 25 (2026-08-02) — 시뮬 엔진 코드 리뷰 반영
+
+**변경 파일**
+- `Assets/Scripts/Simulation/GameSimulator.cs`
+- `Assets/Scripts/ProbabilityModels/PitcherChangeEvaluator.cs`
+
+**수정 내용**
+- GameSimulator: 미사용 `using Unity.VisualScripting;` 제거
+- `PitcherChangeEvaluator.ShouldChange` 시그니처에 `int effectiveInningRuns` 매개변수 추가
+  - 기존 `pitcherState.CurrentInningRuns` 직접 참조 제거 → 호출부에서 명시적으로 넘김
+  - 향후 "득점+3아웃 동시" outcome 추가 시 발생할 이닝 실점 카운터 붕괴 방어
+- `GameSimulator.SimulateAtBat`
+  - `inningRunsBefore` Apply 전 캡처, `inningEnded` 판정 추가
+  - 이닝 종료된 at-bat에서는 `AddInningRun` 스킵 (다음 이닝 실점 유출 방지)
+  - `effectiveInningRuns = inningRunsBefore + runsScored` 계산 후 ShouldChange에 전달
+- `PitcherChangeEvaluator.GetNextPitcherSlot`
+  - 슬롯 인덱스 상한(6=CP) 초과 시 -1 반환 (센티넬 규약)
+  - `GameSimulator.SimulateAtBat`에서 `if (nextSlot != -1)` 가드 추가
+  - 극단 시나리오(연장 11회 + CP 방전)에서 IndexOutOfRangeException 방지
+
+📝 주요 설계 결정:
+- ShouldChange에 pitcher.CurrentInningRuns를 직접 읽지 않고 매개변수로 받는 이유: 순서 의존성 제거, mutable 상태와 결정 로직 분리
+- -1 센티넬 채택 이유: bool+out은 호출부 지저분, throw는 정상 흐름 예외 처리라 부적절. GameState 베이스 주자 -1 규약과 일관성
+- CP 소진 후 폴백 = 지친 CP 계속 등판: 실제 야구의 "야수 마운드 등판"은 우리 규칙에 없어 가장 덜 왜곡된 근사
+
+---
+
 ## ⏭️ 다음 할 일
 
-로드맵 7번: **경기 중 인터럽트/수동 교체** (기획서 8.6) — 일시정지 인터럽트, 대타 교체, 수동 투수 교체
-- 또는: 전체 시뮬 동작 검증용 테스트 스크립트 (Unity 플레이 모드 실행)
+**로드맵 7번: 경기 중 인터럽트/수동 교체** (기획서 8.6)
+
+**확정 스펙 (2026-08-02)**
+- 모드 통합: 토글 없음. 버튼 안 누르면 자동, 누르면 수동 개입
+- UI 버튼: [투수 교체] / [대타 교체] 상시 노출
+- 정지 타이밍: 버튼 = 예약 → 다음 타석 종결 시 실제 정지
+- 정지 시 수비 중 → 투수 1명 교체 후 재개
+- 정지 시 공격 중 → 원하는 만큼 대타 교체 후 [계속] 눌러 재개
+- 대타 포지션 규칙: 동일 포지션만 교체 가능. DH 슬롯만 아무 야수 가능
+- 타순 유지: 교체 야수는 원래 타순 이어받음. 시뮬 중 타순 재배치 불가
+- 재투입 금지: 등판/타석에 한 번 나간 뒤 빠진 카드는 그 경기 재투입 불가
+- 자동 교체 정합성: 자동 로직도 사용 완료 카드 스킵
+
+**제외 항목** (규칙 복잡성 회피)
+- DH 권한 포기 후 투수의 타순 삽입
+- 포지션 스왑 (LF↔SS 등)
+- 시뮬 중 타순 재배치
+- 대주자 교체 (기획서상 추후)
+
+**브랜치 분할 계획** (`feature/manual-substitution`)
+- 7-1: `SimulationContext` 라인업 컨테이너 승격 (배열 → 가변 슬롯 구조, 벤치·대기 투수 포함)
+- 7-2: `GameState`에 사용 완료 카드 트래킹 (`UsedHitterInstanceIds`, `UsedPitcherSlotIndices` HashSet)
+- 7-3: `PitcherChangeEvaluator.GetNextPitcherSlot`이 사용 완료 슬롯 스킵
+- 7-4: `GameSimulator`에 인터럽트 콜백 훅 (델리게이트/인터페이스 주입, 순수성 유지)
+- 7-5: `LiveGameController`(MonoBehaviour) 뼈대 — 일시정지 예약, 정지 이벤트, 교체 API 위임 (UI는 로드맵 9번)

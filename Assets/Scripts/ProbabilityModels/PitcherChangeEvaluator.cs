@@ -11,7 +11,7 @@ public class PitcherChangeEvaluator
     }
 
     //교체 여부 판단
-    public bool ShouldChange(PitcherState pitcherState, GameState gameState)
+    public bool ShouldChange(PitcherState pitcherState, GameState gameState, int effectiveInningRuns)
     {
         bool forcePull = false;
         int pullScore = 0;
@@ -27,7 +27,7 @@ public class PitcherChangeEvaluator
             
 
         //위기 상황 계산
-        pullScore += pitcherState.CurrentInningRuns;
+        pullScore += effectiveInningRuns;
         int runnerCount = 0;
         if (gameState.FirstBase != -1)
             runnerCount++;
@@ -68,10 +68,9 @@ public class PitcherChangeEvaluator
         {
             return 6;
         }
+
         //중계 투수 등판
-        else
-        {
-            return currentState.PitcherSlotIndex + 1;
-        }
+        int nextSlot = currentState.PitcherSlotIndex + 1;
+        return nextSlot <= 6 ? nextSlot : -1;
     }
 }
