@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+
 /// <summary>
 /// 매 타석 종료 후 투수 교체 판단
 /// </summary>
@@ -50,9 +52,10 @@ public class PitcherChangeEvaluator
     {
 
         int scoreDiff = 0;
+        bool isHomePitching = !gameState.IsTopInning;
 
         //현재 투구팀이 홈인지 원정인지 판별후 현재 점수차 계산
-        if (gameState.IsTopInning)
+        if (isHomePitching)
         {
             scoreDiff = gameState.HomeScore - gameState.AwayScore;
         }
@@ -64,13 +67,18 @@ public class PitcherChangeEvaluator
         bool isSaveSituation = gameState.Inning >= 9 && scoreDiff >= 1 && scoreDiff <= 3;
 
         //세이브 상황이면 마무리 등판
-        if (isSaveSituation && currentState.PitcherSlotIndex != 6)
+        if (isSaveSituation && currentState.PitcherSlotIndex != 6 && !gameState.IsPitcherUsed(isHomePitching, 6))
         {
             return 6;
         }
 
         //중계 투수 등판
-        int nextSlot = currentState.PitcherSlotIndex + 1;
-        return nextSlot <= 6 ? nextSlot : -1;
+        for (int nextSlot = currentState.PitcherSlotIndex + 1; nextSlot <= 6; nextSlot++)
+        {
+            //아직 등판 안한 투수 탐색하여 교체
+            if (!gameState.IsPitcherUsed(isHomePitching, nextSlot))
+                return nextSlot;
+        }
+        return -1;
     }
 }
