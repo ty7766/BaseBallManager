@@ -9,13 +9,18 @@ public class GameSimulator
     private readonly PitchCountCalculator _pitchCountCalc;
     private readonly PitcherChangeEvaluator _pitcherChangeEval;
 
+    private readonly IGameInterruptHandler _interruptHandler;
+
+
     //알고리즘 계산기 초기화
-    public GameSimulator(int pullThreshold = 3)
+    public GameSimulator(int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
     {
         _batterOutcomeCalc = new BatterOutcomeCalculator();
         _baseRunningCalc = new BaseRunningCalculator();
         _pitchCountCalc = new PitchCountCalculator();
         _pitcherChangeEval = new PitcherChangeEvaluator(pullThreshold);
+
+        _interruptHandler = interruptHandler;
     }
     
     //경기 루프 실행 후 GameResult 반환
@@ -81,6 +86,13 @@ public class GameSimulator
             if (nextSlot != -1)
                 gameState.SubstitutePitcher(context, isHome: isTopInning, nextSlot);
         }
+
+        //교체 인터럽트 호출
+        if (_interruptHandler != null)
+        {
+            InterruptDecision decision = _interruptHandler.OnAtBatEnded(gameState, context);
+            ApplyInterruptDecision(decision, gameState, context);
+        }
     }
 
     //수비팀 라인업 수비 스탯 평균 및 정규화
@@ -94,5 +106,31 @@ public class GameSimulator
         }
 
         return sumDefense / 9f / 100f;
+    }
+
+    //인터럽트 적용
+    private void ApplyInterruptDecision(InterruptDecision decision, GameState state, SimulationContext context)
+    {
+        bool isHomeDefending = state.IsTopInning;
+        bool ishomeAttacking = !state.IsTopInning;
+
+        //1. 대타 교체 처리
+        HitterSnapshot[] attackLineup = ishomeAttacking ? context.HomeLineup : context.AwayLineup;
+        HitterSnapshot[] attackBench = ishomeAttacking ? context.HomeBench : context.AwayBench;
+
+        foreach (var sub in decision.HitterSubstitutions)
+        {
+            int originHitterInstanceId = attackLineup[sub.BattingOrderIndex].InstanceId;
+            state.MarkHitterUsed(ishomeAttacking, originHitterInstanceId);
+            attackLineup[sub.BattingOrderIndex] = attackBench[sub.BenchIndex];
+        }
+
+        //2. 투수 교체 처리
+        if (decision.PitcherSubstitutionSlot != -1)
+        {
+            int originPitcherSlotIndex = isHomeDefending ? state.HomePitcherState.PitcherSlotIndex : state.AwayPitcherState.PitcherSlotIndex;
+            state.MarkPitcherUsed(isHomeDefending, originPitcherSlotIndex);
+            state.SubstitutePitcher(context, isHomeDefending, decision.PitcherSubstitutionSlot);
+        }
     }
 }

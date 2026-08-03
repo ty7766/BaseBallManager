@@ -545,30 +545,64 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 26 (2026-08-03) — 인터럽트/수동 교체 시뮬 코어 완성
+
+**브랜치**: `feature/Simulation_Interrupt`
+
+**완성된 파일 목록**
+- `Assets/Scripts/Simulation/SimulationContext.cs` — `HomeBench` / `AwayBench` 필드 추가
+- `Assets/Scripts/Simulation/GameState.cs` — 사용 완료 카드 트래킹 (HashSet 4개 + Mark/Is 메서드 4개)
+- `Assets/Scripts/ProbabilityModels/PitcherChangeEvaluator.cs` — `GetNextPitcherSlot` 사용 완료 슬롯 스킵
+- `Assets/Scripts/Simulation/HitterSubstitution.cs` — 대타 교체 1건 (struct)
+- `Assets/Scripts/Simulation/InterruptDecision.cs` — 교체 지시서 (투수 슬롯 + 대타 목록)
+- `Assets/Scripts/Simulation/IGameInterruptHandler.cs` — 인터럽트 핸들러 계약서
+- `Assets/Scripts/Simulation/GameSimulator.cs` — `_interruptHandler` 필드 + 훅 호출 + `ApplyInterruptDecision` 구현
+
+**7-1: SimulationContext 벤치 확장**
+- `HomeBench` / `AwayBench` 배열 추가 (0~5명, 선택)
+- null·Length 검증 제거 — 내부 코드가 만드는 데이터라 방어 시나리오 없음
+- AI팀 벤치는 항상 빈 배열 넘김 (기획서 7.8 미러전 = AI 벤치 없음)
+
+**7-2: GameState 사용 완료 트래킹**
+- 홈/원정 × 야수/투수로 4개 HashSet 분리 (투수 슬롯 인덱스 겹침 오염 방지)
+- 야수 InstanceId / 투수 슬롯 인덱스 기반
+- Tell, Don't Ask — HashSet 노출 없이 `MarkHitterUsed` / `MarkPitcherUsed` / `IsHitterUsed` / `IsPitcherUsed` 4개 메서드로 캡슐화
+- 스타팅 선수 초기 등록 안 함 — "사용 완료" 정의는 "빠져서 재투입 불가"이지 "출전 중"이 아님
+
+**7-3: GetNextPitcherSlot 사용 완료 슬롯 스킵**
+- `isHomePitching = !gameState.IsTopInning`으로 홈/원정 판별
+- 세이브 상황 CP 반환 조건에 `!IsPitcherUsed(...)` 추가
+- 폴백 순회는 for 루프로 첫 미사용 슬롯 반환, 실패 시 `-1` (세션 25 센티넬 규약)
+
+**7-4: GameSimulator 인터럽트 훅**
+- 데이터 구조: `HitterSubstitution` (struct, GC 부담 없음) + `InterruptDecision` (class, `IReadOnlyList` 노출)
+- 인터페이스: `IGameInterruptHandler.OnAtBatEnded(state, context) → InterruptDecision`
+- `GameSimulator` 생성자에 `interruptHandler = null` 매개변수 추가 — 자동 모드 하위 호환
+- 훅 호출 순서: 자동 투수 교체 → 인터럽트 훅 (반대면 인터럽트 교체를 자동 로직이 뒤집을 수 있음)
+- `ApplyInterruptDecision`: 대타 교체 (여러 명) → 투수 교체 (-1이면 스킵)
+- 각 교체마다 순서: **Mark*Used 등록 → 실제 교체** (반대로 하면 원본 값 소실)
+
+📝 주요 설계 결정:
+- 인터페이스 vs 델리게이트 → **인터페이스 채택**. 신호 여러 종류 얽힐 여지, 확장성 우선
+- `null` 허용 인터럽트 핸들러 → 자동/수동 모드를 한 클래스로 커버, 리그 일괄 시뮬 시 오버헤드 0
+- 라인업 갱신 방식 → **방식 A (context 배열 직접 덮어쓰기)**. 원본 라인업 보존 요구 없음(경기 저장 안 함 - 7.6), 시뮬 로직 무수정
+- `SimulationContext` 이름은 "불변 컨텍스트" 인상이지만 실제로는 라인업 배열이 mutable — 향후 XML 주석 보강 필요
+- 대타 교체 시 벤치 배열에서 삭제 없음 — 벤치는 재참조 가능한 풀, 재투입 금지는 `_usedHitterInstanceIds`가 담당
+
+---
+
 ## ⏭️ 다음 할 일
 
-**로드맵 7번: 경기 중 인터럽트/수동 교체** (기획서 8.6)
+**로드맵 7번 마지막 남은 서브: 7-5** (`LiveGameController` MonoBehaviour 뼈대)
 
-**확정 스펙 (2026-08-02)**
-- 모드 통합: 토글 없음. 버튼 안 누르면 자동, 누르면 수동 개입
-- UI 버튼: [투수 교체] / [대타 교체] 상시 노출
-- 정지 타이밍: 버튼 = 예약 → 다음 타석 종결 시 실제 정지
-- 정지 시 수비 중 → 투수 1명 교체 후 재개
-- 정지 시 공격 중 → 원하는 만큼 대타 교체 후 [계속] 눌러 재개
-- 대타 포지션 규칙: 동일 포지션만 교체 가능. DH 슬롯만 아무 야수 가능
-- 타순 유지: 교체 야수는 원래 타순 이어받음. 시뮬 중 타순 재배치 불가
-- 재투입 금지: 등판/타석에 한 번 나간 뒤 빠진 카드는 그 경기 재투입 불가
-- 자동 교체 정합성: 자동 로직도 사용 완료 카드 스킵
+- `IGameInterruptHandler` 구현체 (`OnAtBatEnded` 몸통 채움)
+- 일시정지 예약 플래그 + [투수 교체]/[대타 교체] 버튼 이벤트 접점
+- 교체 API를 InterruptDecision으로 조립해 반환
+- UI 실제 붙이기는 로드맵 9번(경기 UI)과 함께 진행 예정 → 이번엔 뼈대만
+- **별도 브랜치 여부 결정 필요**: 현재 `feature/Simulation_Interrupt`에서 이어갈지, `feature/live-game-controller`로 분리할지
 
 **제외 항목** (규칙 복잡성 회피)
 - DH 권한 포기 후 투수의 타순 삽입
 - 포지션 스왑 (LF↔SS 등)
 - 시뮬 중 타순 재배치
 - 대주자 교체 (기획서상 추후)
-
-**브랜치 분할 계획** (`feature/manual-substitution`)
-- 7-1: `SimulationContext` 라인업 컨테이너 승격 (배열 → 가변 슬롯 구조, 벤치·대기 투수 포함)
-- 7-2: `GameState`에 사용 완료 카드 트래킹 (`UsedHitterInstanceIds`, `UsedPitcherSlotIndices` HashSet)
-- 7-3: `PitcherChangeEvaluator.GetNextPitcherSlot`이 사용 완료 슬롯 스킵
-- 7-4: `GameSimulator`에 인터럽트 콜백 훅 (델리게이트/인터페이스 주입, 순수성 유지)
-- 7-5: `LiveGameController`(MonoBehaviour) 뼈대 — 일시정지 예약, 정지 이벤트, 교체 API 위임 (UI는 로드맵 9번)
