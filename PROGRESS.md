@@ -591,17 +591,48 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 27 (2026-08-06) — LiveGameController 뼈대 완성
+
+**브랜치**: `feature/Simulation_Interrupt` (세션 26에 이어서 진행)
+
+**완성된 파일**
+- `Assets/Scripts/Simulation/LiveGameController.cs` — MonoBehaviour + `IGameInterruptHandler` 이중 상속
+
+**완성된 메서드 (LiveGameController)**
+- `ReserveHitterSubstitution(battingOrderIndex, benchIndex)` — 범위 검증(0~8/0~4) + 벤치 중복(`Any(sub => sub.BenchIndex == ...)`) + 타순 중복(`Any(sub => sub.BattingOrderIndex == ...)`) 검증 후 `_pendingHitterSubs`에 예약
+- `ReservePitcherSubstitution(pitcherSlot)` — 범위 검증(0~6) 후 `_pendingPitcherSlot` 덮어쓰기 (중복 검증 없음, 최신 지시 우선)
+- `OnAtBatEnded(state, context)` — 리스트 복사 → `InterruptDecision` 조립 → 버퍼 초기화(`Clear` + `-1`) → 반환
+
+📝 주요 설계 결정:
+- **null 대신 항상 InterruptDecision 반환** — 예약 없을 땐 `PitcherSubstitutionSlot=-1` + 빈 리스트. 시뮬 코어의 null 체크 부담 제거, 세션 26 -1 센티넬 규약과 일관
+- **리스트 복사 → 원본 클리어 순서** — `_pendingHitterSubs` 참조를 그대로 `InterruptDecision`에 넘긴 뒤 `Clear()`하면 반환 객체까지 비워지는 얕은 복사 버그. `new List<Hittersubstitution>(_pendingHitterSubs)` 로 방어
+- **투수 교체는 덮어쓰기 방식** — 대타는 여러 개(리스트)라 서로 충돌 가능 → 중복 검증. 투수는 한 타석당 1건이라 필드 하나로 충분, 사용자가 마음 바뀌면 최신 지시 존중
+- **UI 실제 연결은 로드맵 9번에서** — 이번엔 진입점(`Reserve*` public 메서드)만 노출. 버튼 OnClick은 UI 작업 때 연결
+
+**로드맵 7번(경기 중 인터럽트/수동 교체) 완료**
+- 시뮬 코어(세션 26) + 컨트롤러(세션 27) 조합으로 인터럽트 시스템 논리적 완결
+- UI 없이도 시뮬 흐름 정상 동작 (프로그래밍적으로 `Reserve*` 호출 가능)
+
+---
+
 ## ⏭️ 다음 할 일
 
-**로드맵 7번 마지막 남은 서브: 7-5** (`LiveGameController` MonoBehaviour 뼈대)
+**로드맵 8번: 리그 시스템** (기획서 7장)
 
-- `IGameInterruptHandler` 구현체 (`OnAtBatEnded` 몸통 채움)
-- 일시정지 예약 플래그 + [투수 교체]/[대타 교체] 버튼 이벤트 접점
-- 교체 API를 InterruptDecision으로 조립해 반환
-- UI 실제 붙이기는 로드맵 9번(경기 UI)과 함께 진행 예정 → 이번엔 뼈대만
-- **별도 브랜치 여부 결정 필요**: 현재 `feature/Simulation_Interrupt`에서 이어갈지, `feature/live-game-controller`로 분리할지
+주요 서브태스크:
+- 리그 티어 구조 / 해금 조건 (2위 이상)
+- 라운드 로빈 일정 생성 (프로 이상은 3연전)
+- 순위표 (KBO 승률·게임차, 타이브레이커 승률→득실차→상대전적)
+- 진행 방식 선택 (한 경기씩 / 일괄 시뮬)
+- AI 팀 미러전 (9팀 풀 로스터, 티어별 능력치 상승)
+- 포스트시즌 (144경기 리그 한정, 상위 5팀 KBO 사다리)
+- 시즌 저장/재도전 (리그 단위 저장, 개별 경기 미저장)
 
-**제외 항목** (규칙 복잡성 회피)
+**시작 전 결정 필요**
+- 새 브랜치명 (`feature/league-system` 등)
+- 서브태스크 분할 브랜치 전략 (한 브랜치에 몰기 vs 세부 분할)
+
+**제외 항목** (규칙 복잡성 회피 — 세션 26에서 확정)
 - DH 권한 포기 후 투수의 타순 삽입
 - 포지션 스왑 (LF↔SS 등)
 - 시뮬 중 타순 재배치
