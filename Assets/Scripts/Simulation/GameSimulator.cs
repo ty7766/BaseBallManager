@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using Unity.VisualScripting;
-
 /// <summary>
 /// 경기 전체 진행 상황을 시뮬레이션
 /// </summary>
@@ -11,15 +9,20 @@ public class GameSimulator
     private readonly PitchCountCalculator _pitchCountCalc;
     private readonly PitcherChangeEvaluator _pitcherChangeEval;
 
+    private readonly IGameInterruptHandler _interruptHandler;
+
+
     //알고리즘 계산기 초기화
-    public GameSimulator(int pullThreshold = 3)
+    public GameSimulator(int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
     {
         _batterOutcomeCalc = new BatterOutcomeCalculator();
         _baseRunningCalc = new BaseRunningCalculator();
         _pitchCountCalc = new PitchCountCalculator();
         _pitcherChangeEval = new PitcherChangeEvaluator(pullThreshold);
-    }
 
+        _interruptHandler = interruptHandler;
+    }
+    
     //경기 루프 실행 후 GameResult 반환
     public GameResult SimulateGame(SimulationContext context)
     {
@@ -58,21 +61,37 @@ public class GameSimulator
 
         //득점 반영 + 주자 출루 + 타순 변경
         int scoreBefore = isTopInning ? gameState.AwayScore : gameState.HomeScore;
+        int inningRunsBefore = defPitcherState.CurrentInningRuns;
+
         gameState.AdvanceBatter();
         _baseRunningCalc.Apply(outcome, hitter.InstanceId, gameState, context);
+        
         int runsScored = (isTopInning ? gameState.AwayScore : gameState.HomeScore) - scoreBefore;
+        bool inningEnded = (isTopInning != gameState.IsTopInning);
 
-        for (int i = 0; i < runsScored; i++)
-            defPitcherState.AddInningRun();
+        if (!inningEnded)
+        {
+            for (int i = 0; i < runsScored; i++)
+                defPitcherState.AddInningRun();
+        }
 
+        int effectiveInningRuns = inningRunsBefore + runsScored;
         //로그 출력
         logs.Add(new SimulationBatterLog(outcome, pitchCount, runsScored, hitter.Name));
 
         //투수 교체
-        if (_pitcherChangeEval.ShouldChange(defPitcherState, gameState))
+        if (_pitcherChangeEval.ShouldChange(defPitcherState, gameState, effectiveInningRuns))
         {
             int nextSlot = _pitcherChangeEval.GetNextPitcherSlot(defPitcherState, gameState);
-            gameState.SubstitutePitcher(context, isHome: isTopInning, nextSlot);
+            if (nextSlot != -1)
+                gameState.SubstitutePitcher(context, isHome: isTopInning, nextSlot);
+        }
+
+        //교체 인터럽트 호출
+        if (_interruptHandler != null)
+        {
+            InterruptDecision decision = _interruptHandler.OnAtBatEnded(gameState, context);
+            ApplyInterruptDecision(decision, gameState, context);
         }
     }
 
@@ -87,5 +106,31 @@ public class GameSimulator
         }
 
         return sumDefense / 9f / 100f;
+    }
+
+    //인터럽트 적용
+    private void ApplyInterruptDecision(InterruptDecision decision, GameState state, SimulationContext context)
+    {
+        bool isHomeDefending = state.IsTopInning;
+        bool ishomeAttacking = !state.IsTopInning;
+
+        //1. 대타 교체 처리
+        HitterSnapshot[] attackLineup = ishomeAttacking ? context.HomeLineup : context.AwayLineup;
+        HitterSnapshot[] attackBench = ishomeAttacking ? context.HomeBench : context.AwayBench;
+
+        foreach (var sub in decision.HitterSubstitutions)
+        {
+            int originHitterInstanceId = attackLineup[sub.BattingOrderIndex].InstanceId;
+            state.MarkHitterUsed(ishomeAttacking, originHitterInstanceId);
+            attackLineup[sub.BattingOrderIndex] = attackBench[sub.BenchIndex];
+        }
+
+        //2. 투수 교체 처리
+        if (decision.PitcherSubstitutionSlot != -1)
+        {
+            int originPitcherSlotIndex = isHomeDefending ? state.HomePitcherState.PitcherSlotIndex : state.AwayPitcherState.PitcherSlotIndex;
+            state.MarkPitcherUsed(isHomeDefending, originPitcherSlotIndex);
+            state.SubstitutePitcher(context, isHomeDefending, decision.PitcherSubstitutionSlot);
+        }
     }
 }

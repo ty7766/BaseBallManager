@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using UnityEngine;
+
 /// <summary>
 /// 이닝
 /// 아웃 카운트
@@ -31,6 +34,12 @@ public class GameState
 
     public bool IsGameOver { get; private set; }    //경기가 종료되었는지 여부
 
+    private HashSet<int> _homeUsedHitterInstanceIds;        //교체된 홈팀 타자 인스턴스 ID
+    private HashSet<int> _awayUsedHitterInstanceIds;        //교체된 원정팀 타자 인스턴스 ID
+    private HashSet<int> _homeUsedPitcherSlotIndices;       //교체된 홈팀 투수 슬롯 번호
+    private HashSet<int> _awayUsedPitcherSlotIndices;       //교체된 원정팀 투수 슬롯 번호
+
+
     public GameState(SimulationContext context)
     {
         Inning = 1;
@@ -46,6 +55,11 @@ public class GameState
         HomePitcherState = new PitcherState(context.HomePitchers[0], 0);
         AwayPitcherState = new PitcherState(context.AwayPitchers[0], 0);
         IsGameOver = false;
+
+        _homeUsedHitterInstanceIds = new HashSet<int>();
+        _awayUsedHitterInstanceIds = new HashSet<int>();
+        _homeUsedPitcherSlotIndices = new HashSet<int>();
+        _awayUsedPitcherSlotIndices = new HashSet<int>();
     }
     
     //아웃 카운트 증가 및 3아웃 이닝 종료 처리
@@ -135,5 +149,35 @@ public class GameState
     public void SetThirdBase(int instanceId)
     {
         ThirdBase = instanceId;
+    }
+
+    //교체로 빠진 야수 기록
+    public void MarkHitterUsed(bool isHome, int instanceId)
+    {
+        if (isHome)
+            _homeUsedHitterInstanceIds.Add(instanceId);
+        else
+            _awayUsedHitterInstanceIds.Add(instanceId);
+    }
+
+    //교체로 빠진 투수 기록
+    public void MarkPitcherUsed(bool isHome, int slotIndex)
+    {
+        if (isHome)
+            _homeUsedPitcherSlotIndices.Add(slotIndex);
+        else
+            _awayUsedPitcherSlotIndices.Add(slotIndex);
+    }
+
+    //해당 야수가 이미 빠진 상태인지 조회
+    public bool IsHitterUsed(bool isHome, int instanceId)
+    {
+        return isHome ? _homeUsedHitterInstanceIds.Contains(instanceId) : _awayUsedHitterInstanceIds.Contains(instanceId);
+    }
+
+    //해당 투수가 이미 빠진 상태인지 조회
+    public bool IsPitcherUsed(bool isHome, int slotIndex)
+    {
+        return isHome ? _homeUsedPitcherSlotIndices.Contains(slotIndex) : _awayUsedPitcherSlotIndices.Contains(slotIndex);
     }
 }

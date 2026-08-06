@@ -518,7 +518,122 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 로드맵 6번 5단계: **경기 루프 통합** — `feature/simulation_game_loop` 브랜치 완료 (기획서 8.1). 로드맵 6번(경기 시뮬레이션 엔진) 전체 완료
 
+### 세션 25 (2026-08-02) — 시뮬 엔진 코드 리뷰 반영
+
+**변경 파일**
+- `Assets/Scripts/Simulation/GameSimulator.cs`
+- `Assets/Scripts/ProbabilityModels/PitcherChangeEvaluator.cs`
+
+**수정 내용**
+- GameSimulator: 미사용 `using Unity.VisualScripting;` 제거
+- `PitcherChangeEvaluator.ShouldChange` 시그니처에 `int effectiveInningRuns` 매개변수 추가
+  - 기존 `pitcherState.CurrentInningRuns` 직접 참조 제거 → 호출부에서 명시적으로 넘김
+  - 향후 "득점+3아웃 동시" outcome 추가 시 발생할 이닝 실점 카운터 붕괴 방어
+- `GameSimulator.SimulateAtBat`
+  - `inningRunsBefore` Apply 전 캡처, `inningEnded` 판정 추가
+  - 이닝 종료된 at-bat에서는 `AddInningRun` 스킵 (다음 이닝 실점 유출 방지)
+  - `effectiveInningRuns = inningRunsBefore + runsScored` 계산 후 ShouldChange에 전달
+- `PitcherChangeEvaluator.GetNextPitcherSlot`
+  - 슬롯 인덱스 상한(6=CP) 초과 시 -1 반환 (센티넬 규약)
+  - `GameSimulator.SimulateAtBat`에서 `if (nextSlot != -1)` 가드 추가
+  - 극단 시나리오(연장 11회 + CP 방전)에서 IndexOutOfRangeException 방지
+
+📝 주요 설계 결정:
+- ShouldChange에 pitcher.CurrentInningRuns를 직접 읽지 않고 매개변수로 받는 이유: 순서 의존성 제거, mutable 상태와 결정 로직 분리
+- -1 센티넬 채택 이유: bool+out은 호출부 지저분, throw는 정상 흐름 예외 처리라 부적절. GameState 베이스 주자 -1 규약과 일관성
+- CP 소진 후 폴백 = 지친 CP 계속 등판: 실제 야구의 "야수 마운드 등판"은 우리 규칙에 없어 가장 덜 왜곡된 근사
+
+---
+
+### 세션 26 (2026-08-03) — 인터럽트/수동 교체 시뮬 코어 완성
+
+**브랜치**: `feature/Simulation_Interrupt`
+
+**완성된 파일 목록**
+- `Assets/Scripts/Simulation/SimulationContext.cs` — `HomeBench` / `AwayBench` 필드 추가
+- `Assets/Scripts/Simulation/GameState.cs` — 사용 완료 카드 트래킹 (HashSet 4개 + Mark/Is 메서드 4개)
+- `Assets/Scripts/ProbabilityModels/PitcherChangeEvaluator.cs` — `GetNextPitcherSlot` 사용 완료 슬롯 스킵
+- `Assets/Scripts/Simulation/HitterSubstitution.cs` — 대타 교체 1건 (struct)
+- `Assets/Scripts/Simulation/InterruptDecision.cs` — 교체 지시서 (투수 슬롯 + 대타 목록)
+- `Assets/Scripts/Simulation/IGameInterruptHandler.cs` — 인터럽트 핸들러 계약서
+- `Assets/Scripts/Simulation/GameSimulator.cs` — `_interruptHandler` 필드 + 훅 호출 + `ApplyInterruptDecision` 구현
+
+**7-1: SimulationContext 벤치 확장**
+- `HomeBench` / `AwayBench` 배열 추가 (0~5명, 선택)
+- null·Length 검증 제거 — 내부 코드가 만드는 데이터라 방어 시나리오 없음
+- AI팀 벤치는 항상 빈 배열 넘김 (기획서 7.8 미러전 = AI 벤치 없음)
+
+**7-2: GameState 사용 완료 트래킹**
+- 홈/원정 × 야수/투수로 4개 HashSet 분리 (투수 슬롯 인덱스 겹침 오염 방지)
+- 야수 InstanceId / 투수 슬롯 인덱스 기반
+- Tell, Don't Ask — HashSet 노출 없이 `MarkHitterUsed` / `MarkPitcherUsed` / `IsHitterUsed` / `IsPitcherUsed` 4개 메서드로 캡슐화
+- 스타팅 선수 초기 등록 안 함 — "사용 완료" 정의는 "빠져서 재투입 불가"이지 "출전 중"이 아님
+
+**7-3: GetNextPitcherSlot 사용 완료 슬롯 스킵**
+- `isHomePitching = !gameState.IsTopInning`으로 홈/원정 판별
+- 세이브 상황 CP 반환 조건에 `!IsPitcherUsed(...)` 추가
+- 폴백 순회는 for 루프로 첫 미사용 슬롯 반환, 실패 시 `-1` (세션 25 센티넬 규약)
+
+**7-4: GameSimulator 인터럽트 훅**
+- 데이터 구조: `HitterSubstitution` (struct, GC 부담 없음) + `InterruptDecision` (class, `IReadOnlyList` 노출)
+- 인터페이스: `IGameInterruptHandler.OnAtBatEnded(state, context) → InterruptDecision`
+- `GameSimulator` 생성자에 `interruptHandler = null` 매개변수 추가 — 자동 모드 하위 호환
+- 훅 호출 순서: 자동 투수 교체 → 인터럽트 훅 (반대면 인터럽트 교체를 자동 로직이 뒤집을 수 있음)
+- `ApplyInterruptDecision`: 대타 교체 (여러 명) → 투수 교체 (-1이면 스킵)
+- 각 교체마다 순서: **Mark*Used 등록 → 실제 교체** (반대로 하면 원본 값 소실)
+
+📝 주요 설계 결정:
+- 인터페이스 vs 델리게이트 → **인터페이스 채택**. 신호 여러 종류 얽힐 여지, 확장성 우선
+- `null` 허용 인터럽트 핸들러 → 자동/수동 모드를 한 클래스로 커버, 리그 일괄 시뮬 시 오버헤드 0
+- 라인업 갱신 방식 → **방식 A (context 배열 직접 덮어쓰기)**. 원본 라인업 보존 요구 없음(경기 저장 안 함 - 7.6), 시뮬 로직 무수정
+- `SimulationContext` 이름은 "불변 컨텍스트" 인상이지만 실제로는 라인업 배열이 mutable — 향후 XML 주석 보강 필요
+- 대타 교체 시 벤치 배열에서 삭제 없음 — 벤치는 재참조 가능한 풀, 재투입 금지는 `_usedHitterInstanceIds`가 담당
+
+---
+
+### 세션 27 (2026-08-06) — LiveGameController 뼈대 완성
+
+**브랜치**: `feature/Simulation_Interrupt` (세션 26에 이어서 진행)
+
+**완성된 파일**
+- `Assets/Scripts/Simulation/LiveGameController.cs` — MonoBehaviour + `IGameInterruptHandler` 이중 상속
+
+**완성된 메서드 (LiveGameController)**
+- `ReserveHitterSubstitution(battingOrderIndex, benchIndex)` — 범위 검증(0~8/0~4) + 벤치 중복(`Any(sub => sub.BenchIndex == ...)`) + 타순 중복(`Any(sub => sub.BattingOrderIndex == ...)`) 검증 후 `_pendingHitterSubs`에 예약
+- `ReservePitcherSubstitution(pitcherSlot)` — 범위 검증(0~6) 후 `_pendingPitcherSlot` 덮어쓰기 (중복 검증 없음, 최신 지시 우선)
+- `OnAtBatEnded(state, context)` — 리스트 복사 → `InterruptDecision` 조립 → 버퍼 초기화(`Clear` + `-1`) → 반환
+
+📝 주요 설계 결정:
+- **null 대신 항상 InterruptDecision 반환** — 예약 없을 땐 `PitcherSubstitutionSlot=-1` + 빈 리스트. 시뮬 코어의 null 체크 부담 제거, 세션 26 -1 센티넬 규약과 일관
+- **리스트 복사 → 원본 클리어 순서** — `_pendingHitterSubs` 참조를 그대로 `InterruptDecision`에 넘긴 뒤 `Clear()`하면 반환 객체까지 비워지는 얕은 복사 버그. `new List<Hittersubstitution>(_pendingHitterSubs)` 로 방어
+- **투수 교체는 덮어쓰기 방식** — 대타는 여러 개(리스트)라 서로 충돌 가능 → 중복 검증. 투수는 한 타석당 1건이라 필드 하나로 충분, 사용자가 마음 바뀌면 최신 지시 존중
+- **UI 실제 연결은 로드맵 9번에서** — 이번엔 진입점(`Reserve*` public 메서드)만 노출. 버튼 OnClick은 UI 작업 때 연결
+
+**로드맵 7번(경기 중 인터럽트/수동 교체) 완료**
+- 시뮬 코어(세션 26) + 컨트롤러(세션 27) 조합으로 인터럽트 시스템 논리적 완결
+- UI 없이도 시뮬 흐름 정상 동작 (프로그래밍적으로 `Reserve*` 호출 가능)
+
+---
+
 ## ⏭️ 다음 할 일
 
-로드맵 7번: **경기 중 인터럽트/수동 교체** (기획서 8.6) — 일시정지 인터럽트, 대타 교체, 수동 투수 교체
-- 또는: 전체 시뮬 동작 검증용 테스트 스크립트 (Unity 플레이 모드 실행)
+**로드맵 8번: 리그 시스템** (기획서 7장)
+
+주요 서브태스크:
+- 리그 티어 구조 / 해금 조건 (2위 이상)
+- 라운드 로빈 일정 생성 (프로 이상은 3연전)
+- 순위표 (KBO 승률·게임차, 타이브레이커 승률→득실차→상대전적)
+- 진행 방식 선택 (한 경기씩 / 일괄 시뮬)
+- AI 팀 미러전 (9팀 풀 로스터, 티어별 능력치 상승)
+- 포스트시즌 (144경기 리그 한정, 상위 5팀 KBO 사다리)
+- 시즌 저장/재도전 (리그 단위 저장, 개별 경기 미저장)
+
+**시작 전 결정 필요**
+- 새 브랜치명 (`feature/league-system` 등)
+- 서브태스크 분할 브랜치 전략 (한 브랜치에 몰기 vs 세부 분할)
+
+**제외 항목** (규칙 복잡성 회피 — 세션 26에서 확정)
+- DH 권한 포기 후 투수의 타순 삽입
+- 포지션 스왑 (LF↔SS 등)
+- 시뮬 중 타순 재배치
+- 대주자 교체 (기획서상 추후)
