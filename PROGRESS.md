@@ -656,6 +656,41 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 29 (2026-08-08) — 데이터 브릿지 완성 (8-0)
+
+**브랜치**: `feature/League-system`
+
+**완성된 파일**
+- `Assets/Scripts/Cards/CardStatsCalculator.cs` — 최종 스탯 계산 (static)
+- `Assets/Scripts/Builders/SimulationContextBuilder.cs` — 게임 데이터 → 시뮬 입력 변환 (static)
+
+**완성된 메서드 (CardStatsCalculator)**
+- `CalculateFinalStat(baseStat, enhanceLevel, trainDelta)` — 기획서 1.4 공식.
+  `baseStat + enhanceLevel * 2 + trainDelta`
+
+**완성된 메서드 (SimulationContextBuilder)**
+- `Build(isPlayerHome, rotationIndex)` — SimulationContext 조립
+- `BuildHitterSnapshot(instanceId)` / `BuildPitcherSnapshot(instanceId)` — 단일 스냅샷
+- `BuildHitterSnapshots(int[])` / `BuildPitcherSnapshots(int[])` — 배열 변환
+- `BuildPitcherStaff(rotationIndex)` — 투수진 7칸 조립 (SP 1 + RP 5 + CP 1)
+
+📝 주요 설계 결정:
+- `CardStatsCalculator`는 **스탯 1개짜리 함수**. 타자/투수 산술이 동일하므로 타입 분기 자체를 없앰. 호출자가 어느 필드에 적용할지 결정
+- 강화 계수는 `const` — 세이브엔 `enhanceLevel`만 저장되고 스탯은 매번 재계산되므로, 값 변경 시 기존 세이브 카드 스탯이 소급 변경됨. 튜닝 노브가 아니라 데이터 계약
+- 폴더 `Assets/Scripts/Builders/` — 브릿지는 Cards·Simulation 양쪽에 의존. `Simulation/` 폴더를 Cards 무의존으로 유지 (세션 15 원칙)
+- 실패 시 `default` 반환 (struct라 null 불가). `BaseRunningCalculator.FindRunnerSnapshot`과 동일 규약 (세션 19)
+- 타자/투수 빌더를 제네릭으로 합치지 않음 — 반환 struct에 공통 조상이 없고, 만들면 시뮬 코어가 그 조상에 의존하게 됨. 실제 중복은 2줄뿐
+- `BuildPitcherStaff`에서 `rotationIndex % spIds.Length` — 경계 처리를 메서드 안에 가둠. 호출부(리그·포스트시즌·테스트)가 늘어날 예정이라 한 곳만 빠뜨려도 예외
+- 배열 인덱스 규약 `[0]=SP / [1~5]=RP / [6]=CP` — 세션 23·25에서 확정된 시뮬 코어 계약
+- 벤치 `-1` 가드는 **호출자(`BuildHitterSnapshots`)가 처리** — `-1`은 정상 상태, `LogError`는 이상 상태 신호. 섞으면 로그 신뢰도 붕괴
+
+⚠️ **임시 배선 (8-1에서 반드시 교체)**
+- `Build()` 내부 `opponentLineup` / `opponentPitchers` = 플레이어 것 재사용. `TODO(8-1)` 주석 표기됨
+- `opponentBench`만 `Array.Empty<HitterSnapshot>()` (기획서 7.8 — AI 벤치 없음)
+- 현재 양 팀 데이터가 동일해 홈/원정 배치 오류가 **증상 없이 통과**함. AI 로스터 연결 시 드러남
+
+---
+
 ## ⏭️ 다음 할 일
 
 **로드맵 8번: 리그 시스템** (기획서 7장) — 브랜치 `feature/League-system`
@@ -663,8 +698,8 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 | 단계 | 작업 | 상태 |
 |---|---|---|
 | 8-0 A | 라인업 읽기 API | ✅ 세션 28 |
-| 8-0 B | `CardStatCalculator` — 최종 스탯 계산 | 🔧 진행 중 |
-| 8-0 C | `SimulationContextBuilder` — 라인업 → SimulationContext | ⏭️ |
+| 8-0 B | `CardStatsCalculator` — 최종 스탯 계산 | ✅ 세션 29 |
+| 8-0 C | `SimulationContextBuilder` — 라인업 → SimulationContext | ✅ 세션 29 |
 | 8-1 | AI 팀 로스터 (9팀 미러전, 티어별 능력치 상승) | ⏭️ |
 | 8-2 | 일정 생성 (라운드 로빈 / 프로 이상 3연전 / 홈·원정 교대) | ⏭️ |
 | 8-3 | 순위표 (KBO 승률·게임차, 타이브레이커 승률→득실차→상대전적) | ⏭️ |
