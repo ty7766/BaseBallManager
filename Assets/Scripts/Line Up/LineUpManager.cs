@@ -63,6 +63,13 @@ public class LineUpManager : MonoBehaviour
             return false;
         }
 
+        //타순 중복 방지
+        if (IsBattingOrderTaken(battingOrder, slot))
+        {
+            Debug.LogWarning($"[LineUpManager]: {battingOrder}번 타순은 이미 다른 선수가 사용 중입니다.");
+            return false;
+        }
+
         //이미 다른 슬롯에 배치된 카드인지 확인
         if (IsCardAssigned(instanceId))
         {
@@ -222,6 +229,12 @@ public class LineUpManager : MonoBehaviour
             return false;
         }
 
+        if (IsBattingOrderTaken(order, slot))
+        {
+            Debug.LogWarning($"[LineUpManager]: {order}번 타순은 이미 다른 선수가 사용 중입니다.");
+            return false;
+        }
+
         if (order <= 0 || order >= 10)
             return false;
 
@@ -280,5 +293,56 @@ public class LineUpManager : MonoBehaviour
         }
 
         return false;
+    }
+
+    //해당 타순이 이미 다른 슬롯에서 사용 중인지 확인
+    private bool IsBattingOrderTaken(int order, HitterPosition excludeSlot)
+    {
+        foreach(var pair in _hitterSlots)
+        {
+            if (pair.Key == excludeSlot)
+                continue;
+            if (pair.Value.instanceId == -1)
+                continue;
+            if (pair.Value.battingOrder == order)
+                return true;
+        }
+        return false;
+    }
+
+    //정렬된 타순의 instanceId 배열 반환
+    public int[] GetHittersInBattingOrder()
+    {
+        if (!IsLineupComplete())
+        {
+            Debug.LogWarning("[LineUpManager]: 라인업이 완성되지 않았습니다.");
+            return Array.Empty<int>();
+        }
+
+        int[] result = new int[9];
+        foreach (var slot in _hitterSlots.Values)
+        {
+            result[slot.battingOrder - 1] = slot.instanceId;
+        }
+
+        return result;
+    }
+
+    //벤치 야수 instanceId 배열 반환
+    public int[] GetBenchInstanceIds()
+    {
+        int[] result = new int[_benchSlots.Length];
+        Array.Copy(_benchSlots, result, _benchSlots.Length);
+        return result;
+    }
+
+    //투수 슬롯 instanceId 배열 반환
+    public int[] GetPitcherInstanceIds(PitcherPosition position)
+    {
+        int[] source = _pitcherSlots[position];
+        int[] result = new int[source.Length];
+
+        Array.Copy(source, result, source.Length);
+        return result;
     }
 }

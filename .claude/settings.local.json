@@ -1,7 +1,33 @@
 {
   "permissions": {
+    "defaultMode": "auto",
     "allow": [
-      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"C:\\\\Users\\\\hyojo\\\\Desktop\\\\Unity Proj\\\\BaseBallManager\\\\CardStats.csv\"\\); $bytes[0..10] -join ',')",
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(git log*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git branch*)",
+      "Bash(git show*)",
+      "Bash(git remote*)",
+      "Bash(ls*)",
+      "Bash(find*)",
+      "Bash(cat*)",
+      "Bash(head*)",
+      "Bash(tail*)",
+      "Bash(wc*)",
+      "PowerShell(git log*)",
+      "PowerShell(git status*)",
+      "PowerShell(git diff*)",
+      "PowerShell(git branch*)",
+      "PowerShell(git show*)",
+      "PowerShell(Get-Content*)",
+      "PowerShell(Get-ChildItem*)",
+      "PowerShell(Select-String *)",
+      "PowerShell($p = *)",
+      "PowerShell($bytes = *)",
+      "PowerShell($enc = *)",
       "Bash(echo \"\")",
       "Bash(echo \"# Excel 임시파일\")",
       "Bash(echo \"~\\\\$*\")",
@@ -9,7 +35,11 @@
       "Bash(echo \"*.xlsx\")",
       "Bash(gh milestone *)",
       "PowerShell(gh milestone *)",
-      "PowerShell(Select-String *)"
+      "Skill(update-config)",
+      "Bash(python -c \"import json;d=json.load\\(open\\('.claude/settings.local.json',encoding='utf-8'\\)\\);print\\('OK', len\\(d['permissions']['allow']\\), 'rules'\\)\")",
+      "Bash(node -e \"const d=require\\('./.claude/settings.local.json'\\);console.log\\('OK',d.permissions.allow.length,'rules'\\)\")",
+      "PowerShell($p = \"C:\\\\Users\\\\hyojo\\\\Desktop\\\\Unity Proj\\\\BaseBallManager\\\\Assets\\\\Scripts\\\\Line Up\\\\LineUpManager.cs\"; $enc = [System.Text.Encoding]::GetEncoding\\(949\\); $lines = $enc.GetString\\([System.IO.File]::ReadAllBytes\\($p\\)\\) -split \"`r?`n\"; for \\($i=0; $i -lt $lines.Count; $i++\\) { if \\($lines[$i] -match \"GetHittersInBattingOrder\"\\) { \"FOUND at $\\($i+1\\)\" } }; \"TOTAL LINES: $\\($lines.Count\\)\")",
+      "PowerShell($p = \"C:\\\\Users\\\\hyojo\\\\Desktop\\\\Unity Proj\\\\BaseBallManager\\\\Assets\\\\Scripts\\\\Line Up\\\\LineUpManager.cs\"; $enc = [System.Text.Encoding]::GetEncoding\\(949\\); $lines = $enc.GetString\\([System.IO.File]::ReadAllBytes\\($p\\)\\) -split \"`r?`n\"; 244..331 | ForEach-Object { if \\($_ -lt $lines.Count\\) { \"$\\($_+1\\): $\\($lines[$_]\\)\" } })"
     ]
   }
 }
