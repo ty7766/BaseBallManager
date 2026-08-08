@@ -615,22 +615,64 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 28 (2026-08-08) — 타순 중복 검증 + 라인업 조회 API
+
+**브랜치**: `fix/LineUpManager-Return-Method` (PR #14 머지 완료)
+
+**수정된 파일**
+- `Assets/Scripts/Line Up/LineUpManager.cs`
+
+**버그 수정 — 타순 중복 검증**
+- `IsBattingOrderTaken(order, excludeSlot)` private 헬퍼 추가
+- `AssignHitter` / `SetBattingOrder` 두 곳에서 호출
+- 기존에는 두 선수가 같은 타순을 가질 수 있었음 → 타순 배열 정렬 시 인덱스 어긋남
+- 검사 순서 정리: **인자 범위 → 대상 존재 → 상태 충돌** (순회 필요한 검사를 뒤로)
+
+**추가된 조회 API**
+- `GetHittersInBattingOrder()` — 타순 정렬된 야수 9명 instanceId 배열
+- `GetBenchInstanceIds()` — 벤치 5칸 복사본 (빈 칸 -1 유지)
+- `GetPitcherInstanceIds(PitcherPosition)` — 역할별 슬롯 복사본
+
+📝 주요 설계 결정:
+- `excludeSlot` 매개변수 — 같은 타순으로 재설정하는 정상 호출이 자기 자신에 걸려 실패하는 것 방지
+- `GetHittersInBattingOrder`는 LINQ 정렬 대신 `result[battingOrder - 1]` 직접 배치 — O(9) 단일 패스, 추가 할당 없음. 리그 일괄 시뮬에서 경기마다 호출되므로
+- 벤치 배열을 **압축하지 않고 -1 유지** — `LiveGameController`의 `benchIndex`(0~4)와 `GameSimulator.ApplyInterruptDecision`의 `attackBench[sub.BenchIndex]`가 UI 슬롯 번호를 그대로 인덱스로 쓰므로, 압축하면 다른 선수가 조용히 교체 투입됨
+- 투수 조회는 역할별 메서드 3개 대신 `PitcherPosition` 매개변수 하나로 통합 — 본문이 키만 다르고 동일. OCP
+- 세 메서드 모두 내부 배열이 아닌 **복사본** 반환
+
+---
+
+## 🔍 세션 28에서 발견한 로드맵 공백
+
+**시뮬 엔진과 게임 데이터가 연결돼 있지 않음** (전수조사로 확인)
+
+- `HitterSnapshot` / `PitcherSnapshot` / `SimulationContext`를 **생성하는 코드가 프로젝트에 0건**
+  (전 브랜치 전 커밋 `git log --all -S` 검색 결과 — 삭제된 것도, 다른 브랜치에 있는 것도 아님)
+- 기획서 1.4의 `최종 스탯 = 기본 + 강화(레벨×2) + trainDelta` 공식이 **어디에도 구현 안 됨**
+- 결과적으로 **시뮬 엔진은 한 번도 실행된 적 없음**
+
+로드맵 6·7번 자체는 정상 완료. 이 브릿지는 기획서 11장 로드맵에 독립 항목으로 없어서(5번과 6번 사이에 끼어 누락) 아무도 할당받지 않았던 것.
+→ **로드맵 8번의 0단계로 편입해 진행**
+
+---
+
 ## ⏭️ 다음 할 일
 
-**로드맵 8번: 리그 시스템** (기획서 7장)
+**로드맵 8번: 리그 시스템** (기획서 7장) — 브랜치 `feature/League-system`
 
-주요 서브태스크:
-- 리그 티어 구조 / 해금 조건 (2위 이상)
-- 라운드 로빈 일정 생성 (프로 이상은 3연전)
-- 순위표 (KBO 승률·게임차, 타이브레이커 승률→득실차→상대전적)
-- 진행 방식 선택 (한 경기씩 / 일괄 시뮬)
-- AI 팀 미러전 (9팀 풀 로스터, 티어별 능력치 상승)
-- 포스트시즌 (144경기 리그 한정, 상위 5팀 KBO 사다리)
-- 시즌 저장/재도전 (리그 단위 저장, 개별 경기 미저장)
+| 단계 | 작업 | 상태 |
+|---|---|---|
+| 8-0 A | 라인업 읽기 API | ✅ 세션 28 |
+| 8-0 B | `CardStatCalculator` — 최종 스탯 계산 | 🔧 진행 중 |
+| 8-0 C | `SimulationContextBuilder` — 라인업 → SimulationContext | ⏭️ |
+| 8-1 | AI 팀 로스터 (9팀 미러전, 티어별 능력치 상승) | ⏭️ |
+| 8-2 | 일정 생성 (라운드 로빈 / 프로 이상 3연전 / 홈·원정 교대) | ⏭️ |
+| 8-3 | 순위표 (KBO 승률·게임차, 타이브레이커 승률→득실차→상대전적) | ⏭️ |
+| 8-4 | 리그 진행 (한 경기씩 / 일괄 시뮬) | ⏭️ |
+| 8-5 | 포스트시즌 (144경기 한정, 상위 5팀 KBO 사다리) | ⏭️ |
+| 8-6 | 시즌 저장/재도전 (리그 단위 저장, 개별 경기 미저장) | ⏭️ |
 
-**시작 전 결정 필요**
-- 새 브랜치명 (`feature/league-system` 등)
-- 서브태스크 분할 브랜치 전략 (한 브랜치에 몰기 vs 세부 분할)
+**브랜치 전략**: `feature/League-system`은 **8-0까지만** 담고, 8-2(일정)부터는 브랜치 재분할
 
 **제외 항목** (규칙 복잡성 회피 — 세션 26에서 확정)
 - DH 권한 포기 후 투수의 타순 삽입
