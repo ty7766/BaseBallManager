@@ -691,6 +691,45 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 30 (2026-08-09) — AI 팀 로스터 착수 (8-1)
+
+**브랜치**: `feature/League-system`
+
+**설계 결정 — AI 로스터 생성 방식 변경**
+- 기획서 7.8·10장은 "AI 전용 CSV 직접 세팅"이나, **기존 카드 마스터 풀에서 자동 편성**으로 변경
+- 이유: `HitterCards.csv` / `PitcherCards.csv`에 team·position·OVR이 이미 존재. 별도 AI CSV는 중복 데이터 소스가 되어 카드 스탯 수정 시 두 곳을 동기화해야 함
+- 티어별 능력치 상승은 어차피 코드 보정값이라 CSV로 담을 수 없음
+- "직접 세팅"의 의도(랜덤 생성 공식 금지, KBO 자료 기반)는 마스터 CSV 자체가 이미 충족
+
+**완성된 파일 목록**
+- `Assets/Scripts/League/LeagueTier.cs` — 리그 티어 enum 21개 (`Basic1 = 0` ~ `Legend3`)
+- `Assets/Scripts/League/AiTeamRoster.cs` — AI 팀 1개의 고정 로스터
+- `Assets/Scripts/Builders/AiRosterBuilder.cs` — 스냅샷 변환 (부분 완성)
+
+**완성된 메서드 목록**
+- `AiTeamRoster.GetPitcherStaff(rotationIndex)` — 로테이션 반영 투수진 7칸 조립 (`[0]=SP / [1~5]=RP / [6]=CP`)
+- `AiRosterBuilder.ToHitterSnapshot(hitterData, tierStatBonus)` — 마스터 데이터 + 티어 보정 → 타자 스냅샷
+- `AiRosterBuilder.ToPitcherSnapshot(pitcherData, tierStatBonus)` — 동일 (투수)
+
+📝 주요 설계 결정:
+- `LeagueTier`에 `None` 센티넬 없음 — `CardGrade`/`CardType`과 달리 필터용이 아니고 "티어 없음" 상태가 게임에 존재하지 않음. `Basic1 = 0`으로 두어 `(int)tier`를 보정 배열 인덱스로 직접 사용
+- AI 선수의 `InstanceId` 자리에 **`CardId`** 주입 — AI는 `CardInstance`가 없으나 시뮬 코어가 주자 식별에 instanceId를 사용(`GameState.FirstBase`, `FindRunnerSnapshot`, `MarkHitterUsed`). 요구조건은 "한 팀 라인업 내 유일 + `-1` 아님"뿐이라 cardId로 충족. 팀 간 유일성은 불필요(공격팀 배열만 순회)
+- AI 스탯 공식은 플레이어와 **별개**: `기본 스탯 + 티어 보정` (강화·훈련 없음). `CardStatsCalculator` 미사용 — `CalculateFinalStat(x, 0, 0)`은 무의미한 호출이고 "AI도 강화가 있나" 오해 유발
+- `AiRosterBuilder`는 `LeagueTier`가 아니라 `int tierStatBonus`를 받음 — 티어→보정값 테이블은 수치 TBD라 인스펙터 튜닝이 필요한데 `static` 클래스는 `[SerializeField]` 불가. 테이블은 `AiRosterManager`(MonoBehaviour)가 소유 예정. 세션 25 `effectiveInningRuns` 매개변수화와 동일한 판단
+- `AiTeamRoster`는 cardId가 아닌 **완성된 스냅샷** 보관 — 기획서 7.8 "매 리그 고정 로스터"라 리그 시작 시 1회 계산이면 충분. 일괄 시뮬 144경기에서 재계산 회피
+- `AiTeamRoster` 생성자에 검증 없음 — 호출자는 `AiRosterBuilder` 한 곳뿐이고, 편성 실패는 카드를 고르는 시점에 잡아야 원인에 가까운 에러 메시지가 나옴. **검증은 만드는 쪽, 담는 쪽은 순수 데이터**
+- `GetPitcherStaff`에서 SP 인덱스는 `% StartingPitchers.Length`(데이터 길이), RP 복사량은 상수 `5`(시뮬 코어 7칸 규약). **길이는 데이터에서 읽고, 규약은 상수로 박는다**
+- 로스터에 벤치 필드 없음 — 기획서 7.8 + 세션 26, AI 팀은 벤치 없음
+- 파일 위치: `AiRosterBuilder`만 `Builders/` — Cards·Simulation·League 세 레이어에 걸쳐 있어 세션 29 원칙 적용
+
+**🔴 발견된 블로커 — `Assets/Resources/Data/` CSV가 구버전**
+- 두 CSV 모두 데이터 **1행뿐**, `OVR` 열 없음
+- `CardCSVLoader.cs:77` `headers["OVR"]` → **`KeyNotFoundException`**. `CardDataManager.Awake()`에서 터져 **게임 실행 자체가 불가**
+- 원인: 구글 시트에는 타자/투수 각 100명 이상 + OVR 열이 이미 존재. **CSV 내보내기를 안 했을 뿐** (코드 버그 아님)
+- OVR 수식은 `=INT(AVERAGE(...))` 필수 — `AVERAGE`만 쓰면 소수점이 CSV에 나가 `int.Parse` FormatException. 표시 서식으로 자릿수를 줄여도 실제 값은 안 바뀌므로 주의
+
+---
+
 ## ⏭️ 다음 할 일
 
 **로드맵 8번: 리그 시스템** (기획서 7장) — 브랜치 `feature/League-system`
@@ -700,7 +739,7 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 | 8-0 A | 라인업 읽기 API | ✅ 세션 28 |
 | 8-0 B | `CardStatsCalculator` — 최종 스탯 계산 | ✅ 세션 29 |
 | 8-0 C | `SimulationContextBuilder` — 라인업 → SimulationContext | ✅ 세션 29 |
-| 8-1 | AI 팀 로스터 (9팀 미러전, 티어별 능력치 상승) | ⏭️ |
+| 8-1 | AI 팀 로스터 (9팀 미러전, 티어별 능력치 상승) | 🔧 세션 30 진행 중 |
 | 8-2 | 일정 생성 (라운드 로빈 / 프로 이상 3연전 / 홈·원정 교대) | ⏭️ |
 | 8-3 | 순위표 (KBO 승률·게임차, 타이브레이커 승률→득실차→상대전적) | ⏭️ |
 | 8-4 | 리그 진행 (한 경기씩 / 일괄 시뮬) | ⏭️ |
@@ -708,6 +747,20 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 | 8-6 | 시즌 저장/재도전 (리그 단위 저장, 개별 경기 미저장) | ⏭️ |
 
 **브랜치 전략**: `feature/League-system`은 **8-0까지만** 담고, 8-2(일정)부터는 브랜치 재분할
+
+### 🚩 다음 세션 착수 지점 (8-1 남은 작업, 순서대로)
+
+1. **CSV 내보내기 확인** ← 가장 먼저 할 것
+   - 구글 시트 → `Assets/Resources/Data/HitterCards.csv` / `PitcherCards.csv` 덮어쓰기 여부 확인
+   - 확인 항목: `OVR` 열 존재 · OVR 값에 소수점 없음 · 포지션 표기(`LF CF RF 1B 2B 3B SS C DH` / `SP RP CP`)
+   - 팀별·포지션별 분포를 집계해 **빈 슬롯이 생기는 팀** 검출
+   - 필요 최소 수량: 야수 팀당 9명(합계 90) / **투수 팀당 11명 = 합계 110명** (SP5·RP5·CP1)
+2. `AiRosterBuilder`에 **`static` 키워드 추가** — 현재 `public class`로 선언되어 있음 (지적했으나 미반영)
+3. `AiRosterBuilder.SelectHitters` — 포지션 8개 + DH 특례(모든 야수 가능) + 중복 배치 금지. 8-1에서 가장 까다로움
+4. `AiRosterBuilder.SelectPitchers` — SP5 / RP5 / CP1
+5. `AiRosterBuilder.BuildTeam` — 위를 묶어 `AiTeamRoster` 조립
+6. `AiRosterManager` (MonoBehaviour 싱글톤) — `[SerializeField] int[]` 티어 보정 테이블 + 9팀 로스터 생성/보관
+7. `SimulationContextBuilder.Build()`의 `TODO(8-1)` 임시 배선(상대팀 = 플레이어 것 재사용) 교체
 
 **제외 항목** (규칙 복잡성 회피 — 세션 26에서 확정)
 - DH 권한 포기 후 투수의 타순 삽입
