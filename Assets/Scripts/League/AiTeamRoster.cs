@@ -1,5 +1,4 @@
 using System;
-
 /// <summary>
 /// AI 팀 1개의 고정 로스터
 /// </summary>
@@ -10,7 +9,7 @@ public class AiTeamRoster
     public HitterSnapshot[] Lineup { get; }                 //야수 9명
     public PitcherSnapshot[] StartingPitchers { get; }      //SP 5명
     public PitcherSnapshot[] RelievePitchers { get; }       //RP 5명
-    public PitcherSnapshot Closer {  get; }               //CP 1명
+    public PitcherSnapshot Closer { get; }               //CP 1명
 
     public AiTeamRoster(string teamName, HitterSnapshot[] lineup, PitcherSnapshot[] startingPitchers, PitcherSnapshot[] relievePitchers, PitcherSnapshot closer)
     {
