@@ -1,4 +1,4 @@
-/// <summary>
-/// ¼±¼öµéÀ» °Ë»öÇÒ ¶§, ÇÊÅÍ Á¶°ÇÀ» °Å´Â ±â´É
+ï»¿/// <summary>
+/// ì„ ìˆ˜ë“¤ì„ ê²€ìƒ‰í•  ë•Œ, í•„í„° ì¡°ê±´ì„ ê±°ëŠ” ê¸°ëŠ¥
 /// </summary>
 public enum PlayerTypeFilter { All, HitterOnly, PitcherOnly}

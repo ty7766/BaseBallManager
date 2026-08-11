@@ -1,17 +1,19 @@
-/// <summary>
-/// µå·Ó´Ù¿î¿¡ Ç¥½ÃÇÒ Ä«µå 1ÀåÀÇ Á¤º¸
+ï»¿/// <summary>
+/// ë“œë¡­ë‹¤ìš´ì— í‘œì‹œí•  ì¹´ë“œ 1ì¥ì˜ ì •ë³´
 /// </summary>
 
 public readonly struct CardEntry
 {
     public int CardId { get; }
     public string TeamName { get; }
+    public string Position { get; }     //CSV í‘œê¸° ê·¸ëŒ€ë¡œ ("LF", "1B", "SP" ...)
     public string Label { get; }
 
-    public CardEntry (int  cardId, string teamName, string label)
+    public CardEntry (int  cardId, string teamName, string position, string label)
     {
         CardId = cardId;
         TeamName = teamName;
+        Position = position;
         Label = label;
     }
 }

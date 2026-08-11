@@ -22,7 +22,7 @@ public class CardSearchDropdown : AdvancedDropdown
         AdvancedDropdownItem root = new AdvancedDropdownItem("카드 선택");
 
         // 비우기 항목 — 맨 위에 오도록 팀 노드보다 먼저 추가
-        root.AddChild(new AdvancedDropdownItem("(비어 있음)") { id = 0 });
+        root.AddChild(new CardDropdownItem("(비어 있음)", 0));
 
         // 팀명 → 팀 폴더 노드. 같은 팀 카드를 한 폴더로 모으기 위한 임시 색인
         Dictionary<string, AdvancedDropdownItem> teamNodes =
@@ -38,10 +38,8 @@ public class CardSearchDropdown : AdvancedDropdown
                 teamNodes.Add(entry.TeamName, teamNode);
             }
 
-            // 카드 항목. id에 cardId를 실어 보낸다
-            AdvancedDropdownItem leaf = new AdvancedDropdownItem(entry.Label);
-            leaf.id = entry.CardId;
-            teamNode.AddChild(leaf);
+            // 카드 항목. cardId는 전용 항목 타입이 직접 들고 다닌다
+            teamNode.AddChild(new CardDropdownItem(entry.Label, entry.CardId));
         }
 
         return root;
@@ -49,6 +47,25 @@ public class CardSearchDropdown : AdvancedDropdown
 
     protected override void ItemSelected(AdvancedDropdownItem item)
     {
-        _onSelected?.Invoke(item.id);
+        // 카드 항목이 아니면(팀 폴더 등) 무시
+        if (item is CardDropdownItem cardItem)
+        {
+            _onSelected?.Invoke(cardItem.CardId);
+        }
+    }
+
+    /// <summary>
+    /// cardId를 실어 나르는 드롭다운 항목.
+    /// AdvancedDropdownItem.id는 Unity가 선택 상태 추적에 쓰는 내부 필드라
+    /// 우리가 넣은 값이 그대로 돌아온다는 보장이 없다. 별도 필드로 보관한다.
+    /// </summary>
+    private class CardDropdownItem : AdvancedDropdownItem
+    {
+        public int CardId { get; }
+
+        public CardDropdownItem(string name, int cardId) : base(name)
+        {
+            CardId = cardId;
+        }
     }
 }

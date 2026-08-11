@@ -1,15 +1,15 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 public class LiveGameController : MonoBehaviour, IGameInterruptHandler
 {
-    //¿¹¾à ¹öÆÛ
+    //ì˜ˆì•½ ë²„í¼
     private readonly List<Hittersubstitution> _pendingHitterSubs = new();
     private int _pendingPitcherSlot = -1;
 
-    //ÀÎÅÍ·´Æ® ÇÚµé·¯
-    //¸Å Å¸¼® Á¾·á ÈÄ ÀÎÅÍ·´Æ® Å¥¿¡ ÀÎÅÍ·´Æ®°¡ ÀÖ´ÂÁö È®ÀÎ. ¾øÀ¸¸é °è¼Ó ÁøÇà. ÀÖÀ¸¸é ±³Ã¼ ¾Ë°í¸®Áò ÁøÇà
+    //ì¸í„°ëŸ½íŠ¸ í•¸ë“¤ëŸ¬
+    //ë§¤ íƒ€ì„ ì¢…ë£Œ í›„ ì¸í„°ëŸ½íŠ¸ íì— ì¸í„°ëŸ½íŠ¸ê°€ ìˆëŠ”ì§€ í™•ì¸. ì—†ìœ¼ë©´ ê³„ì† ì§„í–‰. ìˆìœ¼ë©´ êµì²´ ì•Œê³ ë¦¬ì¦˜ ì§„í–‰
     public InterruptDecision OnAtBatEnded(GameState state, SimulationContext context)
     {
         List<Hittersubstitution>_pendingHitterSubsCopy = new List<Hittersubstitution>(_pendingHitterSubs);
@@ -21,30 +21,30 @@ public class LiveGameController : MonoBehaviour, IGameInterruptHandler
         return interrupt;
     }
         
-    //UI ÁøÀÔÁ¡ - ¹öÆ° È£Ãâ
+    //UI ì§„ì…ì  - ë²„íŠ¼ í˜¸ì¶œ
     public bool ReserveHitterSubstitution(int battingOrderIndex, int benchIndex)
     {
         if (battingOrderIndex < 0 || battingOrderIndex > 8)
         {
-            Debug.LogWarning("[LiveGameController]: Å¸¼ø ¹üÀ§°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
+            Debug.LogWarning("[LiveGameController]: íƒ€ìˆœ ë²”ìœ„ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
             return false;
         }
 
         if (benchIndex < 0 || benchIndex > 4)
         {
-            Debug.LogWarning("[LiveGameController]: º¥Ä¡ ÀÎµ¦½º ¹üÀ§°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
+            Debug.LogWarning("[LiveGameController]: ë²¤ì¹˜ ì¸ë±ìŠ¤ ë²”ìœ„ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
             return false;
         }
 
         if (_pendingHitterSubs.Any(sub => sub.BenchIndex == benchIndex))
         {
-            Debug.LogWarning("[LiveGameController]: ÀÌ¹Ì ±³Ã¼ ¿¹¾àµÈ º¥Ä¡ Ä«µå ÀÔ´Ï´Ù.");
+            Debug.LogWarning("[LiveGameController]: ì´ë¯¸ êµì²´ ì˜ˆì•½ëœ ë²¤ì¹˜ ì¹´ë“œ ì…ë‹ˆë‹¤.");
             return false;
         }
 
         if (_pendingHitterSubs.Any(sub => sub.BattingOrderIndex == battingOrderIndex))
         {
-            Debug.LogWarning("[LiveGameController]: ÀÌ¹Ì ±³Ã¼ ¿¹¾àµÈ Å¸¼øÀÔ´Ï´Ù.");
+            Debug.LogWarning("[LiveGameController]: ì´ë¯¸ êµì²´ ì˜ˆì•½ëœ íƒ€ìˆœì…ë‹ˆë‹¤.");
             return false;
         }
 
@@ -56,7 +56,7 @@ public class LiveGameController : MonoBehaviour, IGameInterruptHandler
     {
         if (pitcherSlot < 0 || pitcherSlot > 6)
         {
-            Debug.LogWarning("[LiveGameController]: Åõ¼ö ¹üÀ§°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
+            Debug.LogWarning("[LiveGameController]: íˆ¬ìˆ˜ ë²”ìœ„ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
             return false;
         }
         

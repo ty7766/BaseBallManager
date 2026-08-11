@@ -1,27 +1,27 @@
-/// <summary>
-/// ½Ã¹Ä·¹ÀÌ¼Ç °æ±â Áß Å¸ÀÚÀÇ »óÅÂ ·Î±× Ãâ·Â¿ë
+ï»¿/// <summary>
+/// ì‹œë®¬ë ˆì´ì…˜ ê²½ê¸° ì¤‘ íƒ€ìì˜ ìƒíƒœ ë¡œê·¸ ì¶œë ¥ìš©
 /// </summary>
 
 public enum BatterOutcome
 {
-    StrikeOut,      //»ïÁø
-    Walk,           //º¼³İ
-    HomeRun,        //È¨·±
-    Single,         //¾ÈÅ¸
-    Double,         //2·çÅ¸
-    Triple,         //3·çÅ¸
-    Error,          //½ÇÃ¥
-    FlyOut,         //¶á°ø ¾Æ¿ô
-    GroundOut,      //¶¥º¼ ¾Æ¿ô
-    DoublePlay,     //º´»ì
-    SacrificeFly    //Èñ»ıÇÃ¶óÀÌ
+    StrikeOut,      //ì‚¼ì§„
+    Walk,           //ë³¼ë„·
+    HomeRun,        //í™ˆëŸ°
+    Single,         //ì•ˆíƒ€
+    Double,         //2ë£¨íƒ€
+    Triple,         //3ë£¨íƒ€
+    Error,          //ì‹¤ì±…
+    FlyOut,         //ëœ¬ê³µ ì•„ì›ƒ
+    GroundOut,      //ë•…ë³¼ ì•„ì›ƒ
+    DoublePlay,     //ë³‘ì‚´
+    SacrificeFly    //í¬ìƒí”Œë¼ì´
 }
 public class SimulationBatterLog
 {
     public BatterOutcome Outcome {  get; }
-    public int PitchCount { get; }              // ÀÌ¹ø Å¸¼® Åõ±¸ ¼ö
-    public int RunsScored {  get; }             //ÀÌ¹ø Å¸¼®¿¡¼­ ³­ µæÁ¡
-    public string BatterName { get; }           //·Î±× Ãâ·Â¿ë Å¸ÀÚ ÀÌ¸§
+    public int PitchCount { get; }              // ì´ë²ˆ íƒ€ì„ íˆ¬êµ¬ ìˆ˜
+    public int RunsScored {  get; }             //ì´ë²ˆ íƒ€ì„ì—ì„œ ë‚œ ë“ì 
+    public string BatterName { get; }           //ë¡œê·¸ ì¶œë ¥ìš© íƒ€ì ì´ë¦„
 
     public SimulationBatterLog(BatterOutcome outcome, int pitchCount, int runsScored, string batterName)
     {

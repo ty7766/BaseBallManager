@@ -1,9 +1,9 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System;
 /// <summary>
-/// Ä«µå CSV¸¦ 1È¸ ÀĞ¾î ¿¡µğÅÍ¿ë Ç¥½Ã ¸ñ·ÏÀ¸·Î Ä³½Ì (°Ë»ö¿ë)
+/// ì¹´ë“œ CSVë¥¼ 1íšŒ ì½ì–´ ì—ë””í„°ìš© í‘œì‹œ ëª©ë¡ìœ¼ë¡œ ìºì‹± (ê²€ìƒ‰ìš©)
 /// </summary>
 public static class CardCatalog
 {
@@ -21,24 +21,24 @@ public static class CardCatalog
     private static List<CardEntry> _pitchers;
     private static Dictionary<int, CardEntry> _byCardId;
 
-    //cardId·Î Ä«µå 1Àå Á¶È¸
+    //cardIdë¡œ ì¹´ë“œ 1ì¥ ì¡°íšŒ
     public static bool TryGet(int cardId, out CardEntry entry)
     {
         EnsureLoaded();
         return _byCardId.TryGetValue(cardId, out entry);
     }
 
-    //Ä³½Ã ºñ¿ì±â
-    [MenuItem("Tools/BaseBallManager/Ä«µå Ä«Å»·Î±× »õ·Î°íÄ§")]
+    //ìºì‹œ ë¹„ìš°ê¸°
+    [MenuItem("Tools/BaseBallManager/ì¹´ë“œ ì¹´íƒˆë¡œê·¸ ìƒˆë¡œê³ ì¹¨")]
     public static void Refresh()
     {
         _hitters = null;
         _pitchers = null;
         _byCardId = null;
-        Debug.Log("Ä«µå Ä«Å»·Î±× Ä³½Ã¸¦ ¼º°øÀûÀ¸·Î ºñ¿ü½À´Ï´Ù");
+        Debug.Log("ì¹´ë“œ ì¹´íƒˆë¡œê·¸ ìºì‹œë¥¼ ì„±ê³µì ìœ¼ë¡œ ë¹„ì› ìŠµë‹ˆë‹¤");
     }
 
-    //Ä³½Ã°¡ ºñ¾îÀÖÀ¸¸é CSV ÀĞ±â
+    //ìºì‹œê°€ ë¹„ì–´ìˆìœ¼ë©´ CSV ì½ê¸°
     private static void EnsureLoaded()
     {
         if (_hitters != null)
@@ -76,7 +76,7 @@ public static class CardCatalog
         }
         catch (Exception e)
         {
-            Debug.LogError($"[CardCatalog] Ä«µå CSV ·Îµå ½ÇÆĞ: {e.Message}");
+            Debug.LogError($"[CardCatalog] ì¹´ë“œ CSV ë¡œë“œ ì‹¤íŒ¨: {e.Message}");
             Debug.LogException(e);
 
             _hitters = new List<CardEntry>();
@@ -85,26 +85,26 @@ public static class CardCatalog
         }        
     }
 
-    //¸¶½ºÅÍ µ¥ÀÌÅÍ -> Ç¥½Ã¿ë Ç×¸ñ º¯È¯
+    //ë§ˆìŠ¤í„° ë°ì´í„° -> í‘œì‹œìš© í•­ëª© ë³€í™˜
     private static CardEntry ToEntry(CardMasterData data)
     {
         string label = $"{data.Year} {data.Name} | {data.TeamName} | {data.Position} | OVR {data.OVR} | { GetCardTypeLabel(data.CardType)}";
-        return new CardEntry(data.CardId, data.TeamName, label);
+        return new CardEntry(data.CardId, data.TeamName, data.Position, label);
     }
 
-    //CardType -> ÇÑ±Û ¶óº§
+    //CardType -> í•œê¸€ ë¼ë²¨
     private static string GetCardTypeLabel(CardType cardType)
     {
         switch (cardType)
         {
             case CardType.Normal:
-                return "ÀÏ¹İ";
+                return "ì¼ë°˜";
             case CardType.Signature:
-                return "½Ã±×";
+                return "ì‹œê·¸";
             case CardType.GoldenGlove:
-                return "°ñ±Û";
+                return "ê³¨ê¸€";
             default:
-                throw new ArgumentException($"¾Ë ¼ö ¾ø´Â CardType: {cardType}");
+                throw new ArgumentException($"ì•Œ ìˆ˜ ì—†ëŠ” CardType: {cardType}");
         }
     }
 }

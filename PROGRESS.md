@@ -952,8 +952,38 @@ AiTeamRosterData (SO)            팀 1개. 실제 편집 대상
 - **빈 슬롯 센티넬 = `0`** — cardId는 1부터 시작하므로 안전하고, `int` 기본값이 0이라 새 에셋의 빈 슬롯이 자동으로 "(비어 있음)" 표시됨. 시뮬 코어의 `-1` 규약과 다른 이유는 여기선 직렬화 기본값이 그대로 빈 슬롯이 되는 게 이득이기 때문
 - **없는 cardId는 버튼에 경고 문구로 표시** — CSV에서 카드를 지웠을 때 눈에 띔. cardId 비워두기 권장 규칙의 실효성이 여기서 나옴
 
-⚠️ **소스 파일 인코딩 혼재** (2026-08-11 확인)
-- 대부분의 `.cs`가 **CP949**, `CardSearchDropdown.cs`만 UTF-8
-- Roslyn은 BOM 없는 소스를 UTF-8로 가정 → CP949 한글이 깨질 수 있음. 주석은 무해하나 **문자열 리터럴이 깨지면 화면에 그대로 노출**
-- 확인법: 인스펙터 cardId 버튼이 `(비어 있음)`으로 보이면 정상, 깨져 보이면 문제
-- 해결: **UTF-8 (BOM 포함)**으로 재저장. 프로젝트 루트 `.editorconfig`에 `[*.cs] charset = utf-8-bom` 두면 이후 자동 적용 (기존 파일은 한 번씩 열어 저장 필요)
+**🐛 테스트에서 발견·수정한 버그 2건** (에디터 실동작 확인 중)
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| 카드를 고르면 `[!] 알 수 없는 cardId: -2` | `AdvancedDropdownItem.id`는 Unity가 선택 상태·검색 트리 관리에 쓰는 **내부 필드**. 우리가 심은 cardId가 보존되지 않고 내부 값으로 덮임 | `CardDropdownItem : AdvancedDropdownItem` 중첩 클래스로 **cardId를 자체 필드에 보관**. `ItemSelected`에서 `is` 패턴으로 꺼냄 |
+| LF 슬롯인데 SS 카드도 선택 가능 | 드로어가 `_cardId` 필드만 보므로 형제 필드 `_position`을 알 방법이 없었음 | `CardIdAttribute`에 `PositionFieldName` 추가 + 드로어가 **propertyPath 문자열을 잘라 붙여** 형제 필드 조회 |
+| 선발 슬롯인데 RP 카드가 나옴 | 투수 배열엔 읽을 형제 필드가 없음. **필드 자체가 역할을 결정**(`_startingPitcherCardIds` = SP) | `CardIdAttribute`에 `FixedPosition` 추가. `[CardId(..., fixedPosition: nameof(PitcherPosition.SP))]` |
+
+📝 수정 관련 설계 결정:
+- **외부 라이브러리의 범용 필드(`id`/`tag`/`userData`)에 내 데이터를 얹지 않는다** — 소유권이 없어 언제 덮어써질지 모름. 내 데이터는 내 타입에 담는다
+- `is CardDropdownItem` 검사 덕에 팀 폴더 클릭 시 콜백이 안 불림 (별도 분기 불필요)
+- **형제 필드 조회는 경로 문자열 조작** — `SerializedProperty`에 형제 접근 API가 없음. `_lineup.Array.data[0]._cardId` → 마지막 점까지 자르고 `_position` 부착
+- **필드 이름은 `nameof(_position)`** — 문자열 리터럴이면 필드명 변경 시 조용히 필터가 꺼짐. `nameof`는 컴파일러가 잡아줌
+- **포지션 필드를 못 찾으면 필터 없이 전체 노출** — 아무것도 못 고르는 것보다 관대한 실패가 나음
+- **DH 슬롯은 필터 건너뜀** — 세션 33 확정(DH = 와일드카드)의 코드상 구현부
+- `CardEntry`에 `Position`(CSV 표기 문자열) 추가. `HitterPositionParser.TryParse`로 `1B`↔`FB` 변환 (세션 13 자산 재사용)
+- **포지션 출처가 둘로 갈림** — 타자는 슬롯마다 값이 다르니 형제 필드를 읽고, 투수는 배열 이름이 곧 역할이니 특성에 고정값. `BuildEntries`가 ① 고정 포지션 → ② 형제 필드 → ③ 필터 없음 순으로 판단
+- **`nameof(PitcherPosition.SP)`** — enum 멤버명이 CSV 표기와 동일. `"SP"` 리터럴은 오타 시 목록만 조용히 비지만 `nameof`는 컴파일 에러
+- **`fixedPosition:` 이름표 필수** — 생성자에 `string` 매개변수가 연달아 있어 위치 인자로 넘기면 `positionFieldName`에 잘못 들어감
+- 두 포지션 매개변수 모두 기본값 `null` — 포지션 개념이 없는 슬롯은 무수정으로 동작 (OCP)
+
+**✅ 8-1 편집 도구 실동작 확인 완료** — 포지션별 필터링 / 검색 / 선택 / 저장 전부 정상
+
+---
+
+### 🔧 소스 파일 인코딩 정리 (2026-08-11 완료)
+
+**문제**: `Assets/` 하위 `.cs` 대부분이 **CP949**로 저장돼 있었음. Unity의 Roslyn 컴파일러는 BOM 없는 소스를 **UTF-8로 가정**하므로 한글이 깨짐. 주석은 무해하나 **문자열 리터럴이 깨지면 화면·콘솔에 그대로 노출**됨
+
+**조치**
+- `.cs` **44개를 UTF-8(BOM 포함)로 일괄 변환**
+- 변환 전 **CP949 왕복 검증**(재인코딩 결과가 원본 바이트와 일치하는지) 통과분만 적용 — 무손실 확인
+- 프로젝트 루트에 **`.editorconfig`** 생성 → `[*.cs] charset = utf-8-bom`. 이후 저장분은 Visual Studio가 자동 적용
+
+⚠️ **주의**: 변환 시점에 Visual Studio에 열려 있던 파일은 VS 메모리에 옛 인코딩으로 남아 있음. 그대로 저장하면 되돌아가므로 **VS를 한 번 닫았다 열 것**

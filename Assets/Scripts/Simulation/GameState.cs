@@ -1,43 +1,43 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// ÀÌ´×
-/// ¾Æ¿ô Ä«¿îÆ®
-/// º£ÀÌ½º ÁÖÀÚ
-/// ¾ç ÆÀ µæÁ¡
-/// ÇöÀç Å¸¼ø
-/// ¾ç ÆÀ Åõ¼ö »óÅÂ
-/// °æ±â Á¾·á ¿©ºÎ
+/// ì´ë‹
+/// ì•„ì›ƒ ì¹´ìš´íŠ¸
+/// ë² ì´ìŠ¤ ì£¼ì
+/// ì–‘ íŒ€ ë“ì 
+/// í˜„ì¬ íƒ€ìˆœ
+/// ì–‘ íŒ€ íˆ¬ìˆ˜ ìƒíƒœ
+/// ê²½ê¸° ì¢…ë£Œ ì—¬ë¶€
 /// 
-/// °æ±â ½Ã¹Ä·¹ÀÌ¼Ç Áß ¸ğµç »óÅÂ º¯¼ö¸¦ ´ã´Â Å¬·¡½º
+/// ê²½ê¸° ì‹œë®¬ë ˆì´ì…˜ ì¤‘ ëª¨ë“  ìƒíƒœ ë³€ìˆ˜ë¥¼ ë‹´ëŠ” í´ë˜ìŠ¤
 /// </summary>
 public class GameState
 {
-    public int Inning { get; private set; }         //ÇöÀç ÀÌ´×
-    public bool IsTopInning { get; private set; }  //true = ÃÊ ¿øÁ¤ °ø°İ
-    public int OutCount { get; private set; }        //ÇöÀç ¾Æ¿ô Ä«¿îÆ®
-    public int HomeScore { get; private set; }      //È¨ ÆÀ Á¡¼ö
-    public int AwayScore { get; private set; }      //¿øÁ¤ ÆÀ Á¡¼ö
+    public int Inning { get; private set; }         //í˜„ì¬ ì´ë‹
+    public bool IsTopInning { get; private set; }  //true = ì´ˆ ì›ì • ê³µê²©
+    public int OutCount { get; private set; }        //í˜„ì¬ ì•„ì›ƒ ì¹´ìš´íŠ¸
+    public int HomeScore { get; private set; }      //í™ˆ íŒ€ ì ìˆ˜
+    public int AwayScore { get; private set; }      //ì›ì • íŒ€ ì ìˆ˜
 
-    //InstanceId·Î Á¶È¸ -> ½ºÅÈ È®ÀÎ -> ÁÖÀÚ°¡ ¾îµğ±îÁö Áø·çÇÒ ¼ö ÀÖ´ÂÁö ÆÇ´Ü
-    //µû¶ó¼­ boolÀ» ¾²Áö ¾Ê°í instanceId¸¦ ´ãÀ» ¼ö ÀÖ´Â int ¼±¾ğ
-    public int FirstBase { get; private set; }     //-1ÀÌ¸é ÁÖÀÚ ¾øÀ½
+    //InstanceIdë¡œ ì¡°íšŒ -> ìŠ¤íƒ¯ í™•ì¸ -> ì£¼ìê°€ ì–´ë””ê¹Œì§€ ì§„ë£¨í•  ìˆ˜ ìˆëŠ”ì§€ íŒë‹¨
+    //ë”°ë¼ì„œ boolì„ ì“°ì§€ ì•Šê³  instanceIdë¥¼ ë‹´ì„ ìˆ˜ ìˆëŠ” int ì„ ì–¸
+    public int FirstBase { get; private set; }     //-1ì´ë©´ ì£¼ì ì—†ìŒ
     public int SecondBase { get; private set; }
     public int ThirdBase { get; private set; }
 
-    public int HomeBattingIndex { get; private set; }   //È¨ÆÀ Å¸ÀÚ Å¸¼ø
-    public int AwayBattingIndex { get; private set; }   //¿øÁ¤ÆÀ Å¸ÀÚ Å¸¼ø
+    public int HomeBattingIndex { get; private set; }   //í™ˆíŒ€ íƒ€ì íƒ€ìˆœ
+    public int AwayBattingIndex { get; private set; }   //ì›ì •íŒ€ íƒ€ì íƒ€ìˆœ
 
-    public PitcherState HomePitcherState { get; private set; }  //È¨ÆÀ Åõ¼ö ÇöÀç Ã¼·Â
-    public PitcherState AwayPitcherState { get; private set; }  //¿øÁ¤ÆÀ Åõ¼ö ÇöÀç Ã¼·Â
+    public PitcherState HomePitcherState { get; private set; }  //í™ˆíŒ€ íˆ¬ìˆ˜ í˜„ì¬ ì²´ë ¥
+    public PitcherState AwayPitcherState { get; private set; }  //ì›ì •íŒ€ íˆ¬ìˆ˜ í˜„ì¬ ì²´ë ¥
 
-    public bool IsGameOver { get; private set; }    //°æ±â°¡ Á¾·áµÇ¾ú´ÂÁö ¿©ºÎ
+    public bool IsGameOver { get; private set; }    //ê²½ê¸°ê°€ ì¢…ë£Œë˜ì—ˆëŠ”ì§€ ì—¬ë¶€
 
-    private HashSet<int> _homeUsedHitterInstanceIds;        //±³Ã¼µÈ È¨ÆÀ Å¸ÀÚ ÀÎ½ºÅÏ½º ID
-    private HashSet<int> _awayUsedHitterInstanceIds;        //±³Ã¼µÈ ¿øÁ¤ÆÀ Å¸ÀÚ ÀÎ½ºÅÏ½º ID
-    private HashSet<int> _homeUsedPitcherSlotIndices;       //±³Ã¼µÈ È¨ÆÀ Åõ¼ö ½½·Ô ¹øÈ£
-    private HashSet<int> _awayUsedPitcherSlotIndices;       //±³Ã¼µÈ ¿øÁ¤ÆÀ Åõ¼ö ½½·Ô ¹øÈ£
+    private HashSet<int> _homeUsedHitterInstanceIds;        //êµì²´ëœ í™ˆíŒ€ íƒ€ì ì¸ìŠ¤í„´ìŠ¤ ID
+    private HashSet<int> _awayUsedHitterInstanceIds;        //êµì²´ëœ ì›ì •íŒ€ íƒ€ì ì¸ìŠ¤í„´ìŠ¤ ID
+    private HashSet<int> _homeUsedPitcherSlotIndices;       //êµì²´ëœ í™ˆíŒ€ íˆ¬ìˆ˜ ìŠ¬ë¡¯ ë²ˆí˜¸
+    private HashSet<int> _awayUsedPitcherSlotIndices;       //êµì²´ëœ ì›ì •íŒ€ íˆ¬ìˆ˜ ìŠ¬ë¡¯ ë²ˆí˜¸
 
 
     public GameState(SimulationContext context)
@@ -62,28 +62,28 @@ public class GameState
         _awayUsedPitcherSlotIndices = new HashSet<int>();
     }
     
-    //¾Æ¿ô Ä«¿îÆ® Áõ°¡ ¹× 3¾Æ¿ô ÀÌ´× Á¾·á Ã³¸®
+    //ì•„ì›ƒ ì¹´ìš´íŠ¸ ì¦ê°€ ë° 3ì•„ì›ƒ ì´ë‹ ì¢…ë£Œ ì²˜ë¦¬
     public void AddOut()
     {
         OutCount++;
 
-        //3¾Æ¿ôÀÏ ¶§¸¸ ·ÎÁ÷ ½ÇÇà
+        //3ì•„ì›ƒì¼ ë•Œë§Œ ë¡œì§ ì‹¤í–‰
         if (OutCount < 3)
             return;
 
-        //3¾Æ¿ô µÇ¸é ÀÌ´× ÀüÈ¯
+        //3ì•„ì›ƒ ë˜ë©´ ì´ë‹ ì „í™˜
         OutCount = 0;
-        FirstBase = SecondBase = ThirdBase = -1;        //ÀÜ·ç ¼Ò¸ê
+        FirstBase = SecondBase = ThirdBase = -1;        //ì”ë£¨ ì†Œë©¸
 
-        //3¾Æ¿ô µÇ¸é ÃÊ -> ¸»
+        //3ì•„ì›ƒ ë˜ë©´ ì´ˆ -> ë§
         if (IsTopInning)
         {
-            IsTopInning = false;    //ÃÊ -> ¸»
+            IsTopInning = false;    //ì´ˆ -> ë§
             HomePitcherState.ResetInningStats();
             return;
         }
 
-        //9È¸°¡ ³¡³­ µÚ µ¿Á¡ÀÌ ¾Æ´Ï°Å³ª ÀÌ´×ÀÌ 12È¸·Î ³Ñ¾î°¡¸é °ÔÀÓ Á¾·á
+        //9íšŒê°€ ëë‚œ ë’¤ ë™ì ì´ ì•„ë‹ˆê±°ë‚˜ ì´ë‹ì´ 12íšŒë¡œ ë„˜ì–´ê°€ë©´ ê²Œì„ ì¢…ë£Œ
         if ((Inning >= 9 && HomeScore != AwayScore) || (Inning >= 11))
         {
             IsGameOver = true;
@@ -95,23 +95,23 @@ public class GameState
         AwayPitcherState.ResetInningStats();
     }
 
-    //ÇöÀç °ø°İ ÁßÀÎ ÆÀ Á¡¼ö Áõ°¡
+    //í˜„ì¬ ê³µê²© ì¤‘ì¸ íŒ€ ì ìˆ˜ ì¦ê°€
     public void AddRun()
     {
-        //Á¡¼ö Áõ°¡
+        //ì ìˆ˜ ì¦ê°€
         if (IsTopInning)
             AwayScore++;
         else
         {
             HomeScore++;
 
-            //³¡³»±âÀÎÁö È®ÀÎ
+            //ëë‚´ê¸°ì¸ì§€ í™•ì¸
             if ((Inning >= 9) && (HomeScore > AwayScore))
                 IsGameOver = true;
         }
     }
 
-    //ÇöÀç °ø°İ ÁßÀÎ ÆÀÀÇ Å¸¼ø 1 Áõ°¡
+    //í˜„ì¬ ê³µê²© ì¤‘ì¸ íŒ€ì˜ íƒ€ìˆœ 1 ì¦ê°€
     public void AdvanceBatter()
     {
         if (IsTopInning)
@@ -120,7 +120,7 @@ public class GameState
             HomeBattingIndex = (HomeBattingIndex + 1) % 9;
     }
 
-    //ÇöÀç µîÆÇ ÁßÀÎ Åõ¼ö ±³Ã¼
+    //í˜„ì¬ ë“±íŒ ì¤‘ì¸ íˆ¬ìˆ˜ êµì²´
     public void SubstitutePitcher(SimulationContext context, bool isHome, int newSlotIndex)
     {
         if (isHome)
@@ -133,25 +133,25 @@ public class GameState
         }
     }
 
-    //1·ç ÁÖÀÚ ¼¼ÆÃ
+    //1ë£¨ ì£¼ì ì„¸íŒ…
     public void SetFirstBase(int instanceId)
     {
         FirstBase = instanceId;
     }
 
-    //2·ç ÁÖÀÚ ¼¼ÆÃ
+    //2ë£¨ ì£¼ì ì„¸íŒ…
     public void SetSecondBase(int instanceId)
     {
         SecondBase = instanceId;
     }
 
-    //3·ç ÁÖÀÚ ¼¼ÆÃ
+    //3ë£¨ ì£¼ì ì„¸íŒ…
     public void SetThirdBase(int instanceId)
     {
         ThirdBase = instanceId;
     }
 
-    //±³Ã¼·Î ºüÁø ¾ß¼ö ±â·Ï
+    //êµì²´ë¡œ ë¹ ì§„ ì•¼ìˆ˜ ê¸°ë¡
     public void MarkHitterUsed(bool isHome, int instanceId)
     {
         if (isHome)
@@ -160,7 +160,7 @@ public class GameState
             _awayUsedHitterInstanceIds.Add(instanceId);
     }
 
-    //±³Ã¼·Î ºüÁø Åõ¼ö ±â·Ï
+    //êµì²´ë¡œ ë¹ ì§„ íˆ¬ìˆ˜ ê¸°ë¡
     public void MarkPitcherUsed(bool isHome, int slotIndex)
     {
         if (isHome)
@@ -169,13 +169,13 @@ public class GameState
             _awayUsedPitcherSlotIndices.Add(slotIndex);
     }
 
-    //ÇØ´ç ¾ß¼ö°¡ ÀÌ¹Ì ºüÁø »óÅÂÀÎÁö Á¶È¸
+    //í•´ë‹¹ ì•¼ìˆ˜ê°€ ì´ë¯¸ ë¹ ì§„ ìƒíƒœì¸ì§€ ì¡°íšŒ
     public bool IsHitterUsed(bool isHome, int instanceId)
     {
         return isHome ? _homeUsedHitterInstanceIds.Contains(instanceId) : _awayUsedHitterInstanceIds.Contains(instanceId);
     }
 
-    //ÇØ´ç Åõ¼ö°¡ ÀÌ¹Ì ºüÁø »óÅÂÀÎÁö Á¶È¸
+    //í•´ë‹¹ íˆ¬ìˆ˜ê°€ ì´ë¯¸ ë¹ ì§„ ìƒíƒœì¸ì§€ ì¡°íšŒ
     public bool IsPitcherUsed(bool isHome, int slotIndex)
     {
         return isHome ? _homeUsedPitcherSlotIndices.Contains(slotIndex) : _awayUsedPitcherSlotIndices.Contains(slotIndex);

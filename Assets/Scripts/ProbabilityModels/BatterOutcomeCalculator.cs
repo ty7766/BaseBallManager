@@ -1,29 +1,29 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// Å¸ÀÚ/Åõ¼ö ½ºÅÈÀ» ¹Ş¾Æ Å¸¼® °á°ú(»ïÁø, º¼³İ, ¾ÈÅ¸, ½ÇÃ¥, ¾Æ¿ô µî) »êÃâ
+/// íƒ€ì/íˆ¬ìˆ˜ ìŠ¤íƒ¯ì„ ë°›ì•„ íƒ€ì„ ê²°ê³¼(ì‚¼ì§„, ë³¼ë„·, ì•ˆíƒ€, ì‹¤ì±…, ì•„ì›ƒ ë“±) ì‚°ì¶œ
 /// </summary>
 public class BatterOutcomeCalculator
 {
-    // È®·ü ¸Ş¼­µå¸¦ Á¶ÇÕÇÏ¿© ÃÖÁ¾ Å¸¼® °á°ú ¹İÈ¯
+    // í™•ë¥  ë©”ì„œë“œë¥¼ ì¡°í•©í•˜ì—¬ ìµœì¢… íƒ€ì„ ê²°ê³¼ ë°˜í™˜
     public BatterOutcome Calculate(GameState state, HitterSnapshot hitter, PitcherSnapshot pitcher, float avgDefense)
     {
-        // 1. »ïÁø
+        // 1. ì‚¼ì§„
         if (Roll(CalcStrikeOutProb(hitter, pitcher)))
             return BatterOutcome.StrikeOut;
-        // 2. º¼³İ
+        // 2. ë³¼ë„·
         if (Roll(CalcWalkProb(hitter, pitcher)))
             return BatterOutcome.Walk;
-        // 3. È¨·±
+        // 3. í™ˆëŸ°
         if (Roll(CalcHomeRunProb(hitter, pitcher)))
             return BatterOutcome.HomeRun;
-        // 4. ½ÇÃ¥
+        // 4. ì‹¤ì±…
         if (Roll(CalcErrorProb(avgDefense)))
             return BatterOutcome.Error;
-        // 5. ¾ÈÅ¸
+        // 5. ì•ˆíƒ€
         if (Roll(CalcHitProb(hitter, pitcher)))
         {
-            // ÆÄ¿ö/ÁÖ·ç ±â¹İ ÀåÅ¸ ºñÁß º¸Á¤
+            // íŒŒì›Œ/ì£¼ë£¨ ê¸°ë°˜ ì¥íƒ€ ë¹„ì¤‘ ë³´ì •
             float power = hitter.Power / 100f;
             float run = hitter.Run / 100f;
             float longHitBonus = 0.15f * (power * 0.6f + run * 0.4f);
@@ -39,7 +39,7 @@ public class BatterOutcomeCalculator
             else
                 return BatterOutcome.Single;
         }
-        // 6. ¾Æ¿ô Á¾·ù
+        // 6. ì•„ì›ƒ ì¢…ë¥˜
         else
         {
             bool canDoublePlay = state.FirstBase != -1 && state.OutCount < 2;
@@ -49,7 +49,7 @@ public class BatterOutcomeCalculator
             {
                 if (r < 0.45f)
                 {
-                    // Èñ»ıÇÃ¶óÀÌ: ¶á°ø + 3·ç ÁÖÀÚ ÀÖÀ½ + 2¾Æ¿ô ¹Ì¸¸
+                    // í¬ìƒí”Œë¼ì´: ëœ¬ê³µ + 3ë£¨ ì£¼ì ìˆìŒ + 2ì•„ì›ƒ ë¯¸ë§Œ
                     if (state.ThirdBase != -1)
                         return BatterOutcome.SacrificeFly;
                     return BatterOutcome.FlyOut;
@@ -63,7 +63,7 @@ public class BatterOutcomeCalculator
             {
                 if (r < 0.5f)
                 {
-                    // Èñ»ıÇÃ¶óÀÌ: ¶á°ø + 3·ç ÁÖÀÚ ÀÖÀ½ + 2¾Æ¿ô ¹Ì¸¸
+                    // í¬ìƒí”Œë¼ì´: ëœ¬ê³µ + 3ë£¨ ì£¼ì ìˆìŒ + 2ì•„ì›ƒ ë¯¸ë§Œ
                     if (state.ThirdBase != -1 && state.OutCount < 2)
                         return BatterOutcome.SacrificeFly;
                     return BatterOutcome.FlyOut;
@@ -73,83 +73,83 @@ public class BatterOutcomeCalculator
         }
     }
 
-    // »ïÁø È®·ü °è»ê
-    // Å¸ÀÚ Á¤È®¡é, Åõ¼ö ±¸À§/±¸¼Ó¡è ÀÏ¼ö·Ï ³ô¾ÆÁü
+    // ì‚¼ì§„ í™•ë¥  ê³„ì‚°
+    // íƒ€ì ì •í™•â†“, íˆ¬ìˆ˜ êµ¬ìœ„/êµ¬ì†â†‘ ì¼ìˆ˜ë¡ ë†’ì•„ì§
     private float CalcStrikeOutProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
-        // 1. ½ºÅÈ Á¤±ÔÈ­
+        // 1. ìŠ¤íƒ¯ ì •ê·œí™”
         float stuff = pitcher.Stuff / 100f;
         float velo = pitcher.Velo / 100f;
         float contact = hitter.Contact / 100f;
 
-        // 2. Åõ¼ö ±¸À§/±¸¼Ó Æò±Õ
+        // 2. íˆ¬ìˆ˜ êµ¬ìœ„/êµ¬ì† í‰ê· 
         float pitcherPower = (stuff + velo) * 0.5f;
 
-        // 3. ±âº» »ïÁø È®·ü °è»ê
+        // 3. ê¸°ë³¸ ì‚¼ì§„ í™•ë¥  ê³„ì‚°
         float probK = 0.22f + 0.30f * (pitcherPower - contact);
 
-        // 4. (5% ~ 40% ¹üÀ§ °íÁ¤)
+        // 4. (5% ~ 40% ë²”ìœ„ ê³ ì •)
         return Mathf.Clamp(probK, 0.05f, 0.40f);
     }
 
-    // º¼³İ È®·ü °è»ê
-    // Å¸ÀÚ Á¤È®¡è, Åõ¼ö Á¦±¸¡é ÀÏ¼ö·Ï ³ô¾ÆÁü
+    // ë³¼ë„· í™•ë¥  ê³„ì‚°
+    // íƒ€ì ì •í™•â†‘, íˆ¬ìˆ˜ ì œêµ¬â†“ ì¼ìˆ˜ë¡ ë†’ì•„ì§
     private float CalcWalkProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
-        // 1. ½ºÅÈ Á¤±ÔÈ­
+        // 1. ìŠ¤íƒ¯ ì •ê·œí™”
         float contact = hitter.Contact / 100f;
         float control = pitcher.Control / 100f;
 
-        // 2. ±âº» º¼³İ È®·ü °è»ê
+        // 2. ê¸°ë³¸ ë³¼ë„· í™•ë¥  ê³„ì‚°
         float probWalk = 0.085f + 0.20f * (contact * 0.4f - control);
 
-        // 3. (2% ~ 20% ¹üÀ§ °íÁ¤)
+        // 3. (2% ~ 20% ë²”ìœ„ ê³ ì •)
         return Mathf.Clamp(probWalk, 0.02f, 0.20f);
     }
 
-    // È¨·± È®·ü °è»ê
-    // Å¸ÀÚ ÆÄ¿ö¡è, Åõ¼ö ±¸À§/±¸¼Ó¡é ÀÏ¼ö·Ï ³ô¾ÆÁü
+    // í™ˆëŸ° í™•ë¥  ê³„ì‚°
+    // íƒ€ì íŒŒì›Œâ†‘, íˆ¬ìˆ˜ êµ¬ìœ„/êµ¬ì†â†“ ì¼ìˆ˜ë¡ ë†’ì•„ì§
     private float CalcHomeRunProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
-        // 1. ½ºÅÈ Á¤±ÔÈ­
+        // 1. ìŠ¤íƒ¯ ì •ê·œí™”
         float power = hitter.Power / 100f;
         float stuff = pitcher.Stuff / 100f;
         float velo = pitcher.Velo / 100f;
 
-        // 2. ±âº» È¨·± È®·ü °è»ê
+        // 2. ê¸°ë³¸ í™ˆëŸ° í™•ë¥  ê³„ì‚°
         float probHomerun = 0.05f + 0.25f * (power - ((stuff + velo) * 0.5f));
 
-        // 3. (0.5% ~ 30% ¹üÀ§ °íÁ¤)
+        // 3. (0.5% ~ 30% ë²”ìœ„ ê³ ì •)
         return Mathf.Clamp(probHomerun, 0.005f, 0.30f);
     }
 
-    // ¾ÈÅ¸ È®·ü °è»ê (BABIP °³³ä)
-    // Å¸ÀÚ Á¤È®¡è, Åõ¼ö ±¸À§¡é ÀÏ¼ö·Ï ³ô¾ÆÁü
+    // ì•ˆíƒ€ í™•ë¥  ê³„ì‚° (BABIP ê°œë…)
+    // íƒ€ì ì •í™•â†‘, íˆ¬ìˆ˜ êµ¬ìœ„â†“ ì¼ìˆ˜ë¡ ë†’ì•„ì§
     private float CalcHitProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
-        // 1. ½ºÅÈ Á¤±ÔÈ­
+        // 1. ìŠ¤íƒ¯ ì •ê·œí™”
         float contact = hitter.Contact / 100f;
         float stuff = pitcher.Stuff / 100f;
 
-        // 2. ±âº» ¾ÈÅ¸ È®·ü °è»ê
+        // 2. ê¸°ë³¸ ì•ˆíƒ€ í™•ë¥  ê³„ì‚°
         float probHit = 0.3f + 0.25f * (contact - stuff);
 
-        // 3. (15% ~ 45% ¹üÀ§ °íÁ¤)
+        // 3. (15% ~ 45% ë²”ìœ„ ê³ ì •)
         return Mathf.Clamp(probHit, 0.15f, 0.45f);
     }
 
-    // ½ÇÃ¥ È®·ü °è»ê
-    // ¼öºñÆÀ Æò±Õ ¼öºñ¡è ÀÏ¼ö·Ï ³·¾ÆÁü
+    // ì‹¤ì±… í™•ë¥  ê³„ì‚°
+    // ìˆ˜ë¹„íŒ€ í‰ê·  ìˆ˜ë¹„â†‘ ì¼ìˆ˜ë¡ ë‚®ì•„ì§
     private float CalcErrorProb(float avgDefense)
     {
-        // 1. ±âº» ½ÇÃ¥ È®·ü °è»ê
+        // 1. ê¸°ë³¸ ì‹¤ì±… í™•ë¥  ê³„ì‚°
         float probError = 0.012f - 0.02f * (avgDefense - 0.5f);
 
-        // 2. (0.3% ~ 3% ¹üÀ§ °íÁ¤)
+        // 2. (0.3% ~ 3% ë²”ìœ„ ê³ ì •)
         return Mathf.Clamp(probError, 0.003f, 0.03f);
     }
 
-    // Å¸¼®ÀÇ ¹ß»ı È®·ü ÆÇÁ¤
+    // íƒ€ì„ì˜ ë°œìƒ í™•ë¥  íŒì •
     private bool Roll(float probability)
     {
         float randomValue = Random.value;

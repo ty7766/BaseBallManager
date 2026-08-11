@@ -1,10 +1,10 @@
-/// <summary>
-/// ´ëÅ¸ ±³Ã¼ 1°ÇÀ» Ç¥ÇöÇÏ´Â °ª °´Ã¼
+ï»¿/// <summary>
+/// ëŒ€íƒ€ êµì²´ 1ê±´ì„ í‘œí˜„í•˜ëŠ” ê°’ ê°ì²´
 /// </summary>
 public struct Hittersubstitution
 {
-    public int BattingOrderIndex { get; }       //0~8 (Å¸¼ø)
-    public int BenchIndex { get; }              //0~4 (º¥Ä¡)
+    public int BattingOrderIndex { get; }       //0~8 (íƒ€ìˆœ)
+    public int BenchIndex { get; }              //0~4 (ë²¤ì¹˜)
 
     public Hittersubstitution(int battingOrderIndex, int benchIndex)
     {

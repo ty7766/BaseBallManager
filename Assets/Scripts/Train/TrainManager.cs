@@ -1,22 +1,22 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// ÈÆ·Ã Àü¹İ ¼³Á¤
+/// í›ˆë ¨ ì „ë°˜ ì„¤ì •
 /// </summary>
 public class TrainManager : MonoBehaviour
 {
     public static TrainManager Instance { get; private set; }
 
-    [Header("ÈÆ·Ã ·¹º§ ¼³Á¤")]
-    [SerializeField, Tooltip("ÈÆ·Ãµ¹ÆÄ Àü ÃÖ´ë ÈÆ·Ã ·¹º§")]
+    [Header("í›ˆë ¨ ë ˆë²¨ ì„¤ì •")]
+    [SerializeField, Tooltip("í›ˆë ¨ëŒíŒŒ ì „ ìµœëŒ€ í›ˆë ¨ ë ˆë²¨")]
     private int _maxTrainLevel = 30;
-    [SerializeField, Tooltip("ÈÆ·Ãµ¹ÆÄ ÈÄ ÃÖ´ë ÈÆ·Ã ·¹º§")]
+    [SerializeField, Tooltip("í›ˆë ¨ëŒíŒŒ í›„ ìµœëŒ€ í›ˆë ¨ ë ˆë²¨")]
     private int _maxTrainLevelAfterBreakthrough = 50;
 
-    [Header("ÈÆ·Ã ºñ¿ë ¼³Á¤")]
-    [SerializeField, Tooltip("±âº» Æ÷ÀÎÆ® ºñ¿ë")]
+    [Header("í›ˆë ¨ ë¹„ìš© ì„¤ì •")]
+    [SerializeField, Tooltip("ê¸°ë³¸ í¬ì¸íŠ¸ ë¹„ìš©")]
     private int _basePointCost;
-    [SerializeField, Tooltip("±âº» ÈÆ·Ã Ä«µå ºñ¿ë")]
+    [SerializeField, Tooltip("ê¸°ë³¸ í›ˆë ¨ ì¹´ë“œ ë¹„ìš©")]
     private int _baseTrainCardCost;
     
     private void Awake()
@@ -32,7 +32,7 @@ public class TrainManager : MonoBehaviour
         }
     }
 
-    //ÈÆ·ÃÀ» ÇÒ ¼ö ÀÖ´Â »óÅÂÀÎÁö¸¦ ¹İÈ¯
+    //í›ˆë ¨ì„ í•  ìˆ˜ ìˆëŠ” ìƒíƒœì¸ì§€ë¥¼ ë°˜í™˜
     public bool CanTrain(int instanceId)
     {
         CardInstance card = InventoryManager.Instance.GetCard(instanceId);
@@ -52,12 +52,12 @@ public class TrainManager : MonoBehaviour
             maxLevel = _maxTrainLevelAfterBreakthrough;
         }
 
-        //ÈÆ·ÃÀÌ ¸¸·¾ÀÌ ¾Æ´Ï¸é true ¹İÈ¯
+        //í›ˆë ¨ì´ ë§Œë ™ì´ ì•„ë‹ˆë©´ true ë°˜í™˜
         return card.TrainLevel < maxLevel;
         
     }
 
-    //ÇöÀç ÈÆ·Ã ·¹º§ ±âÁØ Æ÷ÀÎÆ® ºñ¿ë°ú ÈÆ·Ã Ä«µå ºñ¿ë ¹İÈ¯
+    //í˜„ì¬ í›ˆë ¨ ë ˆë²¨ ê¸°ì¤€ í¬ì¸íŠ¸ ë¹„ìš©ê³¼ í›ˆë ¨ ì¹´ë“œ ë¹„ìš© ë°˜í™˜
     public (int pointCost, int trainCardCost) GetTrainCost(int trainLevel)
     {
         int pointCost = trainLevel * _basePointCost;

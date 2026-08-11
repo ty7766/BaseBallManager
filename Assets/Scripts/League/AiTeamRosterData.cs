@@ -1,7 +1,7 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 /// <summary>
-/// AI ÆÀ 1°³ÀÇ Æí¼º µ¥ÀÌÅÍ (¿¡µğÅÍ ÆíÁı¿ë)
+/// AI íŒ€ 1ê°œì˜ í¸ì„± ë°ì´í„° (ì—ë””í„° í¸ì§‘ìš©)
 /// </summary>
 
 [CreateAssetMenu(fileName = "AiTeamRoster", menuName = "BaseBallManager/AI Team Roster")]
@@ -20,22 +20,22 @@ public class AiTeamRosterData : ScriptableObject
     [SerializeField]
     private string _teamName;
 
-    [Header("Å¸¼± 9¸í - ¹è¿­ ¼ø¼­ = Å¸¼ø")]
+    [Header("íƒ€ì„  9ëª… - ë°°ì—´ ìˆœì„œ = íƒ€ìˆœ")]
     [SerializeField]
     private AiHitterSlot[] _lineup = new AiHitterSlot[LineupSize];
 
-    [Header("¼±¹ß 5¸í - ¹è¿­ ¼ø¼­ = ·ÎÅ×ÀÌ¼Ç")]
-    [CardId(PlayerTypeFilter.PitcherOnly)]
+    [Header("ì„ ë°œ 5ëª… - ë°°ì—´ ìˆœì„œ = ë¡œí…Œì´ì…˜")]
+    [CardId(PlayerTypeFilter.PitcherOnly, fixedPosition: nameof(PitcherPosition.SP))]
     [SerializeField]
     private int[] _startingPitcherCardIds = new int[StartingPitcherCount];
 
-    [Header("ºÒÆæ 5¸í - ¹è¿­ ¼ø¼­ = µîÆÇ ¼ø¼­")]
-    [CardId(PlayerTypeFilter.PitcherOnly)]
+    [Header("ë¶ˆíœ 5ëª… - ë°°ì—´ ìˆœì„œ = ë“±íŒ ìˆœì„œ")]
+    [CardId(PlayerTypeFilter.PitcherOnly, fixedPosition: nameof(PitcherPosition.RP))]
     [SerializeField]
     private int[] _relieverCardIds = new int[RelieverCount];
 
-    [Header("¸¶¹«¸®")]
-    [CardId(PlayerTypeFilter.PitcherOnly)]
+    [Header("ë§ˆë¬´ë¦¬")]
+    [CardId(PlayerTypeFilter.PitcherOnly, fixedPosition: nameof(PitcherPosition.CP))]
     [SerializeField]
     private int _closerCardId;
 }

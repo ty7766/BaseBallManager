@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 
@@ -23,8 +23,8 @@ public class CardDataManager : MonoBehaviour
         }
     }
 
-    //CSV¿¡¼­ ¸¶½ºÅÍµ¥ÀÌÅÍ¸¦ ·Îµå -> Dictionary·Î ÃÊ±âÈ­
-    //cardId¿Í ³ª¸ÓÁö µ¥ÀÌÅÍ¸¦ ÀúÀåÇÏ¿© cardId·Î È®ÀÎÇÒ ¼ö ÀÖ°Ô µ¿ÀÛ
+    //CSVì—ì„œ ë§ˆìŠ¤í„°ë°ì´í„°ë¥¼ ë¡œë“œ -> Dictionaryë¡œ ì´ˆê¸°í™”
+    //cardIdì™€ ë‚˜ë¨¸ì§€ ë°ì´í„°ë¥¼ ì €ì¥í•˜ì—¬ cardIdë¡œ í™•ì¸í•  ìˆ˜ ìˆê²Œ ë™ì‘
     private void LoadCardMasterData()
     {
         CardCSVLoader loader = new CardCSVLoader();
@@ -43,7 +43,7 @@ public class CardDataManager : MonoBehaviour
         }
     }
 
-    //cardId·Î Å¸ÀÚ °Ë»ö
+    //cardIdë¡œ íƒ€ì ê²€ìƒ‰
     public HitterMasterData GetHitter(int cardId)
     {
         if (_hitters.TryGetValue(cardId, out HitterMasterData data))
@@ -53,7 +53,7 @@ public class CardDataManager : MonoBehaviour
         return null;
     }
 
-    //cardId·Î Åõ¼ö °Ë»ö
+    //cardIdë¡œ íˆ¬ìˆ˜ ê²€ìƒ‰
     public PitcherMasterData GetPitcher(int cardId)
     {
         if (_pitchers.TryGetValue(cardId, out PitcherMasterData data))
@@ -63,7 +63,7 @@ public class CardDataManager : MonoBehaviour
         return null;
     }
 
-    //Card µ¥ÀÌÅÍ¸¦ ¹İÈ¯
+    //Card ë°ì´í„°ë¥¼ ë°˜í™˜
     public CardMasterData GetCardMasterData(int cardId)
     {
         if (_hitters.TryGetValue(cardId, out HitterMasterData hdata))
@@ -72,18 +72,18 @@ public class CardDataManager : MonoBehaviour
             return pdata;
         else
         {
-            Debug.LogWarning("[CardDataManager] : ÇÊÅÍ¿¡ ÇØ´çÇÏ´Â Ä«µå°¡ ¾ø½À´Ï´Ù.");
+            Debug.LogWarning("[CardDataManager] : í•„í„°ì— í•´ë‹¹í•˜ëŠ” ì¹´ë“œê°€ ì—†ìŠµë‹ˆë‹¤.");
             return null;
         }
     }
 
-    //ÀüÃ¼ Å¸ÀÚ ¸ñ·Ï ¹İÈ¯
+    //ì „ì²´ íƒ€ì ëª©ë¡ ë°˜í™˜
     public IEnumerable<HitterMasterData> GetAllHitters()
     {
         return _hitters.Values;
     }
 
-    //ÀüÃ¼ Åõ¼ö ¸ñ·Ï ¹İÈ¯
+    //ì „ì²´ íˆ¬ìˆ˜ ëª©ë¡ ë°˜í™˜
     public IEnumerable<PitcherMasterData> GetAllPitchers()
     {
         return _pitchers.Values;

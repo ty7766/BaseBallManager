@@ -1,15 +1,15 @@
-using System;
+ï»¿using System;
 /// <summary>
-/// AI ÆÀ 1°³ÀÇ °íÁ¤ ·Î½ºÅÍ
+/// AI íŒ€ 1ê°œì˜ ê³ ì • ë¡œìŠ¤í„°
 /// </summary>
 public class AiTeamRoster
 {
     public string TeamName { get; }
 
-    public HitterSnapshot[] Lineup { get; }                 //¾ß¼ö 9¸í
-    public PitcherSnapshot[] StartingPitchers { get; }      //SP 5¸í
-    public PitcherSnapshot[] RelievePitchers { get; }       //RP 5¸í
-    public PitcherSnapshot Closer { get; }               //CP 1¸í
+    public HitterSnapshot[] Lineup { get; }                 //ì•¼ìˆ˜ 9ëª…
+    public PitcherSnapshot[] StartingPitchers { get; }      //SP 5ëª…
+    public PitcherSnapshot[] RelievePitchers { get; }       //RP 5ëª…
+    public PitcherSnapshot Closer { get; }               //CP 1ëª…
 
     public AiTeamRoster(string teamName, HitterSnapshot[] lineup, PitcherSnapshot[] startingPitchers, PitcherSnapshot[] relievePitchers, PitcherSnapshot closer)
     {
@@ -20,7 +20,7 @@ public class AiTeamRoster
         Closer = closer;
     }
 
-    //·ÎÅ×ÀÌ¼Ç¿¡ ¸Â´Â Åõ¼öÁø 7Ä­ Á¶¸³
+    //ë¡œí…Œì´ì…˜ì— ë§ëŠ” íˆ¬ìˆ˜ì§„ 7ì¹¸ ì¡°ë¦½
     public PitcherSnapshot[] GetPitcherStaff(int rotationIndex)
     {
         PitcherSnapshot[] allPitchers = new PitcherSnapshot[7];

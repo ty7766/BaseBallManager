@@ -1,15 +1,15 @@
-/// <summary>
-/// Ä«µå ¸¶½ºÅÍ Ç®¿¡¼­ AI ÆÀ ·Î½ºÅÍ Æí¼º
+ï»¿/// <summary>
+/// ì¹´ë“œ ë§ˆìŠ¤í„° í’€ì—ì„œ AI íŒ€ ë¡œìŠ¤í„° í¸ì„±
 /// </summary>
 public static class AiRosterBuilder
 {
-    //¸¶½ºÅÍ µ¥ÀÌÅÍ + Æ¼¾î º¸Á¤ = AI Å¸ÀÚ ½º³À¼¦
+    //ë§ˆìŠ¤í„° ë°ì´í„° + í‹°ì–´ ë³´ì • = AI íƒ€ì ìŠ¤ëƒ…ìƒ·
     private static HitterSnapshot ToHitterSnapshot(HitterMasterData hitterData, int tierStatBonus)
     {
         return new HitterSnapshot(hitterData.CardId, hitterData.Name, hitterData.Power + tierStatBonus, hitterData.Contact + tierStatBonus, hitterData.Run + tierStatBonus, hitterData.Defense + tierStatBonus);
     }
 
-    //¸¶½ºÅÍ µ¥ÀÌÅÍ + Æ¼¾î º¸Á¤ = AI Åõ¼ö ½º³À¼¦
+    //ë§ˆìŠ¤í„° ë°ì´í„° + í‹°ì–´ ë³´ì • = AI íˆ¬ìˆ˜ ìŠ¤ëƒ…ìƒ·
     private static PitcherSnapshot ToPitcherSnapshot(PitcherMasterData pitcherData, int tierStatBonus)
     {
         return new PitcherSnapshot(pitcherData.CardId, pitcherData.Name, pitcherData.Velocity + tierStatBonus, pitcherData.Stuff + tierStatBonus, pitcherData.Control + tierStatBonus, pitcherData.Stamina + tierStatBonus);

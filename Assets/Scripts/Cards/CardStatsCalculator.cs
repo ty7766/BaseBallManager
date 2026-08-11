@@ -1,5 +1,5 @@
-/// <summary>
-/// Ä«µåÀÇ ÃÖÁ¾ ½ºÅÈ °è»ê
+ï»¿/// <summary>
+/// ì¹´ë“œì˜ ìµœì¢… ìŠ¤íƒ¯ ê³„ì‚°
 /// </summary>
 public static class CardStatsCalculator
 {

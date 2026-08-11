@@ -1,7 +1,7 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 
 /// <summary>
-/// °æ±â Á¾·á ÈÄ °á°ú ÀúÀå
+/// ê²½ê¸° ì¢…ë£Œ í›„ ê²°ê³¼ ì €ìž¥
 /// </summary>
 public class GameResult
 {

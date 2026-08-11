@@ -1,31 +1,31 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// Å¸¼®ÀÇ ÃÑ Åõ±¸ ¼ö ¹İÈ¯
+/// íƒ€ì„ì˜ ì´ íˆ¬êµ¬ ìˆ˜ ë°˜í™˜
 /// </summary>
 public class PitchCountCalculator
 {
-    //Å¸¼® ´ç Åõ±¸ ¼ö ¹İÈ¯
+    //íƒ€ì„ ë‹¹ íˆ¬êµ¬ ìˆ˜ ë°˜í™˜
     public int Calculate(BatterOutcome outcome, HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
         return CalcBasePitches(outcome) + CalcFouls(hitter, pitcher); 
     }
 
-    //±âº» Åõ±¸ ¼ö ¹İÈ¯
+    //ê¸°ë³¸ íˆ¬êµ¬ ìˆ˜ ë°˜í™˜
     private int CalcBasePitches(BatterOutcome outcome)
     {
-        //»ïÁø
+        //ì‚¼ì§„
         if (outcome == BatterOutcome.StrikeOut)
         {
             return 3;
         }
-        //º¼³İ
+        //ë³¼ë„·
         if (outcome == BatterOutcome.Walk)
         {
             return 4;
         }
 
-        //±× ¿Ü ÀÎÇÃ·¹ÀÌ
+        //ê·¸ ì™¸ ì¸í”Œë ˆì´
         float r = Random.value;
         if (r < 0.15f)
             return 1;
@@ -39,14 +39,14 @@ public class PitchCountCalculator
             return 5;
     }
 
-    //ÆÄ¿ï °³¼ö ¹İÈ¯
+    //íŒŒìš¸ ê°œìˆ˜ ë°˜í™˜
     private int CalcFouls(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
-        //1. Á¤±ÔÈ­
+        //1. ì •ê·œí™”
         float contact = hitter.Contact / 100f;
         float stuff = pitcher.Stuff / 100f;
 
-        //2. ÆÄ¿ï ¹ß»ı È®·ü °è»ê
+        //2. íŒŒìš¸ ë°œìƒ í™•ë¥  ê³„ì‚°
         float foulChance = Mathf.Clamp(0.28f + 0.40f * (contact - stuff), 0.10f, 0.55f);
 
         int fouls = 0;

@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -6,13 +6,13 @@ public class LineUpManager : MonoBehaviour
 {
     public static LineUpManager Instance { get; private set; }
 
-    //¾ß¼ö ½½·Ô (9Ä­)
+    //ì•¼ìˆ˜ ìŠ¬ë¡¯ (9ì¹¸)
     private Dictionary<HitterPosition, (int instanceId, int battingOrder)> _hitterSlots;
 
-    //¾ß¼ö ÈÄº¸ ½½·Ô (5Ä­)
+    //ì•¼ìˆ˜ í›„ë³´ ìŠ¬ë¡¯ (5ì¹¸)
     private int[] _benchSlots;
 
-    //Åõ¼ö ½½·Ô (SP 5Ä­, RP 5Ä­, CP 1Ä­)
+    //íˆ¬ìˆ˜ ìŠ¬ë¡¯ (SP 5ì¹¸, RP 5ì¹¸, CP 1ì¹¸)
     private Dictionary<PitcherPosition, int[]> _pitcherSlots;
 
     private void Awake()
@@ -41,13 +41,13 @@ public class LineUpManager : MonoBehaviour
         }
     }
 
-    //Å¸ÀÚ ½½·Ô¿¡ Ä«µå ¹èÄ¡
+    //íƒ€ì ìŠ¬ë¡¯ì— ì¹´ë“œ ë°°ì¹˜
     public bool AssignHitter(HitterPosition slot, int instanceId, int battingOrder)
     {
         CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
         if (cardInstance == null)
         {
-            Debug.LogWarning("[LineUpManager]: ÇØ´ç Ä«µå°¡ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù");
+            Debug.LogWarning("[LineUpManager]: í•´ë‹¹ ì¹´ë“œê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤");
             return false;
         }
 
@@ -57,31 +57,31 @@ public class LineUpManager : MonoBehaviour
             return false;
         }
 
-        //Å¸¼øÀº 1¹øºÎÅÍ 9¹ø±îÁö Çã¿ë
+        //íƒ€ìˆœì€ 1ë²ˆë¶€í„° 9ë²ˆê¹Œì§€ í—ˆìš©
         if (battingOrder <= 0 || battingOrder >= 10)
         {
             return false;
         }
 
-        //Å¸¼ø Áßº¹ ¹æÁö
+        //íƒ€ìˆœ ì¤‘ë³µ ë°©ì§€
         if (IsBattingOrderTaken(battingOrder, slot))
         {
-            Debug.LogWarning($"[LineUpManager]: {battingOrder}¹ø Å¸¼øÀº ÀÌ¹Ì ´Ù¸¥ ¼±¼ö°¡ »ç¿ë ÁßÀÔ´Ï´Ù.");
+            Debug.LogWarning($"[LineUpManager]: {battingOrder}ë²ˆ íƒ€ìˆœì€ ì´ë¯¸ ë‹¤ë¥¸ ì„ ìˆ˜ê°€ ì‚¬ìš© ì¤‘ì…ë‹ˆë‹¤.");
             return false;
         }
 
-        //ÀÌ¹Ì ´Ù¸¥ ½½·Ô¿¡ ¹èÄ¡µÈ Ä«µåÀÎÁö È®ÀÎ
+        //ì´ë¯¸ ë‹¤ë¥¸ ìŠ¬ë¡¯ì— ë°°ì¹˜ëœ ì¹´ë“œì¸ì§€ í™•ì¸
         if (IsCardAssigned(instanceId))
         {
-            Debug.LogWarning("[LineUpManager]: ÀÌ Ä«µå´Â ÀÌ¹Ì ´Ù¸¥ ½½·Ô¿¡ ¹èÄ¡µÇ¾îÀÖ½À´Ï´Ù");
+            Debug.LogWarning("[LineUpManager]: ì´ ì¹´ë“œëŠ” ì´ë¯¸ ë‹¤ë¥¸ ìŠ¬ë¡¯ì— ë°°ì¹˜ë˜ì–´ìˆìŠµë‹ˆë‹¤");
             return false;
         }
 
-        //DH Æ÷Áö¼Ç¿¡´Â ¾Æ¹« Ä«µå °¡´É
+        //DH í¬ì§€ì…˜ì—ëŠ” ì•„ë¬´ ì¹´ë“œ ê°€ëŠ¥
         if (slot != HitterPosition.DH)
         {
             HitterPositionParser.TryParse(cardData.Position, out HitterPosition cardPosition);
-            //ÇØ´ç Æ÷Áö¼Ç°ú ÀÏÄ¡ÇÏ´Â Ä«µåÀÎÁö È®ÀÎ
+            //í•´ë‹¹ í¬ì§€ì…˜ê³¼ ì¼ì¹˜í•˜ëŠ” ì¹´ë“œì¸ì§€ í™•ì¸
             if (cardPosition != slot)
             {
                 return false;
@@ -92,22 +92,22 @@ public class LineUpManager : MonoBehaviour
         return true;
     }
 
-    //Å¸ÀÚ ½½·Ô¿¡ Ä«µå Á¦°Å
+    //íƒ€ì ìŠ¬ë¡¯ì— ì¹´ë“œ ì œê±°
     public bool RemoveHitter(HitterPosition slot)
     {
-        //ÇØ´ç ½½·ÔÀÌ ºñ¾îÀÖ´ÂÁö È®ÀÎ
+        //í•´ë‹¹ ìŠ¬ë¡¯ì´ ë¹„ì–´ìˆëŠ”ì§€ í™•ì¸
         if (_hitterSlots[slot].instanceId == -1)
         {
-            Debug.LogWarning("[LineUpManager]: ÇØ´ç ½½·ÔÀÌ ÀÌ¹Ì ºñ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: í•´ë‹¹ ìŠ¬ë¡¯ì´ ì´ë¯¸ ë¹„ì–´ìˆìŠµë‹ˆë‹¤.");
             return false;
         }
 
-        //½½·Ô ÃÊ±âÈ­
+        //ìŠ¬ë¡¯ ì´ˆê¸°í™”
         _hitterSlots[slot] = (-1, 0);
         return true;
     }
 
-    //º¥Ä¡ ½½·Ô¿¡ Ä«µå ¹èÄ¡
+    //ë²¤ì¹˜ ìŠ¬ë¡¯ì— ì¹´ë“œ ë°°ì¹˜
     public bool AssignBench(int benchIndex, int instanceId)
     {
         if(benchIndex < 0 || benchIndex >= _benchSlots.Length)
@@ -115,14 +115,14 @@ public class LineUpManager : MonoBehaviour
 
         if (_benchSlots[benchIndex] != -1)
         {
-            Debug.LogWarning("[LineUpManager]: ÇØ´ç ½½·ÔÀº ÀÌ¹Ì ÇÒ´çµÇ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: í•´ë‹¹ ìŠ¬ë¡¯ì€ ì´ë¯¸ í• ë‹¹ë˜ì–´ìˆìŠµë‹ˆë‹¤.");
             return false;
         }
 
         CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
         if (cardInstance == null)
         {
-            Debug.LogWarning("[LineUpManager]: ÇØ´ç Ä«µå°¡ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: í•´ë‹¹ ì¹´ë“œê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
             return false;
         }
 
@@ -134,7 +134,7 @@ public class LineUpManager : MonoBehaviour
 
         if (IsCardAssigned(instanceId))
         {
-            Debug.LogWarning("[LineUpManager]: Ä«µå°¡ ÀÌ¹Ì ¹èÄ¡µÇ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: ì¹´ë“œê°€ ì´ë¯¸ ë°°ì¹˜ë˜ì–´ìˆìŠµë‹ˆë‹¤.");
             return false;
         }
 
@@ -142,25 +142,25 @@ public class LineUpManager : MonoBehaviour
         return true;
     }
 
-    //º¥Ä¡ ½½·Ô¿¡ Ä«µå Á¦°Å
+    //ë²¤ì¹˜ ìŠ¬ë¡¯ì— ì¹´ë“œ ì œê±°
     public bool RemoveBench(int benchIndex)
     {
         if (benchIndex < 0 || benchIndex >= _benchSlots.Length)
             return false;
 
-        //ÇØ´ç ½½·ÔÀÌ ºñ¾îÀÖ´ÂÁö È®ÀÎ
+        //í•´ë‹¹ ìŠ¬ë¡¯ì´ ë¹„ì–´ìˆëŠ”ì§€ í™•ì¸
         if (_benchSlots[benchIndex] == -1)
         {
-            Debug.LogWarning("[LineUpManager]: ÇØ´ç ½½·ÔÀÌ ÀÌ¹Ì ºñ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: í•´ë‹¹ ìŠ¬ë¡¯ì´ ì´ë¯¸ ë¹„ì–´ìˆìŠµë‹ˆë‹¤.");
             return false;
         }
 
-        //½½·Ô ÃÊ±âÈ­
+        //ìŠ¬ë¡¯ ì´ˆê¸°í™”
         _benchSlots[benchIndex] = -1;
         return true;
     }
 
-    //Åõ¼ö ½½·Ô¿¡ Ä«µå Ãß°¡
+    //íˆ¬ìˆ˜ ìŠ¬ë¡¯ì— ì¹´ë“œ ì¶”ê°€
     public bool AssignPitcher(PitcherPosition position, int slotIndex, int instanceId)
     {
         if (slotIndex < 0 || slotIndex >= _pitcherSlots[position].Length)
@@ -168,14 +168,14 @@ public class LineUpManager : MonoBehaviour
 
         if (_pitcherSlots[position][slotIndex] != -1)
         {
-            Debug.LogWarning("[LineUpManager]: ÇØ´ç ½½·ÔÀº ÀÌ¹Ì ÇÒ´çµÇ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: í•´ë‹¹ ìŠ¬ë¡¯ì€ ì´ë¯¸ í• ë‹¹ë˜ì–´ìˆìŠµë‹ˆë‹¤.");
             return false;
         }
 
         CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
         if (cardInstance == null)
         {
-            Debug.LogWarning("[LineUpManager]: ÇØ´ç Ä«µå°¡ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: í•´ë‹¹ ì¹´ë“œê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
             return false;
         }
 
@@ -186,7 +186,7 @@ public class LineUpManager : MonoBehaviour
         }
 
         PitcherPositionParser.TryParse(cardData.Position, out PitcherPosition cardPosition);
-        //ÇØ´ç Æ÷Áö¼Ç°ú ÀÏÄ¡ÇÏ´Â Ä«µåÀÎÁö È®ÀÎ
+        //í•´ë‹¹ í¬ì§€ì…˜ê³¼ ì¼ì¹˜í•˜ëŠ” ì¹´ë“œì¸ì§€ í™•ì¸
         if (cardPosition != position)
         {
             return false;
@@ -194,7 +194,7 @@ public class LineUpManager : MonoBehaviour
 
         if (IsCardAssigned(instanceId))
         {
-            Debug.LogWarning("[LineUpManager]: Ä«µå°¡ ÀÌ¹Ì ¹èÄ¡µÇ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: ì¹´ë“œê°€ ì´ë¯¸ ë°°ì¹˜ë˜ì–´ìˆìŠµë‹ˆë‹¤.");
             return false;
         }
 
@@ -202,36 +202,36 @@ public class LineUpManager : MonoBehaviour
         return true;
     }
 
-    //Åõ¼ö ½½·Ô¿¡ Ä«µå Á¦°Å
+    //íˆ¬ìˆ˜ ìŠ¬ë¡¯ì— ì¹´ë“œ ì œê±°
     public bool RemovePitcher(PitcherPosition position, int slotIndex)
     {
         if (slotIndex < 0 || slotIndex >= _pitcherSlots[position].Length)
             return false;
 
-        //ÇØ´ç ½½·ÔÀÌ ºñ¾îÀÖ´ÂÁö È®ÀÎ
+        //í•´ë‹¹ ìŠ¬ë¡¯ì´ ë¹„ì–´ìˆëŠ”ì§€ í™•ì¸
         if (_pitcherSlots[position][slotIndex] == -1)
         {
-            Debug.LogWarning("[LineUpManager]: ÇØ´ç ½½·ÔÀÌ ÀÌ¹Ì ºñ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: í•´ë‹¹ ìŠ¬ë¡¯ì´ ì´ë¯¸ ë¹„ì–´ìˆìŠµë‹ˆë‹¤.");
             return false;
         }
 
-        //½½·Ô ÃÊ±âÈ­
+        //ìŠ¬ë¡¯ ì´ˆê¸°í™”
         _pitcherSlots[position][slotIndex] = -1;
         return true;
     }
 
-    //Å¸ÀÚÀÇ Å¸¼ø ¼³Á¤ ¹× º¯°æ
+    //íƒ€ìì˜ íƒ€ìˆœ ì„¤ì • ë° ë³€ê²½
     public bool SetBattingOrder(HitterPosition slot, int order)
     {
         if (_hitterSlots[slot].instanceId == -1)
         {
-            Debug.LogWarning("[LineUpManager]: ÇØ´ç ½½·ÔÀÌ ÀÌ¹Ì ºñ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: í•´ë‹¹ ìŠ¬ë¡¯ì´ ì´ë¯¸ ë¹„ì–´ìˆìŠµë‹ˆë‹¤.");
             return false;
         }
 
         if (IsBattingOrderTaken(order, slot))
         {
-            Debug.LogWarning($"[LineUpManager]: {order}¹ø Å¸¼øÀº ÀÌ¹Ì ´Ù¸¥ ¼±¼ö°¡ »ç¿ë ÁßÀÔ´Ï´Ù.");
+            Debug.LogWarning($"[LineUpManager]: {order}ë²ˆ íƒ€ìˆœì€ ì´ë¯¸ ë‹¤ë¥¸ ì„ ìˆ˜ê°€ ì‚¬ìš© ì¤‘ì…ë‹ˆë‹¤.");
             return false;
         }
 
@@ -242,9 +242,9 @@ public class LineUpManager : MonoBehaviour
         return true;
     }
 
-    //¶óÀÎ¾÷ÀÌ ¸ğµÎ Ã¤¿öÁ³´ÂÁö °Ë»ç
-    //1. º¥Ä¡ ½½·ÔÀº Ã¤¿öÁ®ÀÖÁö ¾Ê¾Æµµ µÊ
-    //2. Åõ/Å¸ ½½·ÔÀÌ Ã¤¿öÁ®ÀÖÁö ¾ÊÀ¸¸é ¸®±× ÀÔÀå ºÒ°¡´É
+    //ë¼ì¸ì—…ì´ ëª¨ë‘ ì±„ì›Œì¡ŒëŠ”ì§€ ê²€ì‚¬
+    //1. ë²¤ì¹˜ ìŠ¬ë¡¯ì€ ì±„ì›Œì ¸ìˆì§€ ì•Šì•„ë„ ë¨
+    //2. íˆ¬/íƒ€ ìŠ¬ë¡¯ì´ ì±„ì›Œì ¸ìˆì§€ ì•Šìœ¼ë©´ ë¦¬ê·¸ ì…ì¥ ë¶ˆê°€ëŠ¥
     public bool IsLineupComplete()
     {
         foreach(var hitter in _hitterSlots.Values)
@@ -265,24 +265,24 @@ public class LineUpManager : MonoBehaviour
         return true;
     }
 
-    //ÀÌ¹Ì ¹èÄ¡µÇ¾îÀÖ´Â Ä«µåÀÎÁö È®ÀÎ
+    //ì´ë¯¸ ë°°ì¹˜ë˜ì–´ìˆëŠ” ì¹´ë“œì¸ì§€ í™•ì¸
     private bool IsCardAssigned(int instanceId)
     {
-        //È÷ÅÍ ½½·Ô¿¡ ÀÌ¹Ì ¹èÄ¡µÇ¾îÀÖ´ÂÁö È®ÀÎ
+        //íˆí„° ìŠ¬ë¡¯ì— ì´ë¯¸ ë°°ì¹˜ë˜ì–´ìˆëŠ”ì§€ í™•ì¸
         foreach(var hitterID in _hitterSlots.Values)
         {
             if (hitterID.instanceId == instanceId)
                 return true;
         }
         
-        //º¥Ä¡ ½½·Ô¿¡ ÀÌ¹Ì ¹èÄ¡µÇ¾îÀÖ´ÂÁö È®ÀÎ
+        //ë²¤ì¹˜ ìŠ¬ë¡¯ì— ì´ë¯¸ ë°°ì¹˜ë˜ì–´ìˆëŠ”ì§€ í™•ì¸
         foreach(int benchID in _benchSlots)
         {
             if (benchID == instanceId)
                 return true;
         }
 
-        //Åõ¼ö ½½·Ô¿¡ ÀÌ¹Ì ¹èÄ¡µÇ¾îÀÖ´ÂÁö È®ÀÎ
+        //íˆ¬ìˆ˜ ìŠ¬ë¡¯ì— ì´ë¯¸ ë°°ì¹˜ë˜ì–´ìˆëŠ”ì§€ í™•ì¸
         foreach (int[] value in _pitcherSlots.Values)
         {
             foreach(var pitcherID in value)
@@ -295,7 +295,7 @@ public class LineUpManager : MonoBehaviour
         return false;
     }
 
-    //ÇØ´ç Å¸¼øÀÌ ÀÌ¹Ì ´Ù¸¥ ½½·Ô¿¡¼­ »ç¿ë ÁßÀÎÁö È®ÀÎ
+    //í•´ë‹¹ íƒ€ìˆœì´ ì´ë¯¸ ë‹¤ë¥¸ ìŠ¬ë¡¯ì—ì„œ ì‚¬ìš© ì¤‘ì¸ì§€ í™•ì¸
     private bool IsBattingOrderTaken(int order, HitterPosition excludeSlot)
     {
         foreach(var pair in _hitterSlots)
@@ -310,12 +310,12 @@ public class LineUpManager : MonoBehaviour
         return false;
     }
 
-    //Á¤·ÄµÈ Å¸¼øÀÇ instanceId ¹è¿­ ¹İÈ¯
+    //ì •ë ¬ëœ íƒ€ìˆœì˜ instanceId ë°°ì—´ ë°˜í™˜
     public int[] GetHittersInBattingOrder()
     {
         if (!IsLineupComplete())
         {
-            Debug.LogWarning("[LineUpManager]: ¶óÀÎ¾÷ÀÌ ¿Ï¼ºµÇÁö ¾Ê¾Ò½À´Ï´Ù.");
+            Debug.LogWarning("[LineUpManager]: ë¼ì¸ì—…ì´ ì™„ì„±ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤.");
             return Array.Empty<int>();
         }
 
@@ -328,7 +328,7 @@ public class LineUpManager : MonoBehaviour
         return result;
     }
 
-    //º¥Ä¡ ¾ß¼ö instanceId ¹è¿­ ¹İÈ¯
+    //ë²¤ì¹˜ ì•¼ìˆ˜ instanceId ë°°ì—´ ë°˜í™˜
     public int[] GetBenchInstanceIds()
     {
         int[] result = new int[_benchSlots.Length];
@@ -336,7 +336,7 @@ public class LineUpManager : MonoBehaviour
         return result;
     }
 
-    //Åõ¼ö ½½·Ô instanceId ¹è¿­ ¹İÈ¯
+    //íˆ¬ìˆ˜ ìŠ¬ë¡¯ instanceId ë°°ì—´ ë°˜í™˜
     public int[] GetPitcherInstanceIds(PitcherPosition position)
     {
         int[] source = _pitcherSlots[position];

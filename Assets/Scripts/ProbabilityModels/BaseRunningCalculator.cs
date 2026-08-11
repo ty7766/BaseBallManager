@@ -1,12 +1,12 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 /// <summary>
-/// Áø·ç ½Ã½ºÅÛ
-/// Å¸±¸ °á°ú¸¦ ¹Ş¾Æ ÁÖÀÚ Áø·ç/µæÁ¡ ±â·Ï
+/// ì§„ë£¨ ì‹œìŠ¤í…œ
+/// íƒ€êµ¬ ê²°ê³¼ë¥¼ ë°›ì•„ ì£¼ì ì§„ë£¨/ë“ì  ê¸°ë¡
 /// </summary>
 public class BaseRunningCalculator
 {
-    //º£ÀÌ½º, µæÁ¡, ¾Æ¿ô °»½Å
+    //ë² ì´ìŠ¤, ë“ì , ì•„ì›ƒ ê°±ì‹ 
     public void Apply(BatterOutcome outcome, int batterInstanceId, GameState state, SimulationContext context)
     {
         switch(outcome)
@@ -182,25 +182,25 @@ public class BaseRunningCalculator
         }
     }
 
-    //Ãß°¡ Áø·ç È®·ü ÆÇÁ¤ (Run ½ºÅÈ)
+    //ì¶”ê°€ ì§„ë£¨ í™•ë¥  íŒì • (Run ìŠ¤íƒ¯)
     private bool TryAdvance(HitterSnapshot runner)
     {
-        //1. Á¤±ÔÈ­
+        //1. ì •ê·œí™”
         float run = runner.Run / 100f;
 
-        //2. Áø·ç È®·ü °è»ê (25% ~ 90% ¹üÀ§ Á¦ÇÑ)
+        //2. ì§„ë£¨ í™•ë¥  ê³„ì‚° (25% ~ 90% ë²”ìœ„ ì œí•œ)
         float probRun = Mathf.Clamp(0.4f + 0.6f * (run - 0.5f), 0.25f, 0.9f);
 
         return Random.value < probRun;
     }
 
-    //µæÁ¡ Ã³¸®
+    //ë“ì  ì²˜ë¦¬
     private void Score(GameState state)
     {
         state.AddRun();
     }
 
-    //ÇöÀç º£ÀÌ½º¿¡ ÀÖ´Â ÁÖÀÚÀÇ ½º³À¼¦ Å½»ö
+    //í˜„ì¬ ë² ì´ìŠ¤ì— ìˆëŠ” ì£¼ìì˜ ìŠ¤ëƒ…ìƒ· íƒìƒ‰
     private HitterSnapshot FindRunnerSnapshot(int instanceId, SimulationContext context, bool isTopInning)
     {
         if (isTopInning)

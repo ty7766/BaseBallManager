@@ -1,7 +1,7 @@
-using System;
+ï»¿using System;
 using UnityEngine;
 /// <summary>
-/// AI ¶óÀÎ¾÷
+/// AI ë¼ì¸ì—…
 /// </summary>
 [Serializable]
 public struct AiHitterSlot
@@ -12,7 +12,7 @@ public struct AiHitterSlot
     [SerializeField]
     private HitterPosition _position;
 
-    [CardId(PlayerTypeFilter.HitterOnly)]
-    [SerializeField] 
+    [CardId(PlayerTypeFilter.HitterOnly, nameof(_position))]
+    [SerializeField]
     private int _cardId;
 }

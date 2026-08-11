@@ -1,19 +1,19 @@
-using System;
+ï»¿using System;
 using UnityEngine;
 
 /// <summary>
-/// °ÔÀÓ µ¥ÀÌÅÍ¸¦ ½Ã¹Ä·¹ÀÌ¼Ç ÀÔ·Â(Snapshot)À¸·Î º¯È¯
+/// ê²Œì„ ë°ì´í„°ë¥¼ ì‹œë®¬ë ˆì´ì…˜ ì…ë ¥(Snapshot)ìœ¼ë¡œ ë³€í™˜
 /// </summary>
 public static class SimulationContextBuilder
 {
-    //ÇÃ·¹ÀÌ¾î ÆÀ ±âÁØ SimulationContext »ı¼º
+    //í”Œë ˆì´ì–´ íŒ€ ê¸°ì¤€ SimulationContext ìƒì„±
     public static SimulationContext Build(bool isPlayerHome, int rotationIndex)
     {
         HitterSnapshot[] lineup = BuildHitterSnapshots(LineUpManager.Instance.GetHittersInBattingOrder());
         HitterSnapshot[] bench = BuildHitterSnapshots(LineUpManager.Instance.GetBenchInstanceIds());
         PitcherSnapshot[] pitchers = BuildPitcherStaff(rotationIndex);
 
-        //TODO(8-1): AI ·Î½ºÅÍ ¿Ï¼º ½Ã »ó´ëÆÀ ½ÇÁ¦ ½º³À¼¦À¸·Î ±³Ã¼
+        //TODO(8-1): AI ë¡œìŠ¤í„° ì™„ì„± ì‹œ ìƒëŒ€íŒ€ ì‹¤ì œ ìŠ¤ëƒ…ìƒ·ìœ¼ë¡œ êµì²´
         HitterSnapshot[] opponentLineup = lineup;
         PitcherSnapshot[] opponentPitchers = pitchers;
         HitterSnapshot[] opponentBench = Array.Empty<HitterSnapshot>();
@@ -30,20 +30,20 @@ public static class SimulationContextBuilder
         return new SimulationContext(isPlayerHome, homeLineup, awayLineup, homeBench, awayBench, homePitchers, awayPitchers);
     }
 
-    //ÃÖÁ¾ ¹İ¿µ Å¸ÀÚ ½ºÅÈ
+    //ìµœì¢… ë°˜ì˜ íƒ€ì ìŠ¤íƒ¯
     public static HitterSnapshot BuildHitterSnapshot(int instanceId)
     {
         CardInstance card = InventoryManager.Instance.GetCard(instanceId);
         if (card == null)
         {
-            Debug.LogError("[SimulationContextBuilder]: Å¸ÀÚ Ä«µå°¡ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù");
+            Debug.LogError("[SimulationContextBuilder]: íƒ€ì ì¹´ë“œê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤");
             return default;
         }
 
         CardMasterData cardData = CardDataManager.Instance.GetCardMasterData(card.CardId);
         if (cardData is not HitterMasterData hitterData)
         {
-            Debug.LogError("[SimulationContextBuilder]: Å¸ÀÚ°¡ ¾Æ´Ï°Å³ª ¸¶½ºÅÍ µ¥ÀÌÅÍ Á¶È¸¿¡ ½ÇÆĞÇß½À´Ï´Ù");
+            Debug.LogError("[SimulationContextBuilder]: íƒ€ìê°€ ì•„ë‹ˆê±°ë‚˜ ë§ˆìŠ¤í„° ë°ì´í„° ì¡°íšŒì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤");
             return default;
         }
 
@@ -55,20 +55,20 @@ public static class SimulationContextBuilder
         return new HitterSnapshot(instanceId, cardData.Name, finalPower, finalContact, finalRun, finalDefense);
     }
 
-    //ÃÖÁ¾ ¹İ¿µ Åõ¼ö ½ºÅÈ
+    //ìµœì¢… ë°˜ì˜ íˆ¬ìˆ˜ ìŠ¤íƒ¯
     public static PitcherSnapshot BuildPitcherSnapshot(int instanceId)
     {
         CardInstance card = InventoryManager.Instance.GetCard(instanceId);
         if (card == null)
         {
-            Debug.LogError("[SimulationContextBuilder]: Åõ¼ö Ä«µå°¡ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù");
+            Debug.LogError("[SimulationContextBuilder]: íˆ¬ìˆ˜ ì¹´ë“œê°€ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤");
             return default;
         }
 
         CardMasterData cardData = CardDataManager.Instance.GetCardMasterData(card.CardId);
         if (cardData is not PitcherMasterData pitcherData)
         {
-            Debug.LogError("[SimulationContextBuilder]: Åõ¼ö°¡ ¾Æ´Ï°Å³ª ¸¶½ºÅÍ µ¥ÀÌÅÍ Á¶È¸¿¡ ½ÇÆĞÇß½À´Ï´Ù");
+            Debug.LogError("[SimulationContextBuilder]: íˆ¬ìˆ˜ê°€ ì•„ë‹ˆê±°ë‚˜ ë§ˆìŠ¤í„° ë°ì´í„° ì¡°íšŒì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤");
             return default;
         }
 
@@ -80,14 +80,14 @@ public static class SimulationContextBuilder
         return new PitcherSnapshot(instanceId, cardData.Name, finalVelo, finalStuff, finalControl, finalStamina);
     }
 
-    //ÀÎ½ºÅÏ½º ID -> Å¸ÀÚ ½º³À¼¦ ¹è¿­
+    //ì¸ìŠ¤í„´ìŠ¤ ID -> íƒ€ì ìŠ¤ëƒ…ìƒ· ë°°ì—´
     private static HitterSnapshot[] BuildHitterSnapshots(int[] instanceIds)
     {
         HitterSnapshot[] result = new HitterSnapshot[instanceIds.Length];
 
         for (int i = 0; i < instanceIds.Length; i++)
         {
-            //Ã¤¿öÁ® ÀÖÁö ¾ÊÀº º¥Ä¡´Â ³Ñ±â±â
+            //ì±„ì›Œì ¸ ìˆì§€ ì•Šì€ ë²¤ì¹˜ëŠ” ë„˜ê¸°ê¸°
             if (instanceIds[i] == -1)
                 continue;
             result[i] = BuildHitterSnapshot(instanceIds[i]);
@@ -95,7 +95,7 @@ public static class SimulationContextBuilder
         return result;
     }
 
-    //ÀÎ½ºÅÏ½º ID -> Åõ¼ö ½º³À¼¦ ¹è¿­
+    //ì¸ìŠ¤í„´ìŠ¤ ID -> íˆ¬ìˆ˜ ìŠ¤ëƒ…ìƒ· ë°°ì—´
     private static PitcherSnapshot[] BuildPitcherSnapshots(int[] instanceIds)
     {
         PitcherSnapshot[] result = new PitcherSnapshot[instanceIds.Length];
@@ -107,17 +107,17 @@ public static class SimulationContextBuilder
         return result;
     }
 
-    //Åõ¼öÁø 7Ä­ Á¶¸³
+    //íˆ¬ìˆ˜ì§„ 7ì¹¸ ì¡°ë¦½
     private static PitcherSnapshot[] BuildPitcherStaff(int rotationIndex)
     {
-        //°¢ Åõ¼ö¿¡ ´ëÇØ ¹è¿­ »ı¼º
+        //ê° íˆ¬ìˆ˜ì— ëŒ€í•´ ë°°ì—´ ìƒì„±
         int[] spInstanceIds = LineUpManager.Instance.GetPitcherInstanceIds(PitcherPosition.SP);
         int[] rpInstanceIds = LineUpManager.Instance.GetPitcherInstanceIds(PitcherPosition.RP);
         int[] cpInstanceIds = LineUpManager.Instance.GetPitcherInstanceIds(PitcherPosition.CP);
 
         int[] staffIds = new int[7];
 
-        //Åõ¼ö ·ÎÅ×ÀÌ¼Ç µî·Ï
+        //íˆ¬ìˆ˜ ë¡œí…Œì´ì…˜ ë“±ë¡
         staffIds[0] = spInstanceIds[rotationIndex % spInstanceIds.Length];
 
         Array.Copy(rpInstanceIds, 0, staffIds, 1, 5);

@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class PlayerDataManager : MonoBehaviour
 {
@@ -23,7 +23,7 @@ public class PlayerDataManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(teamName))
         {
-            Debug.LogWarning("[PlayerDataManager] : ÆÀ ÀÌ¸§ÀÌ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù");
+            Debug.LogWarning("[PlayerDataManager] : íŒ€ ì´ë¦„ì´ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤");
             return; 
         }
         PlayerTeamName = teamName;
