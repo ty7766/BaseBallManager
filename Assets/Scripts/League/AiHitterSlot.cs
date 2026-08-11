@@ -11,6 +11,8 @@ public struct AiHitterSlot
 
     [SerializeField]
     private HitterPosition _position;
-    [SerializeField]
+
+    [CardId(PlayerTypeFilter.HitterOnly)]
+    [SerializeField] 
     private int _cardId;
 }

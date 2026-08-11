@@ -923,9 +923,9 @@ AiTeamRosterData (SO)            팀 1개. 실제 편집 대상
 
 | # | 작업 | 상태 |
 |---|---|---|
-| 1 | `AiHitterSlot` (struct) + `AiTeamRosterData` (SO) | 🔧 진행 중 |
-| 2 | `AiTeamRoster.cs` 정리 — 자동 편성 메서드 4개 + `DefensePositions` + `using NUnit.Framework;` 삭제 | 🔧 |
-| 3 | `CardIdAttribute` + `Editor/CardIdDrawer` — 검색 드롭다운 (년도 포함 라벨) | ⏭️ |
+| 1 | `AiHitterSlot` (struct) + `AiTeamRosterData` (SO) | ✅ |
+| 2 | `AiTeamRoster.cs` 정리 — 자동 편성 메서드 4개 + `DefensePositions` + 잘못된 using 삭제 | ✅ |
+| 3 | `CardIdAttribute` + `CardCatalog` + `CardEntry` + `CardSearchDropdown` + `CardIdDrawer` | ✅ |
 | 4 | `AiRosterSet` (SO) + `LeagueTierTable` (SO) | ⏭️ |
 | 5 | `Editor/AiRosterSeedImporter` — 씨앗 CSV → SO 에셋 일괄 생성 | ⏭️ |
 | 6 | `Editor/AiRosterValidator` — 포지션 커버리지 · 중복 인물 · cardId 존재 검증 | ⏭️ |
@@ -934,3 +934,26 @@ AiTeamRosterData (SO)            팀 1개. 실제 편집 대상
 | 9 | `SimulationContextBuilder.Build()`의 `TODO(8-1)` 임시 배선 교체 | ⏭️ |
 
 ⚠️ **드로어 성능 주의** — `OnGUI`는 초당 수십 회 호출. CSV 파싱 결과를 **static 캐시**에 1회만 올릴 것. 매 리페인트 파싱하면 에디터가 얼어붙음
+
+**완성된 에디터 도구 (3번)**
+- `Assets/Scripts/Cards/CardIdAttribute.cs` — `PropertyAttribute`. **런타임 폴더에 둬야 함** (런타임 필드가 참조하므로 `Editor/`에 두면 빌드 실패)
+  - 타자/투수 구분은 기존 `PlayerTypeFilter` 재사용 — 같은 개념의 enum을 새로 만들지 않음
+- `Assets/Editor/CardEntry.cs` — 드롭다운 표시용 struct (CardId / TeamName / Label)
+- `Assets/Editor/CardCatalog.cs` — CSV 1회 파싱 후 static 캐시. `Tools/BaseBallManager/카드 카탈로그 새로고침` 메뉴
+- `Assets/Editor/CardSearchDropdown.cs` — `AdvancedDropdown` 상속. 팀별 폴더 + 검색창 내장
+- `Assets/Editor/CardIdDrawer.cs` — `PropertyDrawer`. cardId를 라벨 버튼으로 그림
+
+📝 에디터 도구 설계 결정:
+- **`CardCSVLoader`를 그대로 재사용** — 에디터에 파싱 로직을 다시 짜면 헤더 규칙·인코딩 처리가 두 벌이 되어 열 추가 시 한쪽만 고쳐짐. `Resources.Load`는 에디터에서도 동작
+- **`EnsureLoaded`의 catch에서 빈 컬렉션 대입** — `null`로 두면 가드를 통과해 매 프레임 재시도 → 초당 수십 개 에러 로그로 에디터 정지. 빈 컬렉션이면 재시도 중단 + 로그 1회 + NRE 없음
+- **라벨은 캐시 시점에 미리 조립** — `OnGUI`에서 문자열 보간하면 325개 × 초당 수십 회 = GC 폭탄
+- **`leaf.id`에 cardId를 실어 보냄** — `AdvancedDropdownItem.id`를 활용해 별도 매핑 테이블 불필요. 팀 노드는 자식이 있어 폴더로 동작하므로 `ItemSelected`가 안 불림 → id 불필요
+- **드로어 콜백은 `property`를 붙잡지 않음** — 선택은 몇 프레임 뒤에 일어나고 `SerializedProperty`는 그 프레임에만 유효. `serializedObject` + `propertyPath`만 복사해두고 콜백에서 `FindProperty`로 재조회
+- **빈 슬롯 센티넬 = `0`** — cardId는 1부터 시작하므로 안전하고, `int` 기본값이 0이라 새 에셋의 빈 슬롯이 자동으로 "(비어 있음)" 표시됨. 시뮬 코어의 `-1` 규약과 다른 이유는 여기선 직렬화 기본값이 그대로 빈 슬롯이 되는 게 이득이기 때문
+- **없는 cardId는 버튼에 경고 문구로 표시** — CSV에서 카드를 지웠을 때 눈에 띔. cardId 비워두기 권장 규칙의 실효성이 여기서 나옴
+
+⚠️ **소스 파일 인코딩 혼재** (2026-08-11 확인)
+- 대부분의 `.cs`가 **CP949**, `CardSearchDropdown.cs`만 UTF-8
+- Roslyn은 BOM 없는 소스를 UTF-8로 가정 → CP949 한글이 깨질 수 있음. 주석은 무해하나 **문자열 리터럴이 깨지면 화면에 그대로 노출**
+- 확인법: 인스펙터 cardId 버튼이 `(비어 있음)`으로 보이면 정상, 깨져 보이면 문제
+- 해결: **UTF-8 (BOM 포함)**으로 재저장. 프로젝트 루트 `.editorconfig`에 `[*.cs] charset = utf-8-bom` 두면 이후 자동 적용 (기존 파일은 한 번씩 열어 저장 필요)

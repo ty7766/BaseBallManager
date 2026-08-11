@@ -25,14 +25,17 @@ public class AiTeamRosterData : ScriptableObject
     private AiHitterSlot[] _lineup = new AiHitterSlot[LineupSize];
 
     [Header("선발 5명 - 배열 순서 = 로테이션")]
+    [CardId(PlayerTypeFilter.PitcherOnly)]
     [SerializeField]
     private int[] _startingPitcherCardIds = new int[StartingPitcherCount];
 
     [Header("불펜 5명 - 배열 순서 = 등판 순서")]
+    [CardId(PlayerTypeFilter.PitcherOnly)]
     [SerializeField]
     private int[] _relieverCardIds = new int[RelieverCount];
 
     [Header("마무리")]
+    [CardId(PlayerTypeFilter.PitcherOnly)]
     [SerializeField]
     private int _closerCardId;
 }
