@@ -926,8 +926,8 @@ AiTeamRosterData (SO)            팀 1개. 실제 편집 대상
 | 1 | `AiHitterSlot` (struct) + `AiTeamRosterData` (SO) | ✅ |
 | 2 | `AiTeamRoster.cs` 정리 — 자동 편성 메서드 4개 + `DefensePositions` + 잘못된 using 삭제 | ✅ |
 | 3 | `CardIdAttribute` + `CardCatalog` + `CardEntry` + `CardSearchDropdown` + `CardIdDrawer` | ✅ |
-| 4 | `AiRosterSet` (SO) + `LeagueTierTable` (SO) | ⏭️ |
-| 5 | `Editor/AiRosterSeedImporter` — 씨앗 CSV → SO 에셋 일괄 생성 | ⏭️ |
+| 4 | `AiRosterSet` (SO) + `LeagueTierTable` (SO) | ✅ 세션 34 |
+| 5 | `Editor/AiRosterSeedImporter` — 씨앗 CSV → SO 에셋 일괄 생성 | ✅ 세션 34 (실행 검증 미완) |
 | 6 | `Editor/AiRosterValidator` — 포지션 커버리지 · 중복 인물 · cardId 존재 검증 | ⏭️ |
 | 7 | `AiRosterBuilder.BuildTeam` — SO + tierStatBonus → `AiTeamRoster` | ⏭️ |
 | 8 | `AiRosterManager` (MonoBehaviour 싱글톤) | ⏭️ |
@@ -987,3 +987,77 @@ AiTeamRosterData (SO)            팀 1개. 실제 편집 대상
 - 프로젝트 루트에 **`.editorconfig`** 생성 → `[*.cs] charset = utf-8-bom`. 이후 저장분은 Visual Studio가 자동 적용
 
 ⚠️ **주의**: 변환 시점에 Visual Studio에 열려 있던 파일은 VS 메모리에 옛 인코딩으로 남아 있음. 그대로 저장하면 되돌아가므로 **VS를 한 번 닫았다 열 것**
+
+---
+
+### 세션 34 (2026-08-13) — 티어 테이블 + 씨앗 임포터 (8-1의 4·5번)
+
+**브랜치**: `feature/League-system`
+
+**완성된 파일 목록**
+- `Assets/Scripts/League/AiRosterSet.cs` — 팀 10개를 묶은 로스터 세트 (SO)
+- `Assets/Scripts/League/LeagueTierEntry.cs` — 티어 1개 설정 (`[Serializable] struct`)
+- `Assets/Scripts/League/LeagueTierTable.cs` — 티어 21행 테이블 (SO)
+- `Assets/Editor/AiRosterSeedImporter.cs` — 씨앗 CSV → SO 에셋 일괄 생성 (**Claude 작성**)
+
+**완성된 메서드 목록 (LeagueTierTable)**
+- `OnValidate()` — `_entries.Length != TierCount`면 `Array.Resize`로 21칸 복구
+- `GetRosterSet(tier)` — 실패 시 `null`
+- `GetStatBonus(tier)` — 실패 시 `0`
+- `TryGetEntry(tier, out entry)` — `(int)tier` 인덱싱 + 범위 검사 공통부
+
+**완성된 메서드 목록 (AiRosterSeedImporter)**
+- `Import()` — 메뉴 진입점 `Tools/BaseBallManager/AI 로스터 씨앗 임포트`
+- `TryReadSeed(path, requiredColumns, out headers, out rows)` — `AssetDatabase`로 CSV 로드 + 필수 열 존재 검사
+- `ParseHeaders(headerLine)` — 로컬 헤더 파서
+- `FillHitters` / `FillPitchers` — 행 → `TeamDraft` 채우기, 반환값은 오류 건수
+- `TrySetPitcher(slots, order, cardId, ...)` — 투수 배열 범위·중복 검사 후 배치
+- `GetOrCreateDraft` / `WriteTeamAsset` / `WriteRosterSetAsset` / `WriteIntArray` / `EnsureFolder`
+- `TeamDraft` (private 중첩 class) — CSV 행을 모으는 임시 그릇
+
+**🔴 SO 에셋 저장 위치 정정 — `Assets/Data/League/`**
+- `Assets/Editor/` **안의 에셋은 스크립트뿐 아니라 전부 빌드에서 제외**됨
+- 로스터 SO는 `AiRosterManager`가 참조할 런타임 데이터 → `Editor/` 밖이어야 함
+- 에디터에선 정상 동작하고 **빌드에서만 참조가 끊기는** 유형이라 재현이 어려움
+- 씨앗 CSV가 `Assets/Editor/RosterSeed/`에 있는 건 그대로 유지 (임포터만 읽음, 런타임 무관)
+- 생성 경로: `Assets/Data/League/{rosterSet}/AiTeamRoster_{팀명}.asset` + `AiRosterSet_{rosterSet}.asset`
+
+📝 주요 설계 결정:
+- `LeagueTierEntry`는 **`[Serializable] struct`** — `[SerializeField]`는 필드를 표시할 뿐 타입이 직렬화 가능해야 함. `[Serializable]` 없으면 인스펙터에 배열이 아예 안 뜨고 값도 저장 안 됨(무경고). `class`면 `new LeagueTierEntry[21]` 직후 요소가 전부 `null`이라 NRE 창이 생기는데 struct는 그 구간 자체가 없음
+- `LeagueTierEntry`에 `LeagueTier` 필드 없음 — **배열 인덱스가 곧 티어**. 세션 33의 `battingOrder` 필드 제거와 같은 원칙(표현할 수 없는 상태는 만들지 않는다). 대가는 인스펙터에 `Element 0`으로만 보이는 것
+- 범위 검사는 `TierCount` 상수가 아니라 **`_entries.Length`** 기준 — 인스펙터에서 크기가 줄면 상수 검사는 통과하고 인덱싱에서 터짐
+- `GetStatBonus` 실패값은 **`0`** — 이 값은 `AiRosterBuilder`에서 스탯에 **그대로 더해짐**. `-1` 센티넬을 쓰면 전 선수 스탯이 조용히 1 깎임. 시뮬 코어의 `-1` 규약은 산술에 안 들어가는 값에만 적용
+- 티어 보정 테이블 소유자가 `AiRosterManager`(세션 30 기록) → **`LeagueTierTable` SO로 확정 변경**. MonoBehaviour에 두면 씬마다 값이 갈라짐. `AiRosterManager`는 테이블 참조 1개만 보유
+- `_statBonus`는 전부 0으로 시작 — 밸런스 튜닝은 8-1 완료 후 별도 작업(세션 32 결론)
+- **임포터가 private 필드에 쓰는 방식 = `SerializedObject`** — `#if UNITY_EDITOR` 세터를 다는 대안은 런타임 데이터 클래스에 수정 경로를 여는 것이라 기각. 대신 필드명이 문자열이 되므로 파일 상단 `const`로 모으고, `WriteTeamAsset` 진입 직후 5개를 한꺼번에 조회해 하나라도 `null`이면 즉시 중단(조용한 빈 에셋 방지)
+- **오류 1건이라도 있으면 에셋을 하나도 만들지 않고 중단** — 7팀만 만들어진 중간 상태가 최악. 대신 오류 로그는 행마다 전부 찍어 한 번에 고칠 수 있게 함. 로그에 파일명 + CSV 실제 줄 번호(`i + 2`) 포함
+- `Dictionary`(조회) + `List`(순서) 병행 — `Dictionary` 열거 순서는 명세상 미보장. `_teams` 배열 순서가 임포트마다 흔들리면 `.asset` diff가 지저분해지고 8-2 일정 생성이 순서에 의존할 경우 재현 불가
+- **기존 에셋은 `DeleteAsset` 없이 덮어쓰기** — 지우면 GUID가 바뀌어 `AiRosterSet`→팀, `LeagueTierTable`→세트 참조가 전부 끊김
+- 빈 슬롯 판정 `!= 0` — 세션 33의 `0` 센티넬 재사용. `int[]` 기본값이 0이라 초기화 코드 불필요
+- `ParseHeaders`를 임포터에 다시 작성 — `CardCSVLoader.ParseHeaders`는 `private` 인스턴스 메서드. 에디터 도구 하나 때문에 런타임 클래스의 공개 계약을 넓히지 않음. 공유되는 건 6줄짜리 알고리즘뿐
+- `Resources.Load` 불가 → `AssetDatabase.LoadAssetAtPath` — 씨앗 CSV가 `Resources/` 밖. 세션 33의 `CardCatalog`가 `CardCSVLoader`를 재사용할 수 있었던 것과 갈리는 지점
+- **임포터는 로스터 내용을 검증하지 않음** — 존재하지 않는 cardId·포지션 커버리지·동일 인물 중복은 6번 `AiRosterValidator`의 몫. 임포터에 섞으면 인스펙터에서 직접 고친 로스터는 검증을 못 받음
+
+**🐛 코드 리뷰 지적 (미반영)**
+- `LeagueTierTable.cs:50` 에러 로그에 `index`(= `(int)tier`, 중복 정보)가 들어가고 정작 필요한 `_entries.Length`가 빠짐. 이 에러가 뜨는 유일한 시나리오가 "배열 크기가 21이 아님"이라 배열 길이가 핵심 정보
+
+---
+
+## ⏭️ 다음 세션 착수 지점
+
+**먼저 할 것 (세션 34 미완)**
+1. `Assets/Editor/AiTeamRoster.asset` **삭제** — 세션 33 드로어 테스트 흔적 + `Editor/` 폴더라 위치 자체가 잘못됨
+2. **임포터 실행 검증** — `Tools > BaseBallManager > AI 로스터 씨앗 임포트`. 기대 결과: `Assets/Data/League/Normal/`에 팀 10개 + 세트 1개, 콘솔 `임포트 완료 - 세트 1개 / 팀 10개`
+   - ⚠️ **아직 한 번도 실행하지 않았음.** 컴파일 여부·에셋 생성 결과 미확인
+3. `LeagueTierTable` / `AiRosterSet` 에셋 실제 생성 + `LeagueTierTable`에 세트 연결 (21행 전부 같은 세트 참조)
+
+**그다음 (8-1 남은 순서)**
+
+| # | 작업 | 상태 |
+|---|---|---|
+| 6 | `Editor/AiRosterValidator` — 포지션 커버리지 · 중복 인물(이름+팀) · cardId 존재 검증 | ⏭️ |
+| 7 | `AiRosterBuilder.BuildTeam` — SO + tierStatBonus → `AiTeamRoster` | ⏭️ |
+| 8 | `AiRosterManager` (MonoBehaviour 싱글톤) — `LeagueTierTable` 참조 보유 | ⏭️ |
+| 9 | `SimulationContextBuilder.Build()`의 `TODO(8-1)` 임시 배선 교체 | ⏭️ |
+
+8-1이 끝나면 → 시뮬 1회 실행 성공 → **밸런스 튜닝**(세션 32 진단 5건) → 8-2(일정 생성)부터 브랜치 재분할
