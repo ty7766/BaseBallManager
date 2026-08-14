@@ -89,7 +89,7 @@ public static class CardCatalog
     private static CardEntry ToEntry(CardMasterData data)
     {
         string label = $"{data.Year} {data.Name} | {data.TeamName} | {data.Position} | OVR {data.OVR} | { GetCardTypeLabel(data.CardType)}";
-        return new CardEntry(data.CardId, data.TeamName, data.Position, label);
+        return new CardEntry(data.CardId, data.Name, data.TeamName, data.Position, label);
     }
 
     //CardType -> 한글 라벨

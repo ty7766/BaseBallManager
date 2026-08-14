@@ -1038,26 +1038,101 @@ AiTeamRosterData (SO)            팀 1개. 실제 편집 대상
 - `Resources.Load` 불가 → `AssetDatabase.LoadAssetAtPath` — 씨앗 CSV가 `Resources/` 밖. 세션 33의 `CardCatalog`가 `CardCSVLoader`를 재사용할 수 있었던 것과 갈리는 지점
 - **임포터는 로스터 내용을 검증하지 않음** — 존재하지 않는 cardId·포지션 커버리지·동일 인물 중복은 6번 `AiRosterValidator`의 몫. 임포터에 섞으면 인스펙터에서 직접 고친 로스터는 검증을 못 받음
 
-**🐛 코드 리뷰 지적 (미반영)**
-- `LeagueTierTable.cs:50` 에러 로그에 `index`(= `(int)tier`, 중복 정보)가 들어가고 정작 필요한 `_entries.Length`가 빠짐. 이 에러가 뜨는 유일한 시나리오가 "배열 크기가 21이 아님"이라 배열 길이가 핵심 정보
+**🐛 코드 리뷰 지적** → ✅ 세션 35에서 이미 반영돼 있음을 확인 (`LeagueTierTable.cs:50`에 `길이 : {_entries.Length}` 존재)
+
+---
+
+### 세션 35 (2026-08-14) — 임포터 실행 + 로스터 에셋 생성 완료 (8-1의 5번 마감)
+
+**브랜치**: `feature/League-system`
+
+**세션 34 미완 3건 전부 해소**
+1. `Assets/Editor/AiTeamRoster.asset` 삭제 — 커밋 `4a8f786`에서 이미 처리돼 있었음 (기록만 누락)
+2. 임포터 실행 성공 — `Assets/Data/League/Normal/`에 **팀 10개 + 세트 1개** 생성
+3. `LeagueTierTable.asset` 생성 + **21행 전부** `AiRosterSet_Normal` 연결 (`_statBonus`는 전부 0)
+
+**씨앗 CSV 사전 검증 (임포트 전 수행, 오류 0건)**
+- 10팀 × 타자 9 / 투수 11 = 200행, 세트 1개(`Normal`)
+- 타순 1~9 완전성·중복 / 수비 8포지션 + DH 1칸 / SP5·RP5·CP1 + order 연번 — 10팀 전부 통과
+- cardId 200개 전부 마스터 CSV 실존, 씨앗의 team·name·position이 마스터와 일치
+- **동일 인물(이름+팀) 중복 출장 0건**
+
+**생성 에셋 내용 검증 (.asset YAML 직접 확인)**
+- `AiRosterSet_Normal._teams` 10칸 = 서로 다른 팀 10개 (누락·중복 0)
+- LG 기준 타순·포지션 매핑 정상 (1번 오스틴 `1B`→`FB`=3 …), SP1=50109 / CP=50106 — 씨앗과 일치
+
+📝 기록: `Assets/Data/`는 아직 git untracked. 다음 커밋에 포함할 것
+
+---
+
+### 세션 35 (계속) — 8-1 코드 전량 완성 (7 · 8 · 9 · 6번)
+
+**작업 순서 변경** — `6번(Validator)`을 맨 뒤로 미루고 **7 → 8 → 9 → 6** 순으로 진행.
+씨앗 CSV를 이미 전수 검증(오류 0건)해 Validator가 당장 잡을 대상이 없었고, 프로젝트 최대 리스크인
+"시뮬 엔진이 한 번도 실행된 적 없음"(세션 28)을 뚫는 경로가 7·8·9였기 때문.
+
+**완성된 파일 목록**
+- `Assets/Scripts/Builders/AiRosterBuilder.cs` — `BuildTeam` / `BuildLineup` / `BuildPitchers` 추가 (7번)
+- `Assets/Scripts/League/AiRosterManager.cs` — MonoBehaviour 싱글톤 신규 (8번)
+- `Assets/Scripts/Builders/SimulationContextBuilder.cs` — `Build()` 시그니처 교체 + `CopyLineup` 추가 (9번)
+- `Assets/Editor/AiRosterValidator.cs` — 로스터 SO 검증 메뉴 신규 (6번)
+- `Assets/Editor/CardEntry.cs` / `CardCatalog.cs` — `Name` 필드 추가 (동일 인물 판정 키 `(이름, 팀)`에 필요)
+
+**7번 `AiRosterBuilder.BuildTeam`**
+- 흐름: null 체크 → 타선 → 선발 → 불펜 → 마무리, 하나라도 실패하면 `null` 반환
+- 컬렉션은 실패 시 빈 배열, `BuildTeam`은 실패 시 `null` (CLAUDE.md 3-2). 호출자가 `Length`만 보면 판정되므로 `bool` + `out` 불필요
+- `BuildLineup` 진입부에 `slots.Count != 9` 검사 추가 — 인스펙터에서 배열을 7칸으로 줄이면 `new HitterSnapshot[9]`와 어긋나 **뒤 2칸이 `default`(스탯 0)인 채로 통과**함. `BuildTeam`의 길이 검사도 배열이 9칸이라 못 잡음
+- `BuildTeam`에서 SP/RP 길이를 재검사하는 이유 — `AiTeamRoster.GetPitcherStaff`가 `Array.Copy(..., 5)`로 RP 5칸을 상수 가정. 통과시키면 예외가 **경기 시뮬 도중**에 터져 원인 추적이 어려움
+- 에러 로그에 팀명 + 타순/슬롯 번호 + 포지션을 담음 — 200칸 중 어디인지 바로 찾기 위함. `CardDataManager`가 남기는 조회 실패 로그와 2줄이 되지만, 앞줄은 사실·뒷줄은 맥락으로 역할이 다름
+
+**8번 `AiRosterManager`**
+- `[SerializeField] LeagueTierTable` 참조 1개만 보유 (세션 34 결정 — 보정 테이블 소유자는 SO)
+- `BuildRosters(tier)` — 세트/플레이어팀 확인 → 팀 순회 → `Dictionary<string, AiTeamRoster>` 적재. 반환 `bool`
+- **플레이어 팀은 건너뜀** (기획서 7.8 — 나를 제외한 9팀). 결과적으로 `GetRoster`는 "AI 팀 조회"라는 뜻이 정확해짐
+- **실패 시 `_rosters.Clear()` 후 반환** — 3팀만 든 딕셔너리로 리그가 시작되면 일정 생성에서 엉뚱한 곳이 터짐. 전부 성공 아니면 아무것도 없음
+- `_currentTier`는 **성공했을 때만** 갱신 — 실패했는데 티어만 바뀌어 있으면 이후 조회가 거짓말을 함
+- 팀명 중복 검사 포함 — `Dictionary.Add`가 던지는 대신 원인이 보이는 로그로 대체
+- `PlayerDataManager.Instance == null` 가드 — 씬 배치 누락 시 NRE 대신 원인 로그
+
+**9번 `SimulationContextBuilder.Build()` 배선 교체 (TODO(8-1) 제거)**
+- 새 시그니처: `Build(AiTeamRoster opponent, bool isPlayerHome, int playerRotationIndex, int opponentRotationIndex)`
+- **`AiRosterManager`를 직접 부르지 않고 `AiTeamRoster`를 인자로 받음** — 누가 누구와 붙는지는 8-2(일정)의 책임. 빌더는 입력만 받는 순수 변환으로 유지
+- 로테이션 인덱스를 플레이어/상대 **따로 받음** — 리그에서 두 팀의 선발 순번은 독립적으로 진행됨
+- **`CopyLineup`으로 AI 라인업 사본을 넘김** — `GameSimulator.ApplyInterruptDecision`이 `context.HomeLineup`/`AwayLineup`에 **직접 덮어씀**(세션 26 방식 A). 원본을 그대로 넘기면 대타 교체 1회가 고정 로스터를 영구 오염시켜 다음 경기부터 다른 선수가 나옴. 144경기 일괄 시뮬에서 조용히 누적되는 유형
+- `GetPitcherStaff`는 호출마다 새 배열을 만들므로 사본 불필요
+- 호출자가 아직 없어 시그니처 변경의 파급 없음 (`git grep` 확인)
+
+**6번 `AiRosterValidator`** — 메뉴 `Tools/BaseBallManager/AI 로스터 검증`
+- 검사 항목: 팀명 존재 / 타선 9칸 / 빈 슬롯(`0`) / cardId 실존 / 타자·투수 종류 일치 / 슬롯 포지션 일치(DH 제외) / **수비 8자리 + DH 각 1회** / **cardId 중복** / **동일 인물(이름+팀) 중복** / SP5·RP5·CP1 개수 / 투수 역할 일치 / 세트의 팀 10개·빈 칸·중복
+- 프로젝트 전체 에셋을 `AssetDatabase.FindAssets`로 훑음 — 임포터가 만든 것뿐 아니라 **인스펙터에서 손으로 고친 것도** 대상 (세션 34에서 임포터에 검증을 넣지 않은 이유가 이것)
+- `Debug.LogError(msg, asset)` 형태로 **에셋을 context에 넣음** — 콘솔 로그를 클릭하면 해당 에셋이 핑됨
+- **소속팀 불일치는 `LogWarning`** — 타 팀 선수 편성은 난이도 조정 의도일 수 있어 실패로 취급하지 않음
+- `CardCatalog` 재사용 (CSV 재파싱 안 함). `CardEntry`에 `Name` 추가 — 라벨 문자열을 파싱해 이름을 꺼내는 건 표시 형식 변경에 깨짐
 
 ---
 
 ## ⏭️ 다음 세션 착수 지점
 
-**먼저 할 것 (세션 34 미완)**
-1. `Assets/Editor/AiTeamRoster.asset` **삭제** — 세션 33 드로어 테스트 흔적 + `Editor/` 폴더라 위치 자체가 잘못됨
-2. **임포터 실행 검증** — `Tools > BaseBallManager > AI 로스터 씨앗 임포트`. 기대 결과: `Assets/Data/League/Normal/`에 팀 10개 + 세트 1개, 콘솔 `임포트 완료 - 세트 1개 / 팀 10개`
-   - ⚠️ **아직 한 번도 실행하지 않았음.** 컴파일 여부·에셋 생성 결과 미확인
-3. `LeagueTierTable` / `AiRosterSet` 에셋 실제 생성 + `LeagueTierTable`에 세트 연결 (21행 전부 같은 세트 참조)
+**Unity에서 확인할 것 (코드 아님)**
+1. 컴파일 통과 확인
+2. `Tools > BaseBallManager > AI 로스터 검증` 실행 → 기대: `검증 통과 - 팀 10개 / 세트 1개`
+   - ⚠️ 소속팀 경고는 나오지 않아야 정상 (씨앗 CSV 검증 시 팀 일치 확인함)
+3. `AiRosterManager`를 씬에 배치 + `LeagueTierTable` 에셋 연결
+   - `PlayerDataManager` / `CardDataManager`도 같은 씬에 있어야 `BuildRosters` 성공
+4. `Assets/Data/` 커밋에 포함 (현재 untracked)
 
-**그다음 (8-1 남은 순서)**
+**⛔ 아직 남은 것 — 시뮬 1회 실행에 필요한 전제**
+- `SimulationContextBuilder.Build()`는 **플레이어 라인업**을 `LineUpManager`에서 읽는데, 인벤토리·라인업을 채우는 경로(뽑기 UI / 세이브)가 아직 없음
+- 즉 8-1은 끝났지만 **경기를 돌리려면 플레이어 쪽 데이터 공급 수단이 먼저 필요**함. 어떤 방식으로 채울지는 다음 세션 판단 사항
 
-| # | 작업 | 상태 |
+**그다음**
+
+| 단계 | 작업 | 상태 |
 |---|---|---|
-| 6 | `Editor/AiRosterValidator` — 포지션 커버리지 · 중복 인물(이름+팀) · cardId 존재 검증 | ⏭️ |
-| 7 | `AiRosterBuilder.BuildTeam` — SO + tierStatBonus → `AiTeamRoster` | ⏭️ |
-| 8 | `AiRosterManager` (MonoBehaviour 싱글톤) — `LeagueTierTable` 참조 보유 | ⏭️ |
-| 9 | `SimulationContextBuilder.Build()`의 `TODO(8-1)` 임시 배선 교체 | ⏭️ |
-
-8-1이 끝나면 → 시뮬 1회 실행 성공 → **밸런스 튜닝**(세션 32 진단 5건) → 8-2(일정 생성)부터 브랜치 재분할
+| 8-1 | AI 팀 로스터 | ✅ 코드 완성 (에디터 검증 대기) |
+| — | **밸런스 튜닝** (세션 32 진단 5건) | ⏭️ 시뮬 실행 성공 후 |
+| 8-2 | 일정 생성 (라운드 로빈 / 프로 이상 3연전 / 홈·원정 교대) | ⏭️ 브랜치 재분할 |
+| 8-3 | 순위표 (KBO 승률·게임차, 타이브레이커) | ⏭️ |
+| 8-4 | 리그 진행 (한 경기씩 / 일괄 시뮬) | ⏭️ |
+| 8-5 | 포스트시즌 (144경기 한정) | ⏭️ |
+| 8-6 | 시즌 저장/재도전 | ⏭️ |

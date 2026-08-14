@@ -6,16 +6,23 @@ using UnityEngine;
 /// </summary>
 public static class SimulationContextBuilder
 {
-    //플레이어 팀 기준 SimulationContext 생성
-    public static SimulationContext Build(bool isPlayerHome, int rotationIndex)
+    //플레이어 팀 + AI 상대 팀 기준 SimulationContext 생성
+    public static SimulationContext Build(AiTeamRoster opponent, bool isPlayerHome, int playerRotationIndex, int opponentRotationIndex)
     {
+        if (opponent == null)
+        {
+            Debug.LogError("[SimulationContextBuilder]: 상대 팀 로스터가 없습니다");
+            return null;
+        }
+
         HitterSnapshot[] lineup = BuildHitterSnapshots(LineUpManager.Instance.GetHittersInBattingOrder());
         HitterSnapshot[] bench = BuildHitterSnapshots(LineUpManager.Instance.GetBenchInstanceIds());
-        PitcherSnapshot[] pitchers = BuildPitcherStaff(rotationIndex);
+        PitcherSnapshot[] pitchers = BuildPitcherStaff(playerRotationIndex);
 
-        //TODO(8-1): AI 로스터 완성 시 상대팀 실제 스냅샷으로 교체
-        HitterSnapshot[] opponentLineup = lineup;
-        PitcherSnapshot[] opponentPitchers = pitchers;
+        HitterSnapshot[] opponentLineup = CopyLineup(opponent.Lineup);
+        PitcherSnapshot[] opponentPitchers = opponent.GetPitcherStaff(opponentRotationIndex);
+
+        //AI 팀은 벤치가 없음 (기획서 7.8 / 세션 26)
         HitterSnapshot[] opponentBench = Array.Empty<HitterSnapshot>();
 
         HitterSnapshot[] homeLineup = isPlayerHome ? lineup : opponentLineup;
@@ -78,6 +85,15 @@ public static class SimulationContextBuilder
         int finalStamina = CardStatsCalculator.CalculateFinalStat(pitcherData.Stamina, card.EnhanceLevel, card.TrainDelta[3]);
 
         return new PitcherSnapshot(instanceId, cardData.Name, finalVelo, finalStuff, finalControl, finalStamina);
+    }
+
+    //AI 라인업 사본 생성 - 시뮬 코어가 대타 교체 시 라인업 배열에 직접 덮어쓰므로(세션 26) 고정 로스터 원본을 보호
+    private static HitterSnapshot[] CopyLineup(HitterSnapshot[] source)
+    {
+        HitterSnapshot[] copy = new HitterSnapshot[source.Length];
+        Array.Copy(source, copy, source.Length);
+
+        return copy;
     }
 
     //인스턴스 ID -> 타자 스냅샷 배열
