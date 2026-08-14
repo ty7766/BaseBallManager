@@ -5,6 +5,25 @@
 /// </summary>
 public class BatterOutcomeCalculator
 {
+    //리그 평균끼리 붙었을 때 나오는 기준 확률 (KBO 실제 지표에 맞춰 실측 조정한 값)
+    private const float BaseStrikeOutProb = 0.190f;     //삼진율 ~17.5%
+    private const float BaseWalkProb = 0.098f;          //볼넷율 ~9.3% (삼진 탈락 후 기준)
+    private const float BaseHomeRunProb = 0.023f;       //홈런율 ~2.0% (삼진·볼넷 탈락 후 기준)
+    private const float BaseErrorProb = 0.013f;
+    private const float BaseHitProb = 0.303f;           //타율 ~.270이 나오는 인플레이 안타 확률
+
+    //스탯 편차 1.0당 확률 변화폭
+    private const float StrikeOutCoefficient = 0.10f;
+    private const float WalkCoefficient = 0.06f;
+    private const float HomeRunCoefficient = 0.025f;
+    private const float HitCoefficient = 0.10f;
+    private const float ErrorDefenseCoefficient = 0.006f;
+
+    //안타 종류 분배 (홈런 제외) - KBO 기준 단타 79% / 2루타 19% / 3루타 1.5%
+    private const float BaseTripleShare = 0.015f;
+    private const float BaseDoubleShare = 0.190f;
+    private const float LongHitBonusScale = 0.10f;
+
     // 확률 메서드를 조합하여 최종 타석 결과 반환
     public BatterOutcome Calculate(GameState state, HitterSnapshot hitter, PitcherSnapshot pitcher, float avgDefense)
     {
@@ -23,13 +42,12 @@ public class BatterOutcomeCalculator
         // 5. 안타
         if (Roll(CalcHitProb(hitter, pitcher)))
         {
-            // 파워/주루 기반 장타 비중 보정
-            float power = hitter.Power / 100f;
-            float run = hitter.Run / 100f;
-            float longHitBonus = 0.15f * (power * 0.6f + run * 0.4f);
+            // 파워/주루가 평균보다 높을수록 장타 비중 증가 (평균이면 보정 0)
+            float longHitBonus = LongHitBonusScale
+                * (StatBaseline.GetEdge(hitter.Power, StatBaseline.HitterPower) * 0.6f + StatBaseline.GetEdge(hitter.Run, StatBaseline.HitterRun) * 0.4f);
 
-            float tripleThreshold = 0.04f + longHitBonus * (0.04f / 0.22f);
-            float doubleThreshold = tripleThreshold + 0.18f + longHitBonus * (0.18f / 0.22f);
+            float tripleThreshold = Mathf.Max(0f, BaseTripleShare + longHitBonus * 0.1f);
+            float doubleThreshold = tripleThreshold + Mathf.Max(0f, BaseDoubleShare + longHitBonus * 0.9f);
 
             float r = Random.value;
             if (r < tripleThreshold)
@@ -77,75 +95,59 @@ public class BatterOutcomeCalculator
     // 타자 정확↓, 투수 구위/구속↑ 일수록 높아짐
     private float CalcStrikeOutProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
-        // 1. 스탯 정규화
-        float stuff = pitcher.Stuff / 100f;
-        float velo = pitcher.Velo / 100f;
-        float contact = hitter.Contact / 100f;
+        float pitcherPowerEdge = StatBaseline.GetEdge(StatBaseline.GetPitcherPower(pitcher), StatBaseline.PitcherPower);
+        float contactEdge = StatBaseline.GetEdge(hitter.Contact, StatBaseline.HitterContact);
 
-        // 2. 투수 구위/구속 평균
-        float pitcherPower = (stuff + velo) * 0.5f;
+        float probStrikeOut = BaseStrikeOutProb + StrikeOutCoefficient * (pitcherPowerEdge - contactEdge);
 
-        // 3. 기본 삼진 확률 계산
-        float probK = 0.22f + 0.30f * (pitcherPower - contact);
-
-        // 4. (5% ~ 40% 범위 고정)
-        return Mathf.Clamp(probK, 0.05f, 0.40f);
+        return Mathf.Clamp(probStrikeOut, 0.05f, 0.40f);
     }
 
     // 볼넷 확률 계산
-    // 타자 정확↑, 투수 제구↓ 일수록 높아짐
+    // 타자 정확(선구안)↑, 투수 제구↓ 일수록 높아짐
     private float CalcWalkProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
-        // 1. 스탯 정규화
-        float contact = hitter.Contact / 100f;
-        float control = pitcher.Control / 100f;
+        float contactEdge = StatBaseline.GetEdge(hitter.Contact, StatBaseline.HitterContact);
+        float controlEdge = StatBaseline.GetEdge(pitcher.Control, StatBaseline.PitcherControl);
 
-        // 2. 기본 볼넷 확률 계산
-        float probWalk = 0.085f + 0.20f * (contact * 0.4f - control);
+        float probWalk = BaseWalkProb + WalkCoefficient * (contactEdge - controlEdge);
 
-        // 3. (2% ~ 20% 범위 고정)
-        return Mathf.Clamp(probWalk, 0.02f, 0.20f);
+        return Mathf.Clamp(probWalk, 0.02f, 0.25f);
     }
 
     // 홈런 확률 계산
     // 타자 파워↑, 투수 구위/구속↓ 일수록 높아짐
     private float CalcHomeRunProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
-        // 1. 스탯 정규화
-        float power = hitter.Power / 100f;
-        float stuff = pitcher.Stuff / 100f;
-        float velo = pitcher.Velo / 100f;
+        float powerEdge = StatBaseline.GetEdge(hitter.Power, StatBaseline.HitterPower);
+        float pitcherPowerEdge = StatBaseline.GetEdge(StatBaseline.GetPitcherPower(pitcher), StatBaseline.PitcherPower);
 
-        // 2. 기본 홈런 확률 계산
-        float probHomerun = 0.05f + 0.25f * (power - ((stuff + velo) * 0.5f));
+        float probHomeRun = BaseHomeRunProb + HomeRunCoefficient * (powerEdge - pitcherPowerEdge);
 
-        // 3. (0.5% ~ 30% 범위 고정)
-        return Mathf.Clamp(probHomerun, 0.005f, 0.30f);
+        return Mathf.Clamp(probHomeRun, 0.002f, 0.10f);
     }
 
     // 안타 확률 계산 (BABIP 개념)
     // 타자 정확↑, 투수 구위↓ 일수록 높아짐
     private float CalcHitProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
-        // 1. 스탯 정규화
-        float contact = hitter.Contact / 100f;
-        float stuff = pitcher.Stuff / 100f;
+        float contactEdge = StatBaseline.GetEdge(hitter.Contact, StatBaseline.HitterContact);
+        float stuffEdge = StatBaseline.GetEdge(pitcher.Stuff, StatBaseline.PitcherStuff);
 
-        // 2. 기본 안타 확률 계산
-        float probHit = 0.3f + 0.25f * (contact - stuff);
+        float probHit = BaseHitProb + HitCoefficient * (contactEdge - stuffEdge);
 
-        // 3. (15% ~ 45% 범위 고정)
-        return Mathf.Clamp(probHit, 0.15f, 0.45f);
+        return Mathf.Clamp(probHit, 0.12f, 0.50f);
     }
 
     // 실책 확률 계산
     // 수비팀 평균 수비↑ 일수록 낮아짐
     private float CalcErrorProb(float avgDefense)
     {
-        // 1. 기본 실책 확률 계산
-        float probError = 0.012f - 0.02f * (avgDefense - 0.5f);
+        //avgDefense는 0~1로 정규화된 값이라 100을 곱해 원래 스탯 단위로 되돌림
+        float defenseEdge = StatBaseline.GetEdge(avgDefense * 100f, StatBaseline.HitterDefense);
 
-        // 2. (0.3% ~ 3% 범위 고정)
+        float probError = BaseErrorProb - ErrorDefenseCoefficient * defenseEdge;
+
         return Mathf.Clamp(probError, 0.003f, 0.03f);
     }
 

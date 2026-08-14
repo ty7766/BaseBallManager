@@ -41,6 +41,26 @@ public class LeagueTierTable : ScriptableObject
         return entry.StatBonus;
     }
 
+    public int GetGameCount(LeagueTier tier)
+    {
+        if (!TryGetEntry(tier, out LeagueTierEntry entry))
+        {
+            return 0;
+        }
+
+        return entry.GameCount;
+    }
+
+    public int GetSeriesLength(LeagueTier tier)
+    {
+        if (!TryGetEntry(tier, out LeagueTierEntry entry))
+        {
+            return 0;
+        }
+
+        return entry.SeriesLength;
+    }
+
     private bool TryGetEntry(LeagueTier tier, out LeagueTierEntry entry)
     {
         int index = (int)tier;

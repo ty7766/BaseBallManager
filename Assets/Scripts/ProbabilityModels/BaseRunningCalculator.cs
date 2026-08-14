@@ -6,6 +6,12 @@
 /// </summary>
 public class BaseRunningCalculator
 {
+    //평균 주루 스탯 주자의 추가 진루 성공 확률
+    private const float BaseAdvanceChance = 0.62f;
+
+    //주루 편차 1.0당 진루 확률 변화폭
+    private const float AdvanceChanceCoefficient = 0.12f;
+
     //베이스, 득점, 아웃 갱신
     public void Apply(BatterOutcome outcome, int batterInstanceId, GameState state, SimulationContext context)
     {
@@ -185,11 +191,11 @@ public class BaseRunningCalculator
     //추가 진루 확률 판정 (Run 스탯)
     private bool TryAdvance(HitterSnapshot runner)
     {
-        //1. 정규화
-        float run = runner.Run / 100f;
+        //1. 평균 대비 편차로 변환 (평균 주자면 기준 확률 그대로)
+        float runEdge = StatBaseline.GetEdge(runner.Run, StatBaseline.HitterRun);
 
         //2. 진루 확률 계산 (25% ~ 90% 범위 제한)
-        float probRun = Mathf.Clamp(0.4f + 0.6f * (run - 0.5f), 0.25f, 0.9f);
+        float probRun = Mathf.Clamp(BaseAdvanceChance + AdvanceChanceCoefficient * runEdge, 0.25f, 0.90f);
 
         return Random.value < probRun;
     }

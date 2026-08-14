@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 티어에 맞는 AI 팀 로스터 9개를 생성해 보관
+/// 티어에 맞는 팀 로스터를 세트 단위로 생성해 보관 (플레이어 팀 포함 10팀)
 /// </summary>
 public class AiRosterManager : MonoBehaviour
 {
@@ -10,6 +10,7 @@ public class AiRosterManager : MonoBehaviour
 
     public LeagueTier CurrentTier => _currentTier;
     public int TeamCount => _rosters.Count;
+    public IReadOnlyDictionary<string, AiTeamRoster> Rosters => _rosters;
 
     [Header("티어 -> 로스터 세트 + 능력치 보정 테이블")]
     [SerializeField]
@@ -49,20 +50,6 @@ public class AiRosterManager : MonoBehaviour
             return false;
         }
 
-        if (PlayerDataManager.Instance == null)
-        {
-            Debug.LogError("[AiRosterManager]: PlayerDataManager가 씬에 없습니다");
-            return false;
-        }
-
-        string playerTeamName = PlayerDataManager.Instance.PlayerTeamName;
-
-        if (string.IsNullOrEmpty(playerTeamName))
-        {
-            Debug.LogError("[AiRosterManager]: 플레이어 팀이 선택되지 않아 상대 팀을 가릴 수 없습니다");
-            return false;
-        }
-
         int tierStatBonus = _tierTable.GetStatBonus(tier);
         IReadOnlyList<AiTeamRosterData> teams = rosterSet.Teams;
 
@@ -79,10 +66,6 @@ public class AiRosterManager : MonoBehaviour
                 _rosters.Clear();
                 return false;
             }
-
-            //플레이어 팀은 AI가 쓰지 않음 (기획서 7.8 - 나를 제외한 9팀)
-            if (teamData.TeamName == playerTeamName)
-                continue;
 
             AiTeamRoster roster = AiRosterBuilder.BuildTeam(teamData, tierStatBonus);
 
@@ -105,9 +88,25 @@ public class AiRosterManager : MonoBehaviour
 
         _currentTier = tier;
 
-        Debug.Log($"[AiRosterManager]: {tier} 티어 AI 로스터 {_rosters.Count}팀 생성 완료 (능력치 보정 +{tierStatBonus})");
+        Debug.Log($"[AiRosterManager]: {tier} 티어 로스터 {_rosters.Count}팀 생성 완료 (능력치 보정 +{tierStatBonus})");
 
         return true;
+    }
+
+    //플레이어 팀을 뺀 나머지 팀명 (기획서 7.8 - 나를 제외한 9팀)
+    public List<string> GetOpponentTeamNames(string playerTeamName)
+    {
+        List<string> opponentNames = new List<string>(_rosters.Count);
+
+        foreach (string teamName in _rosters.Keys)
+        {
+            if (teamName == playerTeamName)
+                continue;
+
+            opponentNames.Add(teamName);
+        }
+
+        return opponentNames;
     }
 
     //팀명으로 AI 로스터 조회

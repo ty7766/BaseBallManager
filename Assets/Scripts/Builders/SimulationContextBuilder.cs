@@ -37,6 +37,26 @@ public static class SimulationContextBuilder
         return new SimulationContext(isPlayerHome, homeLineup, awayLineup, homeBench, awayBench, homePitchers, awayPitchers);
     }
 
+    //AI 두 팀끼리의 SimulationContext 생성 (내가 뛰지 않는 리그 경기)
+    public static SimulationContext BuildAiVersusAi(AiTeamRoster homeTeam, AiTeamRoster awayTeam, int homeRotationIndex, int awayRotationIndex)
+    {
+        if (homeTeam == null || awayTeam == null)
+        {
+            Debug.LogError("[SimulationContextBuilder]: AI 경기의 팀 로스터가 없습니다");
+            return null;
+        }
+
+        //AI끼리의 경기라 IsPlayerHome은 의미가 없음. 시뮬 코어는 이 값을 읽지 않고 UI 표기용
+        return new SimulationContext(
+            false,
+            CopyLineup(homeTeam.Lineup),
+            CopyLineup(awayTeam.Lineup),
+            Array.Empty<HitterSnapshot>(),
+            Array.Empty<HitterSnapshot>(),
+            homeTeam.GetPitcherStaff(homeRotationIndex),
+            awayTeam.GetPitcherStaff(awayRotationIndex));
+    }
+
     //최종 반영 타자 스탯
     public static HitterSnapshot BuildHitterSnapshot(int instanceId)
     {
