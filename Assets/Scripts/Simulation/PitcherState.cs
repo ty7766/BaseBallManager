@@ -1,10 +1,10 @@
-using System;
+ï»¿using System;
 using UnityEngine;
 
 /// <summary>
-/// ½Ã¹Ä·¹ÀÌ¼Ç ³» µîÆÇ ÁßÀÎ Åõ¼öÀÇ »óÅÂ ÃßÀû
-/// 1. ½º³À¼¦ ÃßÀû
-/// 2. Ã¼·Â, Åõ±¸ ¼ö, ÀÌ´×, ½ÇÁ¡ º¯¼ö µî ±â·Ï¿ë
+/// ì‹œë®¬ë ˆì´ì…˜ ë‚´ ë“±íŒ ì¤‘ì¸ íˆ¬ìˆ˜ì˜ ìƒíƒœ ì¶”ì 
+/// 1. ìŠ¤ëƒ…ìƒ· ì¶”ì 
+/// 2. ì²´ë ¥, íˆ¬êµ¬ ìˆ˜, ì´ë‹, ì‹¤ì  ë³€ìˆ˜ ë“± ê¸°ë¡ìš©
 /// </summary>
 public class PitcherState
 {
@@ -17,10 +17,10 @@ public class PitcherState
     /// </summary>
     public int PitcherSlotIndex { get; }
 
-    public int CurrentStamina { get; private set; }     //³²Àº Ã¼·Â
+    public int CurrentStamina { get; private set; }     //ë‚¨ì€ ì²´ë ¥
     
-    public int TotalPitchCount { get; private set; }    //°æ±â ÀüÃ¼ Åõ±¸ ¼ö
-    public int CurrentInningRuns { get; private set; }  //ÀÌ¹ø ÀÌ´× ½ÇÁ¡
+    public int TotalPitchCount { get; private set; }    //ê²½ê¸° ì „ì²´ íˆ¬êµ¬ ìˆ˜
+    public int CurrentInningRuns { get; private set; }  //ì´ë²ˆ ì´ë‹ ì‹¤ì 
 
     public PitcherState(PitcherSnapshot snapshot, int pitcherSlotIndex)
     {
@@ -29,39 +29,39 @@ public class PitcherState
         CurrentStamina = Snapshot.Stamina;
     }
 
-    //ÇöÀç Ã¼·Â ºñÀ² ¹İÈ¯
+    //í˜„ì¬ ì²´ë ¥ ë¹„ìœ¨ ë°˜í™˜
     public float GetFatigueRatio()
     {
         return (float)CurrentStamina / Snapshot.Stamina;
     }
 
-    //Åõ±¸ ¼ö ¸¸Å­ ÃÑ Åõ±¸ ¼ö¸¦ ´©ÀûÇÏ°í Ã¼·ÂÀ» ¼Ò¸ğ
+    //íˆ¬êµ¬ ìˆ˜ ë§Œí¼ ì´ íˆ¬êµ¬ ìˆ˜ë¥¼ ëˆ„ì í•˜ê³  ì²´ë ¥ì„ ì†Œëª¨
     public void ConsumePitches(int pitchCount)
     {
         TotalPitchCount += pitchCount;
         CurrentStamina = Math.Max(0, CurrentStamina - pitchCount);
     }
 
-    //ÀÌ¹ø ÀÌ´× ½ÇÁ¡ 1 Áõ°¡
+    //ì´ë²ˆ ì´ë‹ ì‹¤ì  1 ì¦ê°€
     public void AddInningRun()
     {
         CurrentInningRuns++;
     }
 
-    //ÀÌ´×ÀÌ ¹Ù²ğ ¶§ ÀÌ¹ø ÀÌ´× ½ÇÁ¡ ÃÊ±âÈ­
+    //ì´ë‹ì´ ë°”ë€” ë•Œ ì´ë²ˆ ì´ë‹ ì‹¤ì  ì´ˆê¸°í™”
     public void ResetInningStats()
     {
         CurrentInningRuns = 0;
     }
     
-    //Åõ±¸ ¼ö·Î ÀÎÇÑ Åõ¼ö Ã¼·Â °»½Å
+    //íˆ¬êµ¬ ìˆ˜ë¡œ ì¸í•œ íˆ¬ìˆ˜ ì²´ë ¥ ê°±ì‹ 
     public PitcherSnapshot GetFatiguedSnapshot()
     {
-        //1. ÇöÀç Ã¼·Â ºñÀ²
+        //1. í˜„ì¬ ì²´ë ¥ ë¹„ìœ¨
         float staminaRatio = GetFatigueRatio();
         float fatigue;
 
-        //2. ºñÀ²¿¡ µû¶ó ÇÇ·Î °è¼ö °è»ê
+        //2. ë¹„ìœ¨ì— ë”°ë¼ í”¼ë¡œ ê³„ìˆ˜ ê³„ì‚°
         if (staminaRatio > 0.5f)
         {
             fatigue = 1.0f;
@@ -72,7 +72,7 @@ public class PitcherState
             fatigue = Mathf.Lerp(1.0f, 0.80f, t);
         }
 
-        //3. Ã¼·Â ¼ÒÁøÀ¸·Î ÀÎÇÑ ½ºÅÈ ¾÷µ¥ÀÌÆ®
+        //3. ì²´ë ¥ ì†Œì§„ìœ¼ë¡œ ì¸í•œ ìŠ¤íƒ¯ ì—…ë°ì´íŠ¸
         int fatiguedVelo = (int) (Snapshot.Velo * fatigue);
         int fatiguedStuff = (int) (Snapshot.Stuff * fatigue);
         int fatiguedControl = (int) (Snapshot.Control * fatigue);

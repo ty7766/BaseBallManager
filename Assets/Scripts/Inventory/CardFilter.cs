@@ -1,5 +1,5 @@
-/// <summary>
-/// ÀÎº¥Åä¸® ÇÊÅÍ Á¶°ÇÀ» ´ã´Â µ¥ÀÌÅÍ Å¬·¡½º
+ï»¿/// <summary>
+/// ì¸ë²¤í† ë¦¬ í•„í„° ì¡°ê±´ì„ ë‹´ëŠ” ë°ì´í„° í´ë˜ìŠ¤
 /// </summary>
 public class CardFilter
 {
@@ -9,4 +9,4 @@ public class CardFilter
     public string TeamName;
 }
 
-//TODO : ¼±¼ö ÀÌ¸§ °Ë»ö ±â´É Ãß°¡ ¿¹Á¤
+//TODO : ì„ ìˆ˜ ì´ë¦„ ê²€ìƒ‰ ê¸°ëŠ¥ ì¶”ê°€ ì˜ˆì •

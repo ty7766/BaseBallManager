@@ -1,25 +1,25 @@
-using System.Runtime.ExceptionServices;
+ï»¿using System.Runtime.ExceptionServices;
 
 /// <summary>
-/// ¸Å Å¸¼® Á¾·á ÈÄ Åõ¼ö ±³Ã¼ ÆÇ´Ü
+/// ë§¤ íƒ€ì„ ì¢…ë£Œ í›„ íˆ¬ìˆ˜ êµì²´ íŒë‹¨
 /// </summary>
 public class PitcherChangeEvaluator
 {
-    private int _pullThreshold;     //±³Ã¼ ÆÇ´Ü Á¡¼ö ÀÓ°è°ª
+    private int _pullThreshold;     //êµì²´ íŒë‹¨ ì ìˆ˜ ì„ê³„ê°’
 
     public PitcherChangeEvaluator(int pullThreshold = 3)
     {
         _pullThreshold = pullThreshold;
     }
 
-    //±³Ã¼ ¿©ºÎ ÆÇ´Ü
+    //êµì²´ ì—¬ë¶€ íŒë‹¨
     public bool ShouldChange(PitcherState pitcherState, GameState gameState, int effectiveInningRuns)
     {
         bool forcePull = false;
         int pullScore = 0;
         float currentStaminaRatio = pitcherState.GetFatigueRatio();
 
-        //Ã¼·Â °è»ê
+        //ì²´ë ¥ ê³„ì‚°
         if (currentStaminaRatio < 0.30f)
             pullScore += 2;
         else if (currentStaminaRatio < 0.50f)
@@ -28,7 +28,7 @@ public class PitcherChangeEvaluator
             forcePull = true;
             
 
-        //À§±â »óÈ² °è»ê
+        //ìœ„ê¸° ìƒí™© ê³„ì‚°
         pullScore += effectiveInningRuns;
         int runnerCount = 0;
         if (gameState.FirstBase != -1)
@@ -41,20 +41,20 @@ public class PitcherChangeEvaluator
         if (runnerCount >= 2 && gameState.OutCount < 2)
             pullScore += 1;
 
-        //Åõ±¸ ±³Ã¼ °áÁ¤
+        //íˆ¬êµ¬ êµì²´ ê²°ì •
         if (forcePull || pullScore >= _pullThreshold)
             return true;
         return false;
     }
 
-    //´ÙÀ½ Åõ¼ö ½½·Ô ÀÎµ¦½º ¹İÈ¯
+    //ë‹¤ìŒ íˆ¬ìˆ˜ ìŠ¬ë¡¯ ì¸ë±ìŠ¤ ë°˜í™˜
     public int GetNextPitcherSlot(PitcherState currentState, GameState gameState)
     {
 
         int scoreDiff = 0;
         bool isHomePitching = !gameState.IsTopInning;
 
-        //ÇöÀç Åõ±¸ÆÀÀÌ È¨ÀÎÁö ¿øÁ¤ÀÎÁö ÆÇº°ÈÄ ÇöÀç Á¡¼öÂ÷ °è»ê
+        //í˜„ì¬ íˆ¬êµ¬íŒ€ì´ í™ˆì¸ì§€ ì›ì •ì¸ì§€ íŒë³„í›„ í˜„ì¬ ì ìˆ˜ì°¨ ê³„ì‚°
         if (isHomePitching)
         {
             scoreDiff = gameState.HomeScore - gameState.AwayScore;
@@ -66,16 +66,16 @@ public class PitcherChangeEvaluator
 
         bool isSaveSituation = gameState.Inning >= 9 && scoreDiff >= 1 && scoreDiff <= 3;
 
-        //¼¼ÀÌºê »óÈ²ÀÌ¸é ¸¶¹«¸® µîÆÇ
+        //ì„¸ì´ë¸Œ ìƒí™©ì´ë©´ ë§ˆë¬´ë¦¬ ë“±íŒ
         if (isSaveSituation && currentState.PitcherSlotIndex != 6 && !gameState.IsPitcherUsed(isHomePitching, 6))
         {
             return 6;
         }
 
-        //Áß°è Åõ¼ö µîÆÇ
+        //ì¤‘ê³„ íˆ¬ìˆ˜ ë“±íŒ
         for (int nextSlot = currentState.PitcherSlotIndex + 1; nextSlot <= 6; nextSlot++)
         {
-            //¾ÆÁ÷ µîÆÇ ¾ÈÇÑ Åõ¼ö Å½»öÇÏ¿© ±³Ã¼
+            //ì•„ì§ ë“±íŒ ì•ˆí•œ íˆ¬ìˆ˜ íƒìƒ‰í•˜ì—¬ êµì²´
             if (!gameState.IsPitcherUsed(isHomePitching, nextSlot))
                 return nextSlot;
         }

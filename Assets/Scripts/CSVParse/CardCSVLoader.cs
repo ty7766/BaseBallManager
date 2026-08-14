@@ -1,27 +1,27 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Text;
 using System.Collections.Generic;
 using System;
 
 public class CardCSVLoader
 {
-    //CSV ÆÄÀÏÀ» ÀĞ¾î¿À´Â ÇÔ¼ö
+    //CSV íŒŒì¼ì„ ì½ì–´ì˜¤ëŠ” í•¨ìˆ˜
     private string ReadCSV(string resourcePath)
     {
-        //[resourcePath]¿¡ ÀÖ´Â ÆÄÀÏÀ» ÀĞÀ½
+        //[resourcePath]ì— ìˆëŠ” íŒŒì¼ì„ ì½ìŒ
         TextAsset asset = Resources.Load<TextAsset>(resourcePath);
         string text = Encoding.UTF8.GetString(asset.bytes);
 
         return text;
     }
 
-    //CSV Ã¹Â° ÁÙ(¼Ó¼º)À» ¹Ş¾Æ¼­ µñ¼Å³Ê¸®¿¡ ÀúÀåÇÏ´Â ÇÔ¼ö
+    //CSV ì²«ì§¸ ì¤„(ì†ì„±)ì„ ë°›ì•„ì„œ ë”•ì…”ë„ˆë¦¬ì— ì €ì¥í•˜ëŠ” í•¨ìˆ˜
     private Dictionary<string, int> ParseHeaders(string headerLine)
     {
         Dictionary<string, int> headers = new Dictionary<string, int>();
         string[] columns = headerLine.Split(',');
 
-        //ÆÄ½ÌÇÑ Á¤º¸µéÀ» µñ¼Å³Ê¸®¿¡ ÀúÀå
+        //íŒŒì‹±í•œ ì •ë³´ë“¤ì„ ë”•ì…”ë„ˆë¦¬ì— ì €ì¥
         for (int i = 0; i < columns.Length; i++)
         {
             headers[columns[i]] = i;
@@ -30,7 +30,7 @@ public class CardCSVLoader
         return headers;
     }
 
-    //CardTypeÀ» ºĞ·ùÇØÁÖ´Â ÇÔ¼ö
+    //CardTypeì„ ë¶„ë¥˜í•´ì£¼ëŠ” í•¨ìˆ˜
     private CardType ParseCardType(string value)
     {
         switch(value)
@@ -42,11 +42,11 @@ public class CardCSVLoader
             case "G":
                 return CardType.GoldenGlove;
             default:
-                throw new Exception($"¾Ë ¼ö ¾ø´Â cardType: {value}");
+                throw new Exception($"ì•Œ ìˆ˜ ì—†ëŠ” cardType: {value}");
         }
     }
 
-    //CardGrade¸¦ ºĞ·ùÇØÁÖ´Â ÇÔ¼ö
+    //CardGradeë¥¼ ë¶„ë¥˜í•´ì£¼ëŠ” í•¨ìˆ˜
     private CardGrade ParseCardGrade(string value)
     {
         switch (value)
@@ -58,11 +58,11 @@ public class CardCSVLoader
             case "5":
                 return CardGrade.Star5;
             default:
-                throw new Exception($"¾Ë ¼ö ¾ø´Â cardGrade: {value}");
+                throw new Exception($"ì•Œ ìˆ˜ ì—†ëŠ” cardGrade: {value}");
         }
     }
 
-    //¼±¼ö µ¥ÀÌÅÍÀÇ °øÅë ¼Ó¼ºÀ» ÆÄ½ÌÇÏ´Â ¸Ş¼Òµå
+    //ì„ ìˆ˜ ë°ì´í„°ì˜ ê³µí†µ ì†ì„±ì„ íŒŒì‹±í•˜ëŠ” ë©”ì†Œë“œ
     private (int cardId, string name, string teamName, int year, 
         CardType cardType, CardGrade cardGrade, string position, int ovr)
         ParseBaseCardData(string[] cols, Dictionary<string, int> headers)
@@ -85,16 +85,16 @@ public class CardCSVLoader
         return text.Split('\n');
     }
 
-    //HitterCards.csv¸¦ ÀüÃ¼ ÀĞ°í ÆÄ½ÌÇÏ¿© ¸®½ºÆ®¿¡ ´ã¾Æ ¹İÈ¯ÇÏ´Â ÇÔ¼ö
+    //HitterCards.csvë¥¼ ì „ì²´ ì½ê³  íŒŒì‹±í•˜ì—¬ ë¦¬ìŠ¤íŠ¸ì— ë‹´ì•„ ë°˜í™˜í•˜ëŠ” í•¨ìˆ˜
     public List<HitterMasterData> LoadHitters()
     {
-        //1. CSV ÆÄÀÏ ÀüÃ¼¸¦ ¹®ÀÚ¿­·Î ÀĞ±â
+        //1. CSV íŒŒì¼ ì „ì²´ë¥¼ ë¬¸ìì—´ë¡œ ì½ê¸°
         string[] lines = ReadAllLines("Data/HitterCards");
 
-        //3. °á°ú ´ãÀ» ¸®½ºÆ®
+        //3. ê²°ê³¼ ë‹´ì„ ë¦¬ìŠ¤íŠ¸
         List<HitterMasterData> result = new List<HitterMasterData>();
 
-        //4. µ¥ÀÌÅÍ ÆÄ½Ì
+        //4. ë°ì´í„° íŒŒì‹±
         Dictionary<string, int> headers = ParseHeaders(lines[0].Trim());
 
         for (int i = 1; i < lines.Length; i++)
@@ -117,16 +117,16 @@ public class CardCSVLoader
         return result;
     }
 
-    //PitcherCards.csv¸¦ ÀüÃ¼ ÀĞ°í ÆÄ½ÌÇÏ¿© ¸®½ºÆ®¿¡ ´ã¾Æ ¹İÈ¯ÇÏ´Â ÇÔ¼ö
+    //PitcherCards.csvë¥¼ ì „ì²´ ì½ê³  íŒŒì‹±í•˜ì—¬ ë¦¬ìŠ¤íŠ¸ì— ë‹´ì•„ ë°˜í™˜í•˜ëŠ” í•¨ìˆ˜
     public List<PitcherMasterData> LoadPitchers()
     {
-        //1. CSV ÆÄÀÏ ÀüÃ¼¸¦ ¹®ÀÚ¿­·Î ÀĞ±â
+        //1. CSV íŒŒì¼ ì „ì²´ë¥¼ ë¬¸ìì—´ë¡œ ì½ê¸°
         string[] lines = ReadAllLines("Data/PitcherCards");
 
-        //3. °á°ú ´ãÀ» ¸®½ºÆ®
+        //3. ê²°ê³¼ ë‹´ì„ ë¦¬ìŠ¤íŠ¸
         List<PitcherMasterData> result = new List<PitcherMasterData>();
 
-        //4. µ¥ÀÌÅÍ ÆÄ½Ì
+        //4. ë°ì´í„° íŒŒì‹±
         Dictionary<string, int> headers = ParseHeaders(lines[0].Trim());
 
         for (int i = 1; i < lines.Length; i++)

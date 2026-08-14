@@ -1,23 +1,23 @@
-using System;
+ï»¿using System;
 /// <summary>
-/// ½Ã¹Ä·¹ÀÌ¼Ç ½ÃÀÛ Á÷Àü ºÒ·¯¿Í¾ß ÇÏ´Â µ¥ÀÌÅÍ
-/// 1. ÇÃ·¹ÀÌ¾î Å¸ÀÚ/Åõ¼ö
-/// 2. AI Å¸ÀÚ/Åõ¼ö
-/// 3. ½º³À¼¦ ¹è¿­
-/// 4. ÇÃ·¹ÀÌ¾î ÆÀ È¨/¿øÁ¤
+/// ì‹œë®¬ë ˆì´ì…˜ ì‹œì‘ ì§ì „ ë¶ˆëŸ¬ì™€ì•¼ í•˜ëŠ” ë°ì´í„°
+/// 1. í”Œë ˆì´ì–´ íƒ€ì/íˆ¬ìˆ˜
+/// 2. AI íƒ€ì/íˆ¬ìˆ˜
+/// 3. ìŠ¤ëƒ…ìƒ· ë°°ì—´
+/// 4. í”Œë ˆì´ì–´ íŒ€ í™ˆ/ì›ì •
 /// </summary>
 public class SimulationContext
 {
     public bool IsPlayerHome { get; }
 
-    public HitterSnapshot[] HomeLineup { get; }     //È¨ÆÀ Å¸ÀÚ ¶óÀÎ¾÷
-    public HitterSnapshot[] AwayLineup { get; }     //¿øÁ¤ÆÀ Å¸ÀÚ ¶óÀÎ¾÷
+    public HitterSnapshot[] HomeLineup { get; }     //í™ˆíŒ€ íƒ€ì ë¼ì¸ì—…
+    public HitterSnapshot[] AwayLineup { get; }     //ì›ì •íŒ€ íƒ€ì ë¼ì¸ì—…
     
-    public HitterSnapshot[] HomeBench { get; }      //È¨ÆÀ º¥Ä¡ ¶óÀÎ¾÷
-    public HitterSnapshot[] AwayBench { get; }      //¿øÁ¤ÆÀ º¥Ä¡ ¶óÀÎ¾÷
+    public HitterSnapshot[] HomeBench { get; }      //í™ˆíŒ€ ë²¤ì¹˜ ë¼ì¸ì—…
+    public HitterSnapshot[] AwayBench { get; }      //ì›ì •íŒ€ ë²¤ì¹˜ ë¼ì¸ì—…
 
-    public PitcherSnapshot[] HomePitchers { get; }  //È¨ÆÀ Åõ¼ö ¶óÀÎ¾÷
-    public PitcherSnapshot[] AwayPitchers { get; }  //¿øÁ¤ÆÀ Åõ¼ö ¶óÀÎ¾÷
+    public PitcherSnapshot[] HomePitchers { get; }  //í™ˆíŒ€ íˆ¬ìˆ˜ ë¼ì¸ì—…
+    public PitcherSnapshot[] AwayPitchers { get; }  //ì›ì •íŒ€ íˆ¬ìˆ˜ ë¼ì¸ì—…
 
     public SimulationContext(
         bool isPlayerHome, HitterSnapshot[] homeLineup, HitterSnapshot[] awayLineup,
@@ -25,13 +25,13 @@ public class SimulationContext
         PitcherSnapshot[] homePitchers, PitcherSnapshot[] awayPitchers)
     {
         if (homeLineup == null || homeLineup.Length != 9)
-            throw new ArgumentException("È¨ Å¸ÀÚ ¶óÀÎ¾÷ Áß ºñ¾îÀÖ´Â ½½·ÔÀÌ ÀÖ½À´Ï´Ù!");
+            throw new ArgumentException("í™ˆ íƒ€ì ë¼ì¸ì—… ì¤‘ ë¹„ì–´ìˆëŠ” ìŠ¬ë¡¯ì´ ìˆìŠµë‹ˆë‹¤!");
         if (awayLineup == null || awayLineup.Length != 9)
-            throw new ArgumentException("¿øÁ¤ Å¸ÀÚ ¶óÀÎ¾÷ Áß ºñ¾îÀÖ´Â ½½·ÔÀÌ ÀÖ½À´Ï´Ù!");
+            throw new ArgumentException("ì›ì • íƒ€ì ë¼ì¸ì—… ì¤‘ ë¹„ì–´ìˆëŠ” ìŠ¬ë¡¯ì´ ìˆìŠµë‹ˆë‹¤!");
         if (homePitchers == null || homePitchers.Length != 7)
-            throw new ArgumentException("È¨ Åõ¼ö ¶óÀÎ¾÷ Áß ºñ¾îÀÖ´Â ½½·ÔÀÌ ÀÖ½À´Ï´Ù!");
+            throw new ArgumentException("í™ˆ íˆ¬ìˆ˜ ë¼ì¸ì—… ì¤‘ ë¹„ì–´ìˆëŠ” ìŠ¬ë¡¯ì´ ìˆìŠµë‹ˆë‹¤!");
         if (awayPitchers == null || awayPitchers.Length != 7)
-            throw new ArgumentException("¿øÁ¤ Åõ¼ö ¶óÀÎ¾÷ Áß ºñ¾îÀÖ´Â ½½·ÔÀÌ ÀÖ½À´Ï´Ù!");
+            throw new ArgumentException("ì›ì • íˆ¬ìˆ˜ ë¼ì¸ì—… ì¤‘ ë¹„ì–´ìˆëŠ” ìŠ¬ë¡¯ì´ ìˆìŠµë‹ˆë‹¤!");
 
         IsPlayerHome = isPlayerHome;
         HomeLineup = homeLineup;

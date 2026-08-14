@@ -1,2 +1,2 @@
-public enum CardGrade { None = 0, Star3 = 3, Star4 = 4, Star5 = 5};
-//* Âü°í : ÀÎº¥Åä¸® °Ë»ö Áß ÀüÃ¼ °Ë»ö ±â´ÉÀ» À§ÇØ None Ãß°¡
+ï»¿public enum CardGrade { None = 0, Star3 = 3, Star4 = 4, Star5 = 5};
+//* ì°¸ê³  : ì¸ë²¤í† ë¦¬ ê²€ìƒ‰ ì¤‘ ì „ì²´ ê²€ìƒ‰ ê¸°ëŠ¥ì„ ìœ„í•´ None ì¶”ê°€

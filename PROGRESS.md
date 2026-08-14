@@ -615,25 +615,797 @@ cardId,name,team,year,cardType,grade,position,velo,stuff,control,stamina
 
 ---
 
+### 세션 28 (2026-08-08) — 타순 중복 검증 + 라인업 조회 API
+
+**브랜치**: `fix/LineUpManager-Return-Method` (PR #14 머지 완료)
+
+**수정된 파일**
+- `Assets/Scripts/Line Up/LineUpManager.cs`
+
+**버그 수정 — 타순 중복 검증**
+- `IsBattingOrderTaken(order, excludeSlot)` private 헬퍼 추가
+- `AssignHitter` / `SetBattingOrder` 두 곳에서 호출
+- 기존에는 두 선수가 같은 타순을 가질 수 있었음 → 타순 배열 정렬 시 인덱스 어긋남
+- 검사 순서 정리: **인자 범위 → 대상 존재 → 상태 충돌** (순회 필요한 검사를 뒤로)
+
+**추가된 조회 API**
+- `GetHittersInBattingOrder()` — 타순 정렬된 야수 9명 instanceId 배열
+- `GetBenchInstanceIds()` — 벤치 5칸 복사본 (빈 칸 -1 유지)
+- `GetPitcherInstanceIds(PitcherPosition)` — 역할별 슬롯 복사본
+
+📝 주요 설계 결정:
+- `excludeSlot` 매개변수 — 같은 타순으로 재설정하는 정상 호출이 자기 자신에 걸려 실패하는 것 방지
+- `GetHittersInBattingOrder`는 LINQ 정렬 대신 `result[battingOrder - 1]` 직접 배치 — O(9) 단일 패스, 추가 할당 없음. 리그 일괄 시뮬에서 경기마다 호출되므로
+- 벤치 배열을 **압축하지 않고 -1 유지** — `LiveGameController`의 `benchIndex`(0~4)와 `GameSimulator.ApplyInterruptDecision`의 `attackBench[sub.BenchIndex]`가 UI 슬롯 번호를 그대로 인덱스로 쓰므로, 압축하면 다른 선수가 조용히 교체 투입됨
+- 투수 조회는 역할별 메서드 3개 대신 `PitcherPosition` 매개변수 하나로 통합 — 본문이 키만 다르고 동일. OCP
+- 세 메서드 모두 내부 배열이 아닌 **복사본** 반환
+
+---
+
+## 🔍 세션 28에서 발견한 로드맵 공백
+
+**시뮬 엔진과 게임 데이터가 연결돼 있지 않음** (전수조사로 확인)
+
+- `HitterSnapshot` / `PitcherSnapshot` / `SimulationContext`를 **생성하는 코드가 프로젝트에 0건**
+  (전 브랜치 전 커밋 `git log --all -S` 검색 결과 — 삭제된 것도, 다른 브랜치에 있는 것도 아님)
+- 기획서 1.4의 `최종 스탯 = 기본 + 강화(레벨×2) + trainDelta` 공식이 **어디에도 구현 안 됨**
+- 결과적으로 **시뮬 엔진은 한 번도 실행된 적 없음**
+
+로드맵 6·7번 자체는 정상 완료. 이 브릿지는 기획서 11장 로드맵에 독립 항목으로 없어서(5번과 6번 사이에 끼어 누락) 아무도 할당받지 않았던 것.
+→ **로드맵 8번의 0단계로 편입해 진행**
+
+---
+
+### 세션 29 (2026-08-08) — 데이터 브릿지 완성 (8-0)
+
+**브랜치**: `feature/League-system`
+
+**완성된 파일**
+- `Assets/Scripts/Cards/CardStatsCalculator.cs` — 최종 스탯 계산 (static)
+- `Assets/Scripts/Builders/SimulationContextBuilder.cs` — 게임 데이터 → 시뮬 입력 변환 (static)
+
+**완성된 메서드 (CardStatsCalculator)**
+- `CalculateFinalStat(baseStat, enhanceLevel, trainDelta)` — 기획서 1.4 공식.
+  `baseStat + enhanceLevel * 2 + trainDelta`
+
+**완성된 메서드 (SimulationContextBuilder)**
+- `Build(isPlayerHome, rotationIndex)` — SimulationContext 조립
+- `BuildHitterSnapshot(instanceId)` / `BuildPitcherSnapshot(instanceId)` — 단일 스냅샷
+- `BuildHitterSnapshots(int[])` / `BuildPitcherSnapshots(int[])` — 배열 변환
+- `BuildPitcherStaff(rotationIndex)` — 투수진 7칸 조립 (SP 1 + RP 5 + CP 1)
+
+📝 주요 설계 결정:
+- `CardStatsCalculator`는 **스탯 1개짜리 함수**. 타자/투수 산술이 동일하므로 타입 분기 자체를 없앰. 호출자가 어느 필드에 적용할지 결정
+- 강화 계수는 `const` — 세이브엔 `enhanceLevel`만 저장되고 스탯은 매번 재계산되므로, 값 변경 시 기존 세이브 카드 스탯이 소급 변경됨. 튜닝 노브가 아니라 데이터 계약
+- 폴더 `Assets/Scripts/Builders/` — 브릿지는 Cards·Simulation 양쪽에 의존. `Simulation/` 폴더를 Cards 무의존으로 유지 (세션 15 원칙)
+- 실패 시 `default` 반환 (struct라 null 불가). `BaseRunningCalculator.FindRunnerSnapshot`과 동일 규약 (세션 19)
+- 타자/투수 빌더를 제네릭으로 합치지 않음 — 반환 struct에 공통 조상이 없고, 만들면 시뮬 코어가 그 조상에 의존하게 됨. 실제 중복은 2줄뿐
+- `BuildPitcherStaff`에서 `rotationIndex % spIds.Length` — 경계 처리를 메서드 안에 가둠. 호출부(리그·포스트시즌·테스트)가 늘어날 예정이라 한 곳만 빠뜨려도 예외
+- 배열 인덱스 규약 `[0]=SP / [1~5]=RP / [6]=CP` — 세션 23·25에서 확정된 시뮬 코어 계약
+- 벤치 `-1` 가드는 **호출자(`BuildHitterSnapshots`)가 처리** — `-1`은 정상 상태, `LogError`는 이상 상태 신호. 섞으면 로그 신뢰도 붕괴
+
+⚠️ **임시 배선 (8-1에서 반드시 교체)**
+- `Build()` 내부 `opponentLineup` / `opponentPitchers` = 플레이어 것 재사용. `TODO(8-1)` 주석 표기됨
+- `opponentBench`만 `Array.Empty<HitterSnapshot>()` (기획서 7.8 — AI 벤치 없음)
+- 현재 양 팀 데이터가 동일해 홈/원정 배치 오류가 **증상 없이 통과**함. AI 로스터 연결 시 드러남
+
+---
+
+### 세션 30 (2026-08-09) — AI 팀 로스터 착수 (8-1)
+
+**브랜치**: `feature/League-system`
+
+**설계 결정 — AI 로스터 생성 방식 변경**
+- 기획서 7.8·10장은 "AI 전용 CSV 직접 세팅"이나, **기존 카드 마스터 풀에서 자동 편성**으로 변경
+- 이유: `HitterCards.csv` / `PitcherCards.csv`에 team·position·OVR이 이미 존재. 별도 AI CSV는 중복 데이터 소스가 되어 카드 스탯 수정 시 두 곳을 동기화해야 함
+- 티어별 능력치 상승은 어차피 코드 보정값이라 CSV로 담을 수 없음
+- "직접 세팅"의 의도(랜덤 생성 공식 금지, KBO 자료 기반)는 마스터 CSV 자체가 이미 충족
+
+**완성된 파일 목록**
+- `Assets/Scripts/League/LeagueTier.cs` — 리그 티어 enum 21개 (`Basic1 = 0` ~ `Legend3`)
+- `Assets/Scripts/League/AiTeamRoster.cs` — AI 팀 1개의 고정 로스터
+- `Assets/Scripts/Builders/AiRosterBuilder.cs` — 스냅샷 변환 (부분 완성)
+
+**완성된 메서드 목록**
+- `AiTeamRoster.GetPitcherStaff(rotationIndex)` — 로테이션 반영 투수진 7칸 조립 (`[0]=SP / [1~5]=RP / [6]=CP`)
+- `AiRosterBuilder.ToHitterSnapshot(hitterData, tierStatBonus)` — 마스터 데이터 + 티어 보정 → 타자 스냅샷
+- `AiRosterBuilder.ToPitcherSnapshot(pitcherData, tierStatBonus)` — 동일 (투수)
+
+📝 주요 설계 결정:
+- `LeagueTier`에 `None` 센티넬 없음 — `CardGrade`/`CardType`과 달리 필터용이 아니고 "티어 없음" 상태가 게임에 존재하지 않음. `Basic1 = 0`으로 두어 `(int)tier`를 보정 배열 인덱스로 직접 사용
+- AI 선수의 `InstanceId` 자리에 **`CardId`** 주입 — AI는 `CardInstance`가 없으나 시뮬 코어가 주자 식별에 instanceId를 사용(`GameState.FirstBase`, `FindRunnerSnapshot`, `MarkHitterUsed`). 요구조건은 "한 팀 라인업 내 유일 + `-1` 아님"뿐이라 cardId로 충족. 팀 간 유일성은 불필요(공격팀 배열만 순회)
+- AI 스탯 공식은 플레이어와 **별개**: `기본 스탯 + 티어 보정` (강화·훈련 없음). `CardStatsCalculator` 미사용 — `CalculateFinalStat(x, 0, 0)`은 무의미한 호출이고 "AI도 강화가 있나" 오해 유발
+- `AiRosterBuilder`는 `LeagueTier`가 아니라 `int tierStatBonus`를 받음 — 티어→보정값 테이블은 수치 TBD라 인스펙터 튜닝이 필요한데 `static` 클래스는 `[SerializeField]` 불가. 테이블은 `AiRosterManager`(MonoBehaviour)가 소유 예정. 세션 25 `effectiveInningRuns` 매개변수화와 동일한 판단
+- `AiTeamRoster`는 cardId가 아닌 **완성된 스냅샷** 보관 — 기획서 7.8 "매 리그 고정 로스터"라 리그 시작 시 1회 계산이면 충분. 일괄 시뮬 144경기에서 재계산 회피
+- `AiTeamRoster` 생성자에 검증 없음 — 호출자는 `AiRosterBuilder` 한 곳뿐이고, 편성 실패는 카드를 고르는 시점에 잡아야 원인에 가까운 에러 메시지가 나옴. **검증은 만드는 쪽, 담는 쪽은 순수 데이터**
+- `GetPitcherStaff`에서 SP 인덱스는 `% StartingPitchers.Length`(데이터 길이), RP 복사량은 상수 `5`(시뮬 코어 7칸 규약). **길이는 데이터에서 읽고, 규약은 상수로 박는다**
+- 로스터에 벤치 필드 없음 — 기획서 7.8 + 세션 26, AI 팀은 벤치 없음
+- 파일 위치: `AiRosterBuilder`만 `Builders/` — Cards·Simulation·League 세 레이어에 걸쳐 있어 세션 29 원칙 적용
+
+**🔴 발견된 블로커 — `Assets/Resources/Data/` CSV가 구버전**
+- 두 CSV 모두 데이터 **1행뿐**, `OVR` 열 없음
+- `CardCSVLoader.cs:77` `headers["OVR"]` → **`KeyNotFoundException`**. `CardDataManager.Awake()`에서 터져 **게임 실행 자체가 불가**
+- 원인: 구글 시트에는 타자/투수 각 100명 이상 + OVR 열이 이미 존재. **CSV 내보내기를 안 했을 뿐** (코드 버그 아님)
+- OVR 수식은 `=INT(AVERAGE(...))` 필수 — `AVERAGE`만 쓰면 소수점이 CSV에 나가 `int.Parse` FormatException. 표시 서식으로 자릿수를 줄여도 실제 값은 안 바뀌므로 주의
+
+---
+
 ## ⏭️ 다음 할 일
 
-**로드맵 8번: 리그 시스템** (기획서 7장)
+**로드맵 8번: 리그 시스템** (기획서 7장) — 브랜치 `feature/League-system`
 
-주요 서브태스크:
-- 리그 티어 구조 / 해금 조건 (2위 이상)
-- 라운드 로빈 일정 생성 (프로 이상은 3연전)
-- 순위표 (KBO 승률·게임차, 타이브레이커 승률→득실차→상대전적)
-- 진행 방식 선택 (한 경기씩 / 일괄 시뮬)
-- AI 팀 미러전 (9팀 풀 로스터, 티어별 능력치 상승)
-- 포스트시즌 (144경기 리그 한정, 상위 5팀 KBO 사다리)
-- 시즌 저장/재도전 (리그 단위 저장, 개별 경기 미저장)
+| 단계 | 작업 | 상태 |
+|---|---|---|
+| 8-0 A | 라인업 읽기 API | ✅ 세션 28 |
+| 8-0 B | `CardStatsCalculator` — 최종 스탯 계산 | ✅ 세션 29 |
+| 8-0 C | `SimulationContextBuilder` — 라인업 → SimulationContext | ✅ 세션 29 |
+| 8-1 | AI 팀 로스터 (9팀 미러전, 티어별 능력치 상승) | 🔧 세션 30 진행 중 |
+| 8-2 | 일정 생성 (라운드 로빈 / 프로 이상 3연전 / 홈·원정 교대) | ⏭️ |
+| 8-3 | 순위표 (KBO 승률·게임차, 타이브레이커 승률→득실차→상대전적) | ⏭️ |
+| 8-4 | 리그 진행 (한 경기씩 / 일괄 시뮬) | ⏭️ |
+| 8-5 | 포스트시즌 (144경기 한정, 상위 5팀 KBO 사다리) | ⏭️ |
+| 8-6 | 시즌 저장/재도전 (리그 단위 저장, 개별 경기 미저장) | ⏭️ |
 
-**시작 전 결정 필요**
-- 새 브랜치명 (`feature/league-system` 등)
-- 서브태스크 분할 브랜치 전략 (한 브랜치에 몰기 vs 세부 분할)
+**브랜치 전략**: `feature/League-system`은 **8-0까지만** 담고, 8-2(일정)부터는 브랜치 재분할
+
+### 세션 31 (2026-08-11) — 상태 점검만 진행 (코드 변경 없음)
+
+- 워킹 트리 클린, 커밋 없음
+- 세션 30의 "다음 착수 지점" 7개 항목을 실제 코드와 대조
+  - `AiRosterBuilder`의 `static` 키워드는 **이미 반영되어 있었음** (기록만 누락)
+  - 🔴 **CSV 블로커는 미해결 상태 그대로** — 두 파일 모두 데이터 1행, `OVR` 열 없음
+- CSV 내보내기는 다음 세션으로 미룸 (작성자 결정)
+
+---
+
+### 세션 32 (2026-08-11) — CSV 최신화 완료 + 밸런스 진단
+
+**브랜치**: `feature/League-system`
+
+**🟢 CSV 블로커 해소** (세션 30·31 연속 미해결분)
+- `HitterCards.csv` — **159행**, `PitcherCards.csv` — **166행**
+- 검증 통과: UTF-8(BOM 없음) · `OVR` 열 존재 · 전 스탯 정수(소수점 0건) · 컬럼 수 일치
+- cardId — 타자 `1~159` / 투수 `50001~50166`, 중복·결번 0건, 기획서 대역 규칙 준수
+- 10개 팀(LG 삼성 KT 기아 두산 한화 NC 롯데 SSG 키움) = 플레이어 1 + AI 9
+
+**수정된 데이터 오류 3건** (1차 검증 → 작성자 수정 → 재검증 통과)
+| 위치 | 증상 | 결과 |
+|---|---|---|
+| 권동진(KT) | `grade` 빈칸 → `ParseCardGrade("")` throw → 게임 실행 불가 | ✅ |
+| 김민혁(KT) | `position`이 `4` → 예외는 없으나 어느 슬롯에도 안 잡히는 유령 카드 | ✅ CF |
+| 기아 | `LF` 0명 → AI 로스터 좌익수 슬롯 공백 | ✅ LF=1 |
+
+**AI 로스터 편성 가능성 — 10팀 전부 OK**
+- 수비 8포지션 전 팀 충족 / 투수 전 팀 SP≥5 · RP≥7 · CP≥1
+
+**📝 확정 — DH는 CSV에 포지션으로 두지 않는다**
+- DH 칸에는 **모든 포지션 카드가 들어갈 수 있으므로** CSV에서 `DH` 표기를 아예 뺌 (실제 `position=DH` 카드 0장)
+- 코드는 이미 반영돼 있었음: `LineUpManager.cs:80` — `if (slot != HitterPosition.DH)` 로 포지션 일치 검사 건너뜀
+- 세션 30 기록의 "`Position == "DH"` 카드는 수비 8자리 후보에서 자동 탈락" 항목은 **무효**
+- → 8-1 `SelectHitters`에서 **DH 슬롯은 수비 카드 중 와일드카드로 채우는 것이 선택이 아니라 필수**
+
+---
+
+## 🔴 밸런스 진단 결과 (세션 32) — 스탯 값이 아니라 **공식**의 문제
+
+CSV 실제 분포로 `BatterOutcomeCalculator`를 해석적으로 평가한 결과 (순차 탈락 구조 반영).
+
+**리그 평균 타자 vs 리그 평균 투수**
+| 지표 | 현재 모델 | KBO 실제 | 판정 |
+|---|---|---|---|
+| 타율 | **.224** | .265~.277 | ❌ 낮음 |
+| 출루율 | **.242** | ~.345 | ❌❌ 심각 |
+| OPS | **.613** | ~.750 | ❌ 낮음 |
+| K% | **25.6%** | ~17.5% | ❌ 높음 |
+| BB% | **1.5%** | ~9.3% | ❌❌ 심각 |
+| HR% | 2.45% | ~2.0% | ✅ |
+| 3루타% | **1.11%** | ~0.3% | ❌ 4배 과다 |
+
+**원인 1 — 볼넷 공식이 구조적으로 붕괴 (최우선)**
+- `probWalk = 0.085 + 0.20 * (contact * 0.4 - control)`
+- `contact * 0.4`로 타자 항만 감쇠 → contact가 만점 100이어도 `0.4` vs control 평균 `0.647`. **항상 음수**
+- 전체 매치업의 **96.5%가 하한 2%에 고정** → 타자 선구안·투수 제구가 결과에 영향 없음
+- 실제 도달 범위 `-3.5% ~ 4.4%`. 설계 상한 20%는 **도달 불가능한 죽은 코드**
+
+**원인 2 — 타자 스탯군과 투수 스탯군의 평균 위치가 어긋남**
+- 타자 contact 평균 **58.4** vs 투수 pitcherPower(=(stuff+velo)/2) 평균 **70.3**
+- 공식 상수(0.22, 0.3 등)는 "양쪽 평균이 같다"를 전제 → 모든 대결이 투수 우위로 기울어 K% 상승·타율 하락
+
+**원인 3 — 클램프 범위가 실제 도달 범위보다 훨씬 넓음** (변별력 미발현)
+| 확률 | 설계 클램프 | 실제 도달 범위 |
+|---|---|---|
+| 삼진 | 5% ~ 40% | 14.7% ~ 33.7% |
+| 볼넷 | 2% ~ 20% | -3.5% ~ 4.4% |
+| 홈런 | 0.5% ~ 30% | -1.3% ~ 10.1% (하한 포화 12.2%) |
+| 안타 | 15% ~ 45% | 20.5% ~ 37.8% |
+
+**원인 4 — 3루타 과다**: `tripleThreshold = 0.04 + ...` → 안타 중 4~7%가 3루타 (KBO는 ~1.5%)
+
+**원인 5 — velo 표준편차 2.5** (65~80에 밀집) → 사실상 상수. 투수 변별력이 stuff(sd 5.4)에만 의존
+
+**✅ 정상 확인된 항목**
+- 등급별 평균 OVR 단조 증가 — 타자 3성 57.0 / 4성 61.2 / 5성 66.6, 투수 59.5 / 64.0 / 70.6
+- stamina 이봉우리 분포(sd 12.6, SP 60~70 · RP 35~40) — 의도대로
+
+**📌 결론: CSV 재작성이 아니라 공식 상수 조정으로 해결한다**
+- CSV의 선수 간 **상대 순위**는 합리적 (김도영 74 최고, 등급별 OVR 단조 증가)
+- 문제는 두 스탯군의 **절대 위치 차이**이고, 이는 공식 기준점이 흡수해야 할 몫
+- 325명 스탯 재작성보다 상수 5개 조정이 압도적으로 싸고 안전
+- **권장 방식**: 각 스탯을 자기 집단 평균 대비 **편차**로 정규화 → 평균 대 평균 매치업이 정확히 기준 상수로 떨어짐 → 상수에 KBO 실제 수치를 넣으면 리그 평균이 자동으로 맞음
+
+---
+
+### 🚩 다음 세션 착수 지점 (8-1 남은 작업, 순서대로)
+
+1. `AiRosterBuilder.SelectHitters` — 수비 8포지션 + DH 와일드카드 + 중복 배치 금지. 8-1에서 가장 까다로움
+   - 배정 순서: 수비 8자리(제약 강한 쪽) 먼저 → DH(와일드카드) 나중. 반대로 하면 최고 OVR 선수가 DH로 빠져 포수 자리가 빔
+   - **DH는 수비 카드 중에서 뽑는다** (`position=DH` 카드 자체가 없음 — 위 확정 사항)
+   - 타순은 OVR 내림차순 (단순 근사, 추후 튜닝 대상)
+   - 실패 시 `Array.Empty<HitterSnapshot>()` + `LogError`에 팀명·포지션 포함
+2. `AiRosterBuilder.SelectPitchers` — SP5 / RP5 / CP1
+3. `AiRosterBuilder.BuildTeam` — 위를 묶어 `AiTeamRoster` 조립
+4. `AiRosterManager` (MonoBehaviour 싱글톤) — `[SerializeField] int[]` 티어 보정 테이블 + 9팀 로스터 생성/보관
+   - 이때 **티어 보정 후 스탯 100 초과 클램프 여부 결정**. 현재 `BatterOutcomeCalculator`는 `stat / 100f` 정규화 + 최종 확률 `Mathf.Clamp`라 크래시는 없고 상한에 붙는 형태로 흡수됨
+5. `SimulationContextBuilder.Build()`의 `TODO(8-1)` 임시 배선(상대팀 = 플레이어 것 재사용) 교체
+
+**⏸️ 밸런스 튜닝은 8-1 완료 후 별도 작업으로 분리**
+- 이유: 지금 상수를 고쳐도 **검증할 수단이 없음**. AI 로스터가 완성돼야 실제 경기를 돌려 타율·득점을 측정할 수 있음
+- 8-1 완료 → 시뮬 1회 실행 성공 → 그때 상수 튜닝 + 시즌 일괄 시뮬로 지표 확인
 
 **제외 항목** (규칙 복잡성 회피 — 세션 26에서 확정)
 - DH 권한 포기 후 투수의 타순 삽입
 - 포지션 스왑 (LF↔SS 등)
 - 시뮬 중 타순 재배치
 - 대주자 교체 (기획서상 추후)
+
+---
+
+### 세션 33 (2026-08-11) — AI 로스터 편성 방식 재설계 (SO 기반)
+
+**브랜치**: `feature/League-system`
+
+**🔄 세션 30 결정 철회 — 자동 OVR 편성 폐기**
+
+세션 30에서 "기존 카드 마스터 풀에서 자동 편성"으로 정했으나, 아래 이유로 **에디터 수동 편성**으로 전환.
+
+- **개발자 편집 권한 없음** — 자동 편성은 OVR 내림차순이라 팀 최고 타자가 1번타자가 됨(실제는 3~4번). 타순·선수 선택을 손댈 방법이 전무
+- **동일 인물 중복 출장 버그** — 시그니쳐 추가 시 `FindBestExcluding`이 카드 참조로만 중복을 걸러, 김도영(S)=3B / 김도영(N)=DH 동시 출장. 예외·로그 없음
+- **시그니쳐 출시 = AI 전 팀 자동 강화** — 최고 OVR을 고르므로 S/G 카드를 CSV에 넣는 순간 10팀 전원 자동 교체. 난이도 튜닝 노브 없음
+- 기획서 7.8·10장 원안("AI 전용 CSV 직접 세팅")이 옳았음. 세션 30이 **"AI 스탯 데이터"(중복 발생)**와 **"AI 편성 데이터"(중복 없음)**를 혼동해 뒤집었던 것
+
+**📐 확정 구조 — 3단 참조**
+
+```
+LeagueTierTable (SO 1개, 21행)   티어 → { 로스터 세트 참조, 능력치 보정 }
+      ↓
+AiRosterSet (SO)                 10팀 참조만 든 얇은 껍데기
+      ↓
+AiTeamRosterData (SO)            팀 1개. 실제 편집 대상
+   타선 9 (배열 순서 = 타순) / 선발 5 (= 로테이션) / 불펜 5 (= 등판 순서) / 마무리 1
+```
+
+작업량: 전 티어가 세트 1개 공유 시 **200배정**. 티어마다 따로 만들면 4,200 (21×10×20)
+
+📝 주요 설계 결정:
+- **세트와 팀을 2단으로 분리** — 세트는 참조 10개뿐이라 복제 비용 0. 팀 하나만 포크하고 나머지 9팀은 원본 공유 가능. 10팀을 세트 안에 인라인했다면 복제 시 전부 딸려와 LG 수정이 모든 복제본에 반복됨
+- **티어별 차이는 기본적으로 `statBonus`로 표현** — 세트 포크는 "선수 구성 자체를 바꿀 때"만. 대부분 티어는 포크 불필요
+- **부분 오버라이드 방식 기각** — "티어 행에서 특정 팀·슬롯만 덮어쓰기"는 우선순위 해석이 필요해 "지금 이 티어의 삼성 3번은 누구인가"를 추적하기 어려움. 복제 방식은 티어 테이블 행에 보이는 게 곧 정답
+  - 대가: 복제본은 원본 수정을 상속하지 않음. 포크 3~4개 수준에서는 수용 가능, 20개 넘어가면 재검토
+- **`battingOrder` 필드 없음** — 배열 인덱스가 곧 타순. 별도 필드를 두면 "3번이 두 명"인 상태가 표현 가능해지고 검증 코드가 필요해짐. **표현할 수 없는 상태는 만들지 않는다**
+- **`AiHitterSlot.Position`은 검증 전용** — 시뮬 코어는 수비 포지션을 안 씀(`CalcAverageDefense`가 9명 평균만 냄). "포수 없는 라인업" 검출용이며, DH는 어느 포지션 카드든 올 수 있어 카드에서 역산 불가
+- **카드 마스터는 CSV 유지** — 325장 벌크 + OVR 수식은 시트가 적합, 로스터는 슬롯별 판단이라 인스펙터가 적합. 도구를 용도에 맞게 분리
+- **씨앗 CSV는 `Assets/Editor/RosterSeed/`로 이동** — `Resources/`에 두면 참조 여부와 무관하게 빌드에 포함됨. 에디터 전용 데이터라 제외
+- **로스터 SO는 Resources 미사용** — `AiRosterManager`의 `[SerializeField]` 직접 참조. Resources는 스트리핑 불가
+
+**🔴 확정 규칙 — cardId는 append-only**
+
+로스터 SO가 cardId만 저장하므로, **CSV에서 cardId를 재배치하면 모든 SO가 조용히 오염된다.**
+(예: 김도영 = `cardId 50`. 24년 카드를 앞번호로 끼워넣으면 `cardId 50`이 다른 선수로 바뀜. 예외·로그·컴파일 에러 전부 없음)
+
+**신규 카드 추가 시작 번호**: 타자 `160~` / 투수 `50167~` (2026-08-11 기준 최대값 타자 159 · 투수 50166)
+
+| 허용 | 금지 |
+|---|---|
+| 새 카드를 맨 뒤 번호로 추가 | 기존 cardId 재배치·재정렬 |
+| 기존 카드의 스탯·이름 수정 | 삭제한 cardId 재사용 |
+| 시트에서 행 정렬해 보기 (파서가 헤더 기반이라 무관) | 정렬 결과로 cardId 재부여 |
+
+- 카드 제외 시 행 삭제보다 **cardId를 비워두는 편이 안전** — 검증기가 "없는 cardId" 로 잡아주는 안전한 실패가 됨
+
+**📝 년도(`year`) 취급 확정**
+- 현재 CSV는 전부 `26`. 기획서 38줄은 다년도(24, 25)를 상정
+- `CardMasterData.Year`는 현재 **읽는 곳 0곳**. 기획서 535줄(카드 UI에 년도 표시) 대비 필드는 유지
+- **로스터 슬롯에 `year` 필드 불필요** — 김도영24/김도영26은 어차피 다른 cardId. 년도는 cardId에 함축됨
+- **드롭다운 라벨에는 년도 포함 필수** — 없으면 24/26 김도영을 육안 구분 불가
+- **라인업 중복 판정 키 = `(이름, 팀)`** — 기획서 126줄의 강화용 동일성 판정(종류·이름·팀)을 그대로 쓰면 안 됨. `cardType`이 들어가 있어 시그니쳐 김도영 + 일반 김도영이 통과함. 목적이 다른 별개 규칙
+
+**🗂️ 남은 작업 순서**
+
+| # | 작업 | 상태 |
+|---|---|---|
+| 1 | `AiHitterSlot` (struct) + `AiTeamRosterData` (SO) | ✅ |
+| 2 | `AiTeamRoster.cs` 정리 — 자동 편성 메서드 4개 + `DefensePositions` + 잘못된 using 삭제 | ✅ |
+| 3 | `CardIdAttribute` + `CardCatalog` + `CardEntry` + `CardSearchDropdown` + `CardIdDrawer` | ✅ |
+| 4 | `AiRosterSet` (SO) + `LeagueTierTable` (SO) | ✅ 세션 34 |
+| 5 | `Editor/AiRosterSeedImporter` — 씨앗 CSV → SO 에셋 일괄 생성 | ✅ 세션 34 (실행 검증 미완) |
+| 6 | `Editor/AiRosterValidator` — 포지션 커버리지 · 중복 인물 · cardId 존재 검증 | ⏭️ |
+| 7 | `AiRosterBuilder.BuildTeam` — SO + tierStatBonus → `AiTeamRoster` | ⏭️ |
+| 8 | `AiRosterManager` (MonoBehaviour 싱글톤) | ⏭️ |
+| 9 | `SimulationContextBuilder.Build()`의 `TODO(8-1)` 임시 배선 교체 | ⏭️ |
+
+⚠️ **드로어 성능 주의** — `OnGUI`는 초당 수십 회 호출. CSV 파싱 결과를 **static 캐시**에 1회만 올릴 것. 매 리페인트 파싱하면 에디터가 얼어붙음
+
+**완성된 에디터 도구 (3번)**
+- `Assets/Scripts/Cards/CardIdAttribute.cs` — `PropertyAttribute`. **런타임 폴더에 둬야 함** (런타임 필드가 참조하므로 `Editor/`에 두면 빌드 실패)
+  - 타자/투수 구분은 기존 `PlayerTypeFilter` 재사용 — 같은 개념의 enum을 새로 만들지 않음
+- `Assets/Editor/CardEntry.cs` — 드롭다운 표시용 struct (CardId / TeamName / Label)
+- `Assets/Editor/CardCatalog.cs` — CSV 1회 파싱 후 static 캐시. `Tools/BaseBallManager/카드 카탈로그 새로고침` 메뉴
+- `Assets/Editor/CardSearchDropdown.cs` — `AdvancedDropdown` 상속. 팀별 폴더 + 검색창 내장
+- `Assets/Editor/CardIdDrawer.cs` — `PropertyDrawer`. cardId를 라벨 버튼으로 그림
+
+📝 에디터 도구 설계 결정:
+- **`CardCSVLoader`를 그대로 재사용** — 에디터에 파싱 로직을 다시 짜면 헤더 규칙·인코딩 처리가 두 벌이 되어 열 추가 시 한쪽만 고쳐짐. `Resources.Load`는 에디터에서도 동작
+- **`EnsureLoaded`의 catch에서 빈 컬렉션 대입** — `null`로 두면 가드를 통과해 매 프레임 재시도 → 초당 수십 개 에러 로그로 에디터 정지. 빈 컬렉션이면 재시도 중단 + 로그 1회 + NRE 없음
+- **라벨은 캐시 시점에 미리 조립** — `OnGUI`에서 문자열 보간하면 325개 × 초당 수십 회 = GC 폭탄
+- **`leaf.id`에 cardId를 실어 보냄** — `AdvancedDropdownItem.id`를 활용해 별도 매핑 테이블 불필요. 팀 노드는 자식이 있어 폴더로 동작하므로 `ItemSelected`가 안 불림 → id 불필요
+- **드로어 콜백은 `property`를 붙잡지 않음** — 선택은 몇 프레임 뒤에 일어나고 `SerializedProperty`는 그 프레임에만 유효. `serializedObject` + `propertyPath`만 복사해두고 콜백에서 `FindProperty`로 재조회
+- **빈 슬롯 센티넬 = `0`** — cardId는 1부터 시작하므로 안전하고, `int` 기본값이 0이라 새 에셋의 빈 슬롯이 자동으로 "(비어 있음)" 표시됨. 시뮬 코어의 `-1` 규약과 다른 이유는 여기선 직렬화 기본값이 그대로 빈 슬롯이 되는 게 이득이기 때문
+- **없는 cardId는 버튼에 경고 문구로 표시** — CSV에서 카드를 지웠을 때 눈에 띔. cardId 비워두기 권장 규칙의 실효성이 여기서 나옴
+
+**🐛 테스트에서 발견·수정한 버그 2건** (에디터 실동작 확인 중)
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| 카드를 고르면 `[!] 알 수 없는 cardId: -2` | `AdvancedDropdownItem.id`는 Unity가 선택 상태·검색 트리 관리에 쓰는 **내부 필드**. 우리가 심은 cardId가 보존되지 않고 내부 값으로 덮임 | `CardDropdownItem : AdvancedDropdownItem` 중첩 클래스로 **cardId를 자체 필드에 보관**. `ItemSelected`에서 `is` 패턴으로 꺼냄 |
+| LF 슬롯인데 SS 카드도 선택 가능 | 드로어가 `_cardId` 필드만 보므로 형제 필드 `_position`을 알 방법이 없었음 | `CardIdAttribute`에 `PositionFieldName` 추가 + 드로어가 **propertyPath 문자열을 잘라 붙여** 형제 필드 조회 |
+| 선발 슬롯인데 RP 카드가 나옴 | 투수 배열엔 읽을 형제 필드가 없음. **필드 자체가 역할을 결정**(`_startingPitcherCardIds` = SP) | `CardIdAttribute`에 `FixedPosition` 추가. `[CardId(..., fixedPosition: nameof(PitcherPosition.SP))]` |
+
+📝 수정 관련 설계 결정:
+- **외부 라이브러리의 범용 필드(`id`/`tag`/`userData`)에 내 데이터를 얹지 않는다** — 소유권이 없어 언제 덮어써질지 모름. 내 데이터는 내 타입에 담는다
+- `is CardDropdownItem` 검사 덕에 팀 폴더 클릭 시 콜백이 안 불림 (별도 분기 불필요)
+- **형제 필드 조회는 경로 문자열 조작** — `SerializedProperty`에 형제 접근 API가 없음. `_lineup.Array.data[0]._cardId` → 마지막 점까지 자르고 `_position` 부착
+- **필드 이름은 `nameof(_position)`** — 문자열 리터럴이면 필드명 변경 시 조용히 필터가 꺼짐. `nameof`는 컴파일러가 잡아줌
+- **포지션 필드를 못 찾으면 필터 없이 전체 노출** — 아무것도 못 고르는 것보다 관대한 실패가 나음
+- **DH 슬롯은 필터 건너뜀** — 세션 33 확정(DH = 와일드카드)의 코드상 구현부
+- `CardEntry`에 `Position`(CSV 표기 문자열) 추가. `HitterPositionParser.TryParse`로 `1B`↔`FB` 변환 (세션 13 자산 재사용)
+- **포지션 출처가 둘로 갈림** — 타자는 슬롯마다 값이 다르니 형제 필드를 읽고, 투수는 배열 이름이 곧 역할이니 특성에 고정값. `BuildEntries`가 ① 고정 포지션 → ② 형제 필드 → ③ 필터 없음 순으로 판단
+- **`nameof(PitcherPosition.SP)`** — enum 멤버명이 CSV 표기와 동일. `"SP"` 리터럴은 오타 시 목록만 조용히 비지만 `nameof`는 컴파일 에러
+- **`fixedPosition:` 이름표 필수** — 생성자에 `string` 매개변수가 연달아 있어 위치 인자로 넘기면 `positionFieldName`에 잘못 들어감
+- 두 포지션 매개변수 모두 기본값 `null` — 포지션 개념이 없는 슬롯은 무수정으로 동작 (OCP)
+
+**✅ 8-1 편집 도구 실동작 확인 완료** — 포지션별 필터링 / 검색 / 선택 / 저장 전부 정상
+
+---
+
+### 🔧 소스 파일 인코딩 정리 (2026-08-11 완료)
+
+**문제**: `Assets/` 하위 `.cs` 대부분이 **CP949**로 저장돼 있었음. Unity의 Roslyn 컴파일러는 BOM 없는 소스를 **UTF-8로 가정**하므로 한글이 깨짐. 주석은 무해하나 **문자열 리터럴이 깨지면 화면·콘솔에 그대로 노출**됨
+
+**조치**
+- `.cs` **44개를 UTF-8(BOM 포함)로 일괄 변환**
+- 변환 전 **CP949 왕복 검증**(재인코딩 결과가 원본 바이트와 일치하는지) 통과분만 적용 — 무손실 확인
+- 프로젝트 루트에 **`.editorconfig`** 생성 → `[*.cs] charset = utf-8-bom`. 이후 저장분은 Visual Studio가 자동 적용
+
+⚠️ **주의**: 변환 시점에 Visual Studio에 열려 있던 파일은 VS 메모리에 옛 인코딩으로 남아 있음. 그대로 저장하면 되돌아가므로 **VS를 한 번 닫았다 열 것**
+
+---
+
+### 세션 34 (2026-08-13) — 티어 테이블 + 씨앗 임포터 (8-1의 4·5번)
+
+**브랜치**: `feature/League-system`
+
+**완성된 파일 목록**
+- `Assets/Scripts/League/AiRosterSet.cs` — 팀 10개를 묶은 로스터 세트 (SO)
+- `Assets/Scripts/League/LeagueTierEntry.cs` — 티어 1개 설정 (`[Serializable] struct`)
+- `Assets/Scripts/League/LeagueTierTable.cs` — 티어 21행 테이블 (SO)
+- `Assets/Editor/AiRosterSeedImporter.cs` — 씨앗 CSV → SO 에셋 일괄 생성 (**Claude 작성**)
+
+**완성된 메서드 목록 (LeagueTierTable)**
+- `OnValidate()` — `_entries.Length != TierCount`면 `Array.Resize`로 21칸 복구
+- `GetRosterSet(tier)` — 실패 시 `null`
+- `GetStatBonus(tier)` — 실패 시 `0`
+- `TryGetEntry(tier, out entry)` — `(int)tier` 인덱싱 + 범위 검사 공통부
+
+**완성된 메서드 목록 (AiRosterSeedImporter)**
+- `Import()` — 메뉴 진입점 `Tools/BaseBallManager/AI 로스터 씨앗 임포트`
+- `TryReadSeed(path, requiredColumns, out headers, out rows)` — `AssetDatabase`로 CSV 로드 + 필수 열 존재 검사
+- `ParseHeaders(headerLine)` — 로컬 헤더 파서
+- `FillHitters` / `FillPitchers` — 행 → `TeamDraft` 채우기, 반환값은 오류 건수
+- `TrySetPitcher(slots, order, cardId, ...)` — 투수 배열 범위·중복 검사 후 배치
+- `GetOrCreateDraft` / `WriteTeamAsset` / `WriteRosterSetAsset` / `WriteIntArray` / `EnsureFolder`
+- `TeamDraft` (private 중첩 class) — CSV 행을 모으는 임시 그릇
+
+**🔴 SO 에셋 저장 위치 정정 — `Assets/Data/League/`**
+- `Assets/Editor/` **안의 에셋은 스크립트뿐 아니라 전부 빌드에서 제외**됨
+- 로스터 SO는 `AiRosterManager`가 참조할 런타임 데이터 → `Editor/` 밖이어야 함
+- 에디터에선 정상 동작하고 **빌드에서만 참조가 끊기는** 유형이라 재현이 어려움
+- 씨앗 CSV가 `Assets/Editor/RosterSeed/`에 있는 건 그대로 유지 (임포터만 읽음, 런타임 무관)
+- 생성 경로: `Assets/Data/League/{rosterSet}/AiTeamRoster_{팀명}.asset` + `AiRosterSet_{rosterSet}.asset`
+
+📝 주요 설계 결정:
+- `LeagueTierEntry`는 **`[Serializable] struct`** — `[SerializeField]`는 필드를 표시할 뿐 타입이 직렬화 가능해야 함. `[Serializable]` 없으면 인스펙터에 배열이 아예 안 뜨고 값도 저장 안 됨(무경고). `class`면 `new LeagueTierEntry[21]` 직후 요소가 전부 `null`이라 NRE 창이 생기는데 struct는 그 구간 자체가 없음
+- `LeagueTierEntry`에 `LeagueTier` 필드 없음 — **배열 인덱스가 곧 티어**. 세션 33의 `battingOrder` 필드 제거와 같은 원칙(표현할 수 없는 상태는 만들지 않는다). 대가는 인스펙터에 `Element 0`으로만 보이는 것
+- 범위 검사는 `TierCount` 상수가 아니라 **`_entries.Length`** 기준 — 인스펙터에서 크기가 줄면 상수 검사는 통과하고 인덱싱에서 터짐
+- `GetStatBonus` 실패값은 **`0`** — 이 값은 `AiRosterBuilder`에서 스탯에 **그대로 더해짐**. `-1` 센티넬을 쓰면 전 선수 스탯이 조용히 1 깎임. 시뮬 코어의 `-1` 규약은 산술에 안 들어가는 값에만 적용
+- 티어 보정 테이블 소유자가 `AiRosterManager`(세션 30 기록) → **`LeagueTierTable` SO로 확정 변경**. MonoBehaviour에 두면 씬마다 값이 갈라짐. `AiRosterManager`는 테이블 참조 1개만 보유
+- `_statBonus`는 전부 0으로 시작 — 밸런스 튜닝은 8-1 완료 후 별도 작업(세션 32 결론)
+- **임포터가 private 필드에 쓰는 방식 = `SerializedObject`** — `#if UNITY_EDITOR` 세터를 다는 대안은 런타임 데이터 클래스에 수정 경로를 여는 것이라 기각. 대신 필드명이 문자열이 되므로 파일 상단 `const`로 모으고, `WriteTeamAsset` 진입 직후 5개를 한꺼번에 조회해 하나라도 `null`이면 즉시 중단(조용한 빈 에셋 방지)
+- **오류 1건이라도 있으면 에셋을 하나도 만들지 않고 중단** — 7팀만 만들어진 중간 상태가 최악. 대신 오류 로그는 행마다 전부 찍어 한 번에 고칠 수 있게 함. 로그에 파일명 + CSV 실제 줄 번호(`i + 2`) 포함
+- `Dictionary`(조회) + `List`(순서) 병행 — `Dictionary` 열거 순서는 명세상 미보장. `_teams` 배열 순서가 임포트마다 흔들리면 `.asset` diff가 지저분해지고 8-2 일정 생성이 순서에 의존할 경우 재현 불가
+- **기존 에셋은 `DeleteAsset` 없이 덮어쓰기** — 지우면 GUID가 바뀌어 `AiRosterSet`→팀, `LeagueTierTable`→세트 참조가 전부 끊김
+- 빈 슬롯 판정 `!= 0` — 세션 33의 `0` 센티넬 재사용. `int[]` 기본값이 0이라 초기화 코드 불필요
+- `ParseHeaders`를 임포터에 다시 작성 — `CardCSVLoader.ParseHeaders`는 `private` 인스턴스 메서드. 에디터 도구 하나 때문에 런타임 클래스의 공개 계약을 넓히지 않음. 공유되는 건 6줄짜리 알고리즘뿐
+- `Resources.Load` 불가 → `AssetDatabase.LoadAssetAtPath` — 씨앗 CSV가 `Resources/` 밖. 세션 33의 `CardCatalog`가 `CardCSVLoader`를 재사용할 수 있었던 것과 갈리는 지점
+- **임포터는 로스터 내용을 검증하지 않음** — 존재하지 않는 cardId·포지션 커버리지·동일 인물 중복은 6번 `AiRosterValidator`의 몫. 임포터에 섞으면 인스펙터에서 직접 고친 로스터는 검증을 못 받음
+
+**🐛 코드 리뷰 지적** → ✅ 세션 35에서 이미 반영돼 있음을 확인 (`LeagueTierTable.cs:50`에 `길이 : {_entries.Length}` 존재)
+
+---
+
+### 세션 35 (2026-08-14) — 임포터 실행 + 로스터 에셋 생성 완료 (8-1의 5번 마감)
+
+**브랜치**: `feature/League-system`
+
+**세션 34 미완 3건 전부 해소**
+1. `Assets/Editor/AiTeamRoster.asset` 삭제 — 커밋 `4a8f786`에서 이미 처리돼 있었음 (기록만 누락)
+2. 임포터 실행 성공 — `Assets/Data/League/Normal/`에 **팀 10개 + 세트 1개** 생성
+3. `LeagueTierTable.asset` 생성 + **21행 전부** `AiRosterSet_Normal` 연결 (`_statBonus`는 전부 0)
+
+**씨앗 CSV 사전 검증 (임포트 전 수행, 오류 0건)**
+- 10팀 × 타자 9 / 투수 11 = 200행, 세트 1개(`Normal`)
+- 타순 1~9 완전성·중복 / 수비 8포지션 + DH 1칸 / SP5·RP5·CP1 + order 연번 — 10팀 전부 통과
+- cardId 200개 전부 마스터 CSV 실존, 씨앗의 team·name·position이 마스터와 일치
+- **동일 인물(이름+팀) 중복 출장 0건**
+
+**생성 에셋 내용 검증 (.asset YAML 직접 확인)**
+- `AiRosterSet_Normal._teams` 10칸 = 서로 다른 팀 10개 (누락·중복 0)
+- LG 기준 타순·포지션 매핑 정상 (1번 오스틴 `1B`→`FB`=3 …), SP1=50109 / CP=50106 — 씨앗과 일치
+
+📝 기록: `Assets/Data/`는 아직 git untracked. 다음 커밋에 포함할 것
+
+---
+
+### 세션 35 (계속) — 8-1 코드 전량 완성 (7 · 8 · 9 · 6번)
+
+**작업 순서 변경** — `6번(Validator)`을 맨 뒤로 미루고 **7 → 8 → 9 → 6** 순으로 진행.
+씨앗 CSV를 이미 전수 검증(오류 0건)해 Validator가 당장 잡을 대상이 없었고, 프로젝트 최대 리스크인
+"시뮬 엔진이 한 번도 실행된 적 없음"(세션 28)을 뚫는 경로가 7·8·9였기 때문.
+
+**완성된 파일 목록**
+- `Assets/Scripts/Builders/AiRosterBuilder.cs` — `BuildTeam` / `BuildLineup` / `BuildPitchers` 추가 (7번)
+- `Assets/Scripts/League/AiRosterManager.cs` — MonoBehaviour 싱글톤 신규 (8번)
+- `Assets/Scripts/Builders/SimulationContextBuilder.cs` — `Build()` 시그니처 교체 + `CopyLineup` 추가 (9번)
+- `Assets/Editor/AiRosterValidator.cs` — 로스터 SO 검증 메뉴 신규 (6번)
+- `Assets/Editor/CardEntry.cs` / `CardCatalog.cs` — `Name` 필드 추가 (동일 인물 판정 키 `(이름, 팀)`에 필요)
+
+**7번 `AiRosterBuilder.BuildTeam`**
+- 흐름: null 체크 → 타선 → 선발 → 불펜 → 마무리, 하나라도 실패하면 `null` 반환
+- 컬렉션은 실패 시 빈 배열, `BuildTeam`은 실패 시 `null` (CLAUDE.md 3-2). 호출자가 `Length`만 보면 판정되므로 `bool` + `out` 불필요
+- `BuildLineup` 진입부에 `slots.Count != 9` 검사 추가 — 인스펙터에서 배열을 7칸으로 줄이면 `new HitterSnapshot[9]`와 어긋나 **뒤 2칸이 `default`(스탯 0)인 채로 통과**함. `BuildTeam`의 길이 검사도 배열이 9칸이라 못 잡음
+- `BuildTeam`에서 SP/RP 길이를 재검사하는 이유 — `AiTeamRoster.GetPitcherStaff`가 `Array.Copy(..., 5)`로 RP 5칸을 상수 가정. 통과시키면 예외가 **경기 시뮬 도중**에 터져 원인 추적이 어려움
+- 에러 로그에 팀명 + 타순/슬롯 번호 + 포지션을 담음 — 200칸 중 어디인지 바로 찾기 위함. `CardDataManager`가 남기는 조회 실패 로그와 2줄이 되지만, 앞줄은 사실·뒷줄은 맥락으로 역할이 다름
+
+**8번 `AiRosterManager`**
+- `[SerializeField] LeagueTierTable` 참조 1개만 보유 (세션 34 결정 — 보정 테이블 소유자는 SO)
+- `BuildRosters(tier)` — 세트/플레이어팀 확인 → 팀 순회 → `Dictionary<string, AiTeamRoster>` 적재. 반환 `bool`
+- **플레이어 팀은 건너뜀** (기획서 7.8 — 나를 제외한 9팀). 결과적으로 `GetRoster`는 "AI 팀 조회"라는 뜻이 정확해짐
+- **실패 시 `_rosters.Clear()` 후 반환** — 3팀만 든 딕셔너리로 리그가 시작되면 일정 생성에서 엉뚱한 곳이 터짐. 전부 성공 아니면 아무것도 없음
+- `_currentTier`는 **성공했을 때만** 갱신 — 실패했는데 티어만 바뀌어 있으면 이후 조회가 거짓말을 함
+- 팀명 중복 검사 포함 — `Dictionary.Add`가 던지는 대신 원인이 보이는 로그로 대체
+- `PlayerDataManager.Instance == null` 가드 — 씬 배치 누락 시 NRE 대신 원인 로그
+
+**9번 `SimulationContextBuilder.Build()` 배선 교체 (TODO(8-1) 제거)**
+- 새 시그니처: `Build(AiTeamRoster opponent, bool isPlayerHome, int playerRotationIndex, int opponentRotationIndex)`
+- **`AiRosterManager`를 직접 부르지 않고 `AiTeamRoster`를 인자로 받음** — 누가 누구와 붙는지는 8-2(일정)의 책임. 빌더는 입력만 받는 순수 변환으로 유지
+- 로테이션 인덱스를 플레이어/상대 **따로 받음** — 리그에서 두 팀의 선발 순번은 독립적으로 진행됨
+- **`CopyLineup`으로 AI 라인업 사본을 넘김** — `GameSimulator.ApplyInterruptDecision`이 `context.HomeLineup`/`AwayLineup`에 **직접 덮어씀**(세션 26 방식 A). 원본을 그대로 넘기면 대타 교체 1회가 고정 로스터를 영구 오염시켜 다음 경기부터 다른 선수가 나옴. 144경기 일괄 시뮬에서 조용히 누적되는 유형
+- `GetPitcherStaff`는 호출마다 새 배열을 만들므로 사본 불필요
+- 호출자가 아직 없어 시그니처 변경의 파급 없음 (`git grep` 확인)
+
+**6번 `AiRosterValidator`** — 메뉴 `Tools/BaseBallManager/AI 로스터 검증`
+- 검사 항목: 팀명 존재 / 타선 9칸 / 빈 슬롯(`0`) / cardId 실존 / 타자·투수 종류 일치 / 슬롯 포지션 일치(DH 제외) / **수비 8자리 + DH 각 1회** / **cardId 중복** / **동일 인물(이름+팀) 중복** / SP5·RP5·CP1 개수 / 투수 역할 일치 / 세트의 팀 10개·빈 칸·중복
+- 프로젝트 전체 에셋을 `AssetDatabase.FindAssets`로 훑음 — 임포터가 만든 것뿐 아니라 **인스펙터에서 손으로 고친 것도** 대상 (세션 34에서 임포터에 검증을 넣지 않은 이유가 이것)
+- `Debug.LogError(msg, asset)` 형태로 **에셋을 context에 넣음** — 콘솔 로그를 클릭하면 해당 에셋이 핑됨
+- **소속팀 불일치는 `LogWarning`** — 타 팀 선수 편성은 난이도 조정 의도일 수 있어 실패로 취급하지 않음
+- `CardCatalog` 재사용 (CSV 재파싱 안 함). `CardEntry`에 `Name` 추가 — 라벨 문자열을 파싱해 이름을 꺼내는 건 표시 형식 변경에 깨짐
+
+---
+
+**✅ 8-1 완료 확정** — `AI 로스터 검증` 메뉴 실행 결과 `검증 통과 - 팀 10개 / 세트 1개`
+
+---
+
+### 세션 35 (계속) — 8-2 리그 일정 생성
+
+**완성된 파일 목록**
+- `Assets/Scripts/League/LeagueGame.cs` — 경기 1건 (홈/원정 + `Contains` / `GetOpponent`)
+- `Assets/Scripts/League/LeagueGameDay.cs` — 하루치 5경기. **0번 칸이 항상 플레이어 경기**
+- `Assets/Scripts/League/LeagueSchedule.cs` — 리그 1회분 전체 일정
+- `Assets/Scripts/League/LeagueScheduleGenerator.cs` — 생성기 (static)
+- `Assets/Editor/LeagueTierDefaultsFiller.cs` — 티어 21행에 기획서 7.2 경기 수·연전 수 일괄 입력
+- `Assets/Scripts/League/LeagueTierEntry.cs` / `LeagueTierTable.cs` — `_gameCount` / `_seriesLength` + getter 2개 추가
+
+📝 주요 설계 결정:
+- **AI끼리의 경기도 일정에 포함** — 기획서 7.7 순위표는 10팀 전체의 승/패/무를 요구하고 해금 조건이 "정규시즌 2위 이상"이므로, 내 경기만 만들면 8-3에서 나머지 팀 성적의 출처가 없어짐. 하루 = 5경기(내 경기 1 + AI끼리 4)
+- **원형 방식(circle method) 라운드 로빈** — 0번(플레이어)을 고정축으로 두고 나머지 9팀을 회전. 부수 효과로 **플레이어 경기가 항상 대진 0번 칸**에 오므로 `LeagueGameDay`에 별도 인덱스 필드가 불필요
+- **연전은 "라운드 통째로 반복"** — 라운드 하나를 `seriesLength`번 반복하면 플레이어뿐 아니라 10팀 전부가 같은 상대와 연전이 됨. 플레이어만 3연전으로 맞추면 AI끼리는 매일 상대가 바뀌어 규칙이 갈라짐
+- **`gameCount % seriesLength != 0`이면 생성 거부** — 연전이 중간에 끊기면 팀별 총 경기 수가 어긋나 순위표가 불공정해짐. 기획서 수치는 전부 나누어떨어짐(108/3, 144/3)
+- **일수 = 라운드 경계로만 끊음** — 라운드 하나에 전 팀이 정확히 1경기씩 하므로 어디서 끊어도 팀별 경기 수가 같음
+- **경기 수·연전 수를 `LeagueTierTable`에 둠** — 티어별 데이터의 소유자가 이미 이 SO. 인스펙터 튜닝 가능. 21행 수기 입력은 오타 위험이 커 채우기 메뉴를 함께 제공
+- 생성기는 SO를 모름 (`gameCount` / `seriesLength`를 인자로 받음) — `AiRosterBuilder`가 `tierStatBonus`를 받는 것과 같은 판단
+
+**🔬 홈/원정 배정 방식은 측정해서 골랐음**
+
+초안(`라운드 번호마다 반전`)은 144경기에서 **팀별 홈경기가 56~89로 편중**됐음. 홈팀은 말 공격·끝내기 이점이 있어 순위표가 왜곡됨.
+3가지 방식 × 사이클 반전 유무를 전부 계산해 비교한 뒤 **`대진 자리(i)별 교대 + 9라운드 사이클마다 전체 반전`** 채택.
+
+| 리그 | 경기 수 | 채택안 홈경기 | 이상적 |
+|---|---|---|---|
+| 베이직2 | 36 | 18~18 | 18 |
+| 아마추어 | 81 | 40~41 | 40 |
+| 프로 | 108 | 54~54 | 54 |
+| 마이너~ | 144 | 71~73 | 72 |
+
+**검증 완료 (생성 로직을 그대로 옮겨 전 티어 계산)**
+- 하루 5경기 / 10팀이 정확히 1번씩 출전 / 자기 자신과의 대진 0건
+- 팀별 총 경기 수 전부 동일, 플레이어 홈·원정 완전 교대
+- 연전 구간에서 상대가 바뀌지 않음
+
+**⚠️ 기획서 확인 필요 2건 (현재는 문구 그대로 구현해 둠)**
+1. **3연전 중에도 홈/원정이 매 경기 바뀜** — 기획서 7.3에 "프로부터 3연전"과 "내 팀은 경기마다 홈/원정 번갈아"가 함께 적혀 있음. 실제 야구는 3연전을 한 구장에서 치름. 현재는 후자를 그대로 따름
+2. **144경기 + 3연전이면 상대별 경기 수가 15~18로 갈림** — 144가 27(9팀 × 3연전)의 배수가 아니어서 구조적으로 발생. 135(27×5)나 162(27×6)로 바꾸면 균등해짐
+
+---
+
+**✅ 8-2 컴파일 통과 확인** (2026-08-14)
+
+---
+
+### 세션 35 (계속) — 8-3 순위표
+
+**완성된 파일 목록**
+- `Assets/Scripts/League/TeamRecord.cs` — 팀 1개 성적 (승·패·무 + 득실 + 상대전적)
+- `Assets/Scripts/League/LeagueStandingRow.cs` — 순위표 한 줄 (순위 + 성적 + 게임차)
+- `Assets/Scripts/League/LeagueStandings.cs` — 순위표 본체
+
+**완성된 메서드 목록**
+- `TeamRecord.AddResult(opponent, runsScored, runsAllowed)` — 승/패/무 판정 + 득실 누적 + 상대전적 기록
+- `TeamRecord.GetWinsAgainst / GetLossesAgainst` — 타이브레이커 3순위용
+- `LeagueStandings.ApplyGameResult(game, homeScore, awayScore)` — 양 팀에 동시 반영
+- `LeagueStandings.GetRanking()` — 승률 → 득실차 → 상대전적 정렬 + 게임차 계산
+
+📝 주요 설계 결정:
+- **승률에서 무승부 제외** (기획서 7.7) — `Wins / (Wins + Losses)`. 분모가 0이면 `0f`
+- **상대전적을 `TeamRecord`가 직접 들고 있음** — 팀명별 승/패 딕셔너리 2개. "그 팀의 성적"이라는 책임 안에 들어감
+- **타이브레이커를 한 비교 함수에 다 넣지 않고 2단계로 분리** — 상대전적은 비교 대상 두 팀에 따라 결과가 달라져(비추이적) 정렬기가 불안정해짐. ① 승률·득실차로 먼저 정렬 → ② **동률 구간만 잘라내** 그 구간 안의 상대전적으로 재정렬
+- **동률 구간이 3팀 이상이어도 동작** — 구간에 속한 팀들끼리의 전적만 합산해 승률을 냄. 2팀 동률은 이 규칙의 특수한 경우일 뿐이라 분기 불필요
+- **마지막 기준은 팀명(`CompareOrdinal`)** — `List.Sort`는 불안정 정렬이라 완전 동률이면 실행할 때마다 순서가 달라질 수 있음. 순위표가 새로고침마다 바뀌면 버그로 오인됨
+- `ApplyGameResult`는 **한 팀이라도 없으면 아무것도 반영하지 않음** — 한쪽만 반영되면 승수 총합 ≠ 패수 총합이 되어 이후 순위가 조용히 틀어짐
+- 게임차 = `((1위 승 - 팀 승) + (팀 패 - 1위 패)) / 2`
+- `LeagueStandings`는 `GameResult`가 아니라 **점수 두 개(int)를 받음** — Simulation 레이어 의존을 만들지 않기 위함. 연결은 8-4가 담당
+
+**검증 완료 (로직을 그대로 옮겨 계산, 오류 0건)**
+- 10승5패5무 → 승률 .667 (무승부 제외 확인), 게임차 계산 일치
+- 승률 동률 → 득실차로 갈림 / 승률·득실차 동률 → 상대전적으로 갈림
+- 3팀 원형 동률(전원 2승2패·득실 동일) → 팀명 순으로 결과 고정
+- 90경기 무작위 리그: 승 총합 = 패 총합, 득점 총합 = 실점 총합, 경기 수 정합, 정렬 역전 0건
+
+---
+
+**✅ 8-3 컴파일 통과 확인** (2026-08-14)
+
+---
+
+### 세션 35 (계속) — 8-4 리그 진행 + 🎉 **시뮬레이션 첫 실행 성공**
+
+**플레이어 데이터 공백 대응: 방식 3 채택** (작성자 결정)
+- AI 로스터를 플레이어 팀으로 임시 사용해 리그 로직을 먼저 완성. 실제 인벤토리·라인업 공급은 UI/세이브 작업에서 한 번에 해결
+- `LeagueRunner._useAiRosterForPlayerTeam` / `LeagueManager`의 인스펙터 토글로 노출. 끄면 곧바로 실제 플레이어 라인업 경로를 탐
+
+**완성된 파일 목록**
+- `Assets/Scripts/League/LeagueGameScore.cs` — 경기 1건 최종 점수
+- `Assets/Scripts/League/LeagueDayResult.cs` — 하루치 결과 (5경기 점수 + 플레이어 경기 상세)
+- `Assets/Scripts/League/LeagueSeason.cs` — 진행 상태 (일정 + 순위표 + 진행도)
+- `Assets/Scripts/League/LeagueRunner.cs` — 하루 단위 시뮬 + 순위표 반영 (순수 C#)
+- `Assets/Scripts/League/LeagueManager.cs` — MonoBehaviour 싱글톤 진입점
+- `Assets/Scripts/Builders/SimulationContextBuilder.cs` — `BuildAiVersusAi` 추가
+- `Assets/Scripts/League/AiRosterManager.cs` — **세트 10팀 전부 보관하도록 변경**
+
+📝 주요 설계 결정:
+- **`AiRosterManager`가 플레이어 팀도 보관하도록 되돌림** (세션 35 앞부분 결정 수정) — 방식 3이 플레이어 팀 로스터를 필요로 함. 부수 효과로 `PlayerDataManager` 의존이 사라져 더 단순해짐. 상대 9팀 필터는 `GetOpponentTeamNames(playerTeamName)` 한 곳으로 모음
+- **하루 5경기를 다 시뮬한 뒤 순위표에 한꺼번에 반영** — 중간 실패로 하루가 반만 반영되면 팀별 경기 수가 어긋나 순위가 조용히 틀어짐
+- **선발 로테이션 인덱스 = 그 팀이 치른 경기 수** (`TeamRecord.GamePlayedCount`) — 별도 상태를 두지 않음. 기획서 6.2(3연전에서도 로테이션 연속)가 자동으로 충족됨. 단, **결과 반영 전에 읽어야 함**
+- **일괄 시뮬은 중간 날짜의 타석 로그를 보관하지 않음** — 144일치 로그는 메모리만 먹음. 기획서 8.5(일괄 = 박스스코어 위주)와 일치
+- `LeagueRunner`는 순수 C#, MonoBehaviour 의존 없음 (`IReadOnlyDictionary`로 로스터 주입) — 리그 일괄 시뮬 고속화 원칙 유지
+- AI끼리의 경기는 `IsPlayerHome = false`로 둠 — 시뮬 코어는 이 값을 읽지 않고 UI 표기용 (전수 확인)
+
+**🎉 시뮬레이션 첫 실행 (Unity 밖 검증 하니스, 프로젝트 미포함)**
+
+`Assets/Scripts` **런타임 61개 전체**를 UnityEngine 최소 셰임과 함께 dotnet으로 컴파일 → **오류 0 · 경고 0**.
+씨앗 CSV 로스터로 `Minor1`(144경기 · 3연전) 한 시즌 실행.
+
+| 항목 | 결과 |
+|---|---|
+| 진행 | 144일 / **720경기** / **0.10초** / 오류 로그 0건 |
+| 정합성 | 승합 684 = 패합 684 ✅ / 무 72(짝수) ✅ / 득점합 = 실점합 (4639) ✅ / 전 팀 144경기 ✅ |
+| 순위 | 1위 삼성 89승48패7무 (.650) ~ 10위 키움 50승90패4무 (.357) |
+
+- 5위 한화(.4783)와 6위 롯데(.4779)가 표시상 둘 다 `.478`이지만 실제 승률이 달라 정렬은 정상. **순위표 UI는 승률을 3자리로 반올림해 보여주므로 동률처럼 보일 수 있음**
+
+**🔴 밸런스 실측 (300경기 표본) — 세션 32의 해석적 진단이 대체로 확인됨**
+
+| 지표 | 실측 | KBO | 세션 32 추정 | 판정 |
+|---|---|---|---|---|
+| 타율 | .241 | .265~.277 | .224 | ❌ 낮음 |
+| 출루율 | **.250** | ~.345 | .242 | ❌❌ 심각 |
+| 장타율 | .418 | ~.400 | — | ⚠️ 높음 |
+| OPS | .668 | ~.750 | .613 | ❌ 낮음 |
+| 삼진율 | 24.2% | ~17.5% | 25.6% | ❌ 높음 |
+| 볼넷율 | **1.4%** | ~9.3% | 1.5% | ❌❌ 심각 |
+| 홈런율 | **3.4%** | ~2.0% | 2.45% | ❌ 과다 (추정보다 나쁨) |
+| 3루타/안타 | 4.5% | ~1.5% | — | ❌ 3배 과다 |
+| 실책율 | 0.7% | ~1.2% | — | ⚠️ 낮음 |
+| 경기당 총득점 | 5.93 | ~9.0 | — | ❌ 낮음 |
+| 타석당 투구수 | 3.25 | ~3.9 | — | ⚠️ 낮음 |
+
+- **볼넷 공식 붕괴가 최우선 과제로 재확인** (세션 32 원인 1). 출루율이 타율과 거의 같다는 건 볼넷이 사실상 없다는 뜻
+- 세션 32 추정과 다른 점: **홈런은 "정상"이 아니라 과다**(3.4%). 장타율이 KBO보다 높은데 타율·출루율은 낮은 기형적 구조
+- 타석당 투구수가 낮은 것도 볼넷 부족의 결과로 보임
+
+**🧹 정리**: `InventoryManager.cs`의 미사용 `using System.Runtime.InteropServices.WindowsRuntime;` 제거 (자동 임포트 잔여물)
+
+---
+
+## ⏭️ 다음 세션 착수 지점
+
+### 세션 35 (계속) — 🎯 밸런스 튜닝 완료 (세션 32 진단 5건 해소)
+
+**근본 원인: 서로 다른 평균의 스탯을 직접 뺐다**
+
+`0.22 + 0.30 * (구위̂ - 정확̂)` 같은 공식은 **"두 스탯군의 평균이 같다"** 를 전제한다.
+실제 카드 풀은 타자 정확 평균 **60.9**, 투수 구위·구속 평균 **72.0** — 11점 차이.
+그래서 평균끼리 붙어도 늘 투수 우위로 기울었고, 볼넷 공식은 `contact * 0.4`로 타자 항을 감쇠까지 시켜 전체 매치업의 96.5%가 하한에 붙어 있었다.
+
+**해결: 편차 정규화 (세션 32 권고안 채택)**
+
+각 스탯을 **자기 집단 평균 대비 편차**(20점 = 1.0)로 바꾼 뒤 비교한다.
+→ 평균 대 평균 대결이 정확히 기준 상수로 떨어지고, 기준 상수에 **KBO 실제 지표를 그대로 넣으면 리그 평균이 자동으로 맞는다.**
+
+**완성/수정된 파일**
+- `Assets/Scripts/ProbabilityModels/StatBaseline.cs` — **신규**. 카드 풀 평균 기준값 + `GetEdge` 단일 출처
+- `BatterOutcomeCalculator.cs` — 5개 확률 전부 편차 기반으로 재작성, 기준 상수를 이름 있는 `const`로 분리
+- `PitchCountCalculator.cs` — 파울 확률에 같은 결함이 있어 동일 방식으로 수정
+- `BaseRunningCalculator.cs` — `TryAdvance`도 `run̂ - 0.5` 하드코딩이라 동일 방식으로 수정
+
+📝 주요 설계 결정:
+- **기준값을 `StatBaseline` 한 곳에 모음** — 네 군데 공식이 같은 평균값을 쓰는데 클래스마다 복제하면 CSV 개편 시 한쪽만 고쳐져 조용히 어긋남
+- **상수를 `const`로 두고 SO로 빼지 않음** — 확률 계산기는 순수 C#이라 `[SerializeField]` 불가(세션 22 판단과 동일). 인스펙터 튜닝이 필요해지면 `GameSimulator`가 생성자로 주입하는 방식으로 확장
+- 클램프 범위를 실제 도달 범위에 맞게 조정 (삼진 5~40%, 볼넷 2~25%, 홈런 0.2~10%, 안타 12~50%)
+
+**📊 튜닝 결과 (300경기 실측)**
+
+| 지표 | 튜닝 전 | 튜닝 후 | KBO |
+|---|---|---|---|
+| 타율 | .241 | **.275** | .265~.277 |
+| 출루율 | .250 | **.337** | ~.345 |
+| 장타율 | .418 | **.401** | ~.400 |
+| OPS | .668 | **.739** | ~.750 |
+| 삼진율 | 24.2% | **17.7%** | ~17.5% |
+| 볼넷율 | 1.4% | **9.0%** | ~9.3% |
+| 홈런율 | 3.4% | **2.1%** | ~2.0% |
+| 3루타/안타 | 4.5% | **1.3%** | ~1.5% |
+| 실책율 | 0.7% | **1.0%** | ~1.2% |
+| 경기당 총득점 | 5.93 | **8.24** | ~9.0 |
+| 타석당 투구수 | 3.25 | **3.98** | ~3.9 |
+
+**선수 변별력 확인 (클램프 포화 없음)**
+| 항목 | 최상위 카드 | 최하위 카드 |
+|---|---|---|
+| 삼진율 (정확 86 / 38) | 6.5% | 30.5% |
+| 볼넷율 (정확 86 / 38) | 17.3% | 2.9% |
+| 홈런율 (파워 82 / 52) | 4.2% | 0.4% |
+
+**⚠️ 남은 차이와 그 이유 (의도적 수용)**
+- **출루율 -.008**: 사구(HBP)가 모델에 없음. KBO 출루율은 사구 ~1.2%p를 포함하므로 **구조적으로 낮게 나오는 것이 정상**
+- **경기당 득점 -0.8**: 진루 규칙 단순화(세션 20 의도적 미구현 — 1·2루 태그업 없음, 도루 없음, 실책 후 추가 진루 없음) 때문. 여기서 안타 확률을 더 올리면 타율이 목표를 벗어남 → **타격 지표 정확도를 우선**
+
+**📌 순위표에서 오해하기 쉬운 표시 2가지 (버그 아님)**
+- 승률이 화면상 같아 보여도(`.478` vs `.478`) 실제 값이 달라 순위가 갈릴 수 있음 — 3자리 반올림 표시 때문
+- **게임차가 같은데 순위가 다를 수 있음** (예: 1위 86승51패 / 2위 88승53패 → 둘 다 0게임차). KBO도 동일하며 순위 기준은 승률
+
+---
+
+### 세션 35 (계속) — 8-5 포스트시즌 + 8-6 시즌 저장 → **로드맵 8번 전체 완료**
+
+**완성된 파일 목록**
+- `Assets/Scripts/League/LeagueGameContextFactory.cs` — 리그·포스트시즌이 공유하는 컨텍스트 생성부 (`LeagueRunner`에서 추출)
+- `Assets/Scripts/League/PostSeasonRound.cs` — 단계 enum (WC / 준PO / PO / KS)
+- `Assets/Scripts/League/PostSeasonSeries.cs` — 시리즈 1개 (대진 · 승수 · 경기 기록)
+- `Assets/Scripts/League/PostSeasonRunner.cs` — 대진표 구성 + 시리즈 진행
+- `Assets/Scripts/Save/ISaveStorage.cs` — 저장소 인터페이스 (기획서 10장)
+- `Assets/Scripts/Save/LocalFileStorage.cs` — 로컬 JSON 파일 저장소
+- `Assets/Scripts/League/LeagueSaveData.cs` — 저장 DTO 2개
+- `Assets/Scripts/League/LeagueSaveService.cs` — 정규시즌 진행도 저장·복원
+- `LeagueManager` — `StartPostSeason` / `SaveLeague` / `LoadLeague` / `DeleteSavedLeague` / `HasSavedLeague` 추가
+
+**8-5 설계 결정**
+- **와일드카드 1승 어드밴티지는 "시작 승수"로 표현** — `HigherSeedWins`를 1에서 시작하고 2승 도달 시 진출. 4위는 1승, 5위는 2연승이 필요해져 기획서 7.5와 정확히 일치. 별도 예외 규칙이 필요 없음
+- **무승부는 승수를 올리지 않아 자동으로 재경기가 됨** — KBO 포스트시즌 규칙과 같음. 대신 무승부 반복으로 무한 루프가 되지 않도록 시리즈당 `WinsToClinch * 2 + 5` 상한
+- **홈/원정은 단계별 배정표(`bool[]`)** — 5전제 `홈홈원원홈`, 7전제 `홈홈원원원홈홈`. 재경기로 배정표를 넘어가면 상위 시드 홈으로 처리
+- **선발 로테이션을 정규시즌에서 이어감** — 팀별 누적 경기 수를 `Dictionary`에 옮겨 담고 경기마다 증가 (기획서 6.2)
+- `Create()`가 조건(정규시즌 종료 / 144경기 / 5팀 이상)을 검사하고 실패 시 `null` — 144경기 미만 리그는 `LogWarning` 후 `null` (기획서 7.5 - 포스트시즌 없이 최종 순위로 마감)
+
+**8-6 설계 결정**
+- **일정은 저장하지 않고 재생성** — 같은 입력이면 같은 일정이 나오므로 저장할 이유가 없음. 대신 **팀 순서(0번=플레이어)** 를 저장해야 재생성 결과가 일치함
+- **경기 수·연전 수를 세이브에 함께 저장** — 복원 시 티어 테이블이 아니라 **저장 당시 값**으로 일정을 다시 만듦. 시즌 도중 인스펙터에서 테이블을 고쳐도 진행 중인 시즌이 깨지지 않음
+- **상대전적은 나란한 배열 3개로 폄** — `JsonUtility`는 `Dictionary`를 직렬화하지 못함. 복원 시 길이가 어긋나면 `LogError` 후 상대전적만 버림
+- **복원 전용 생성자 추가** (`TeamRecord` / `LeagueStandings` / `LeagueSeason`) — 기존 누적 경로(`AddResult`)는 그대로 두고 별도 입구를 냄. `private set`을 열지 않아 일반 코드에서는 여전히 수정 불가
+- 저장소 교체 지점은 `LeagueManager.Awake()`의 `new LocalFileStorage()` 한 줄 — 서버 저장으로 바꿀 때 여기만 바뀜
+
+**✅ 검증 (하니스 실행, 오류 0건)**
+
+포스트시즌
+| 단계 | 결과 | 경기 수 |
+|---|---|---|
+| 와일드카드 | KT 2-0 두산 → KT | **1경기** (4위 어드밴티지 정상 동작) |
+| 준플레이오프 | KT 3-1 LG → KT | 4경기 |
+| 플레이오프 | 삼성 3-2 KT → 삼성 | 5경기 |
+| 한국시리즈 | 삼성 4-2 한화 → **삼성 우승** | 6경기 |
+
+홈/원정 배정도 배정표대로 적용됨 (준PO: LG홈 2 → KT홈 2 / KS: 한화홈 2 → 삼성홈 3 → 한화홈 1)
+
+세이브 왕복 (프로1, 108경기 중 40일차에서 저장)
+| 항목 | 결과 |
+|---|---|
+| 진행도 | ✅ 40일차 그대로 |
+| 티어·플레이어 팀 | ✅ |
+| 승·패·무·득실 (10팀) | ✅ |
+| 상대전적 (10팀 × 9상대) | ✅ |
+| 일정 재생성 | ✅ **108일 전량 비교 일치** |
+| 이어하기 | ✅ 68일 추가 진행 → 전 팀 108경기 완료 |
+| 파일 크기 | 약 7KB |
+
+**⚠️ 의도적으로 넣지 않은 것 (기획서 대비)**
+- **포스트시즌 진행도는 저장하지 않음** — 기획서 7.6은 "리그 진행도 저장"만 명시. 포스트시즌은 최대 18경기라 한 번에 진행하는 흐름을 전제함. 필요해지면 `PostSeasonSaveData` 추가
+- **순위 동률 시 타이브레이커 경기 미구현** (기획서 7.5) — 순위표가 이미 승률→득실차→상대전적 3단계로 가르므로 실제로 완전 동률이 남을 확률이 극히 낮음. 필요 여부 판단 필요
+
+---
+
+## ✅ 로드맵 8번(리그 시스템) 전체 완료
+
+| 단계 | 상태 |
+|---|---|
+| 8-0 데이터 브릿지 / 8-1 AI 로스터 / 8-2 일정 / 8-3 순위표 / 8-4 진행 / 8-5 포스트시즌 / 8-6 저장 | ✅ |
+| 밸런스 튜닝 | ✅ |
+
+---
+
+## ⏭️ 다음 세션 착수 지점
+
+**남은 로드맵**: 9번 경기 UI(로그·박스스코어) / 10번 골든글러브 제작·분해·재화 / 11번 튜토리얼
+**선행 과제**: 플레이어 인벤토리·라인업 공급 경로 (임시 배선 `_useAiRosterForPlayerTeam` 해제)
+
+**Unity에서 확인할 것 (코드 아님)**
+1. 컴파일 통과 확인
+2. `Tools > BaseBallManager > 리그 티어 기본값 채우기` 실행 → 티어 21행에 경기 수·연전 수 입력
+3. `AiRosterManager` + `LeagueManager`를 씬에 배치, 둘 다 `LeagueTierTable` 에셋 연결
+3. `AiRosterManager`를 씬에 배치 + `LeagueTierTable` 에셋 연결
+   - `PlayerDataManager` / `CardDataManager`도 같은 씬에 있어야 `BuildRosters` 성공
+4. `Assets/Data/` 커밋에 포함 (현재 untracked)
+
+**⛔ 아직 남은 것 — 시뮬 1회 실행에 필요한 전제**
+- `SimulationContextBuilder.Build()`는 **플레이어 라인업**을 `LineUpManager`에서 읽는데, 인벤토리·라인업을 채우는 경로(뽑기 UI / 세이브)가 아직 없음
+- 즉 8-1은 끝났지만 **경기를 돌리려면 플레이어 쪽 데이터 공급 수단이 먼저 필요**함. 어떤 방식으로 채울지는 다음 세션 판단 사항
+
+**그다음**
+
+| 단계 | 작업 | 상태 |
+|---|---|---|
+| 8-1 | AI 팀 로스터 | ✅ 완료 (검증 통과) |
+| 8-2 | 일정 생성 (라운드 로빈 / 프로 이상 3연전 / 홈·원정 교대) | ✅ 완료 |
+| 8-3 | 순위표 (KBO 승률·게임차, 타이브레이커) | ✅ 완료 |
+| 8-4 | 리그 진행 (한 경기씩 / 일괄 시뮬) | ✅ 코드 완성 + 720경기 실행 검증 (Unity 컴파일 확인 대기) |
+| — | **밸런스 튜닝** (KBO 지표 대비 실측 조정) | ✅ 완료 |
+| 8-5 | 포스트시즌 (144경기 한정, 상위 5팀 KBO 사다리) | ✅ 완료 |
+| 8-6 | 시즌 저장/재도전 | ✅ 완료 |
+| — | 플레이어 인벤토리·라인업 공급 (임시 배선 해제) | ⏭️ UI/세이브 작업과 함께 |

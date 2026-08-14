@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 
 public enum HitterPosition
 {
@@ -30,7 +30,7 @@ public static class HitterPositionParser
             case "DH":
                 return HitterPosition.DH;
             default:
-                throw new ArgumentException($"[HitterPosition]: ¾Ë ¼ö ¾ø´Â Æ÷Áö¼Ç: {positionStr}");
+                throw new ArgumentException($"[HitterPosition]: ì•Œ ìˆ˜ ì—†ëŠ” í¬ì§€ì…˜: {positionStr}");
         }
     }
 

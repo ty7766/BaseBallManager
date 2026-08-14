@@ -1,17 +1,16 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
-using System.Runtime.InteropServices.WindowsRuntime;
 
 public class InventoryManager : MonoBehaviour
 {
-    //½Ì±ÛÅæ
+    //ì‹±ê¸€í†¤
     public static InventoryManager Instance { get; private set; }
 
-    //ÇÁ·ÎÆÛÆ¼
+    //í”„ë¡œí¼í‹°
     public int Count => _cards.Count;
     public bool IsFull => _cards.Count >= _maxCapacity;
 
-    //º¯¼ö
+    //ë³€ìˆ˜
     [SerializeField]
     private int _maxCapacity = 200;
 
@@ -32,18 +31,18 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    //maxCapacity Àü´Ş¿ë
+    //maxCapacity ì „ë‹¬ìš©
     public int GetMaxCapacity()
     {
         return _maxCapacity;
     }
 
-    //ÀÎº¥Åä¸®¿¡ Ä«µå Ãß°¡
+    //ì¸ë²¤í† ë¦¬ì— ì¹´ë“œ ì¶”ê°€
     public void AddCard(int cardId)
     {
         if (IsFull)
         {
-            Debug.LogWarning($"[InventoryManager] : Ä«µå°¡ {_maxCapacity}¸¦ ÃÊ°úÇß½À´Ï´Ù!");
+            Debug.LogWarning($"[InventoryManager] : ì¹´ë“œê°€ {_maxCapacity}ë¥¼ ì´ˆê³¼í–ˆìŠµë‹ˆë‹¤!");
             return;
         }
 
@@ -52,46 +51,46 @@ public class InventoryManager : MonoBehaviour
         _nextInstanceId++;
     }
 
-    //ÀÎº¥Åä¸®¿¡¼­ Ä«µå Á¦°Å
+    //ì¸ë²¤í† ë¦¬ì—ì„œ ì¹´ë“œ ì œê±°
     public bool RemoveCard(int instanceId)
     {
         CardInstance foundCard = _cards.Find(card => card.InstanceId == instanceId);
-        //»èÁ¦ÇÏ·Á´Â Ä«µå°¡ ÀÖÀ¸¸é »èÁ¦
+        //ì‚­ì œí•˜ë ¤ëŠ” ì¹´ë“œê°€ ìˆìœ¼ë©´ ì‚­ì œ
         if (foundCard == null)
         {
-            Debug.LogWarning("[InventoryManager] : »èÁ¦ÇÏ·Á´Â Ä«µå°¡ ¾ø½À´Ï´Ù!");
+            Debug.LogWarning("[InventoryManager] : ì‚­ì œí•˜ë ¤ëŠ” ì¹´ë“œê°€ ì—†ìŠµë‹ˆë‹¤!");
             return false;
         }
         _cards.Remove(foundCard);
         return true;
     }
 
-    //Ä«µå Àá±İ
+    //ì¹´ë“œ ì ê¸ˆ
     public bool SetLocked (int instanceId, bool locked)
     {
         CardInstance foundCard = _cards.Find (card => card.InstanceId == instanceId);
 
         if (foundCard == null)
         {
-            Debug.LogWarning("[InventoryManager] : Àá±×·Á´Â Ä«µå°¡ ¾ø½À´Ï´Ù!");
+            Debug.LogWarning("[InventoryManager] : ì ê·¸ë ¤ëŠ” ì¹´ë“œê°€ ì—†ìŠµë‹ˆë‹¤!");
             return false;
         }
         foundCard.SetLocked(locked);
         return true;
     }
 
-    //ÀÎº¥Åä¸® È®Àå
+    //ì¸ë²¤í† ë¦¬ í™•ì¥
     public void ExpandCapacity(int amount)
     {
         if (amount <= 0)
         {
-            Debug.LogWarning($"[InventoryManager] : ÀÎº¥Åä¸® È®ÀåÀ» À½¼ö·Î ÇÒ ¼ö ¾ø½À´Ï´Ù!");
+            Debug.LogWarning($"[InventoryManager] : ì¸ë²¤í† ë¦¬ í™•ì¥ì„ ìŒìˆ˜ë¡œ í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
             return;
         }
         _maxCapacity += amount;
     }
 
-    //ÀÎº¥Åä¸® ÇÊÅÍ¸µ
+    //ì¸ë²¤í† ë¦¬ í•„í„°ë§
     public List<CardInstance> GetFiltered(CardFilter filter)
     {
         List<CardInstance> result = new List<CardInstance>();
@@ -103,7 +102,7 @@ public class InventoryManager : MonoBehaviour
             if (cardMasterData == null)
                 continue;
 
-            //PlayerType ÇÊÅÍ
+            //PlayerType í•„í„°
             if (filter.PlayerType != PlayerTypeFilter.All)
             {
                 bool isHitter = cardMasterData is HitterMasterData;
@@ -113,15 +112,15 @@ public class InventoryManager : MonoBehaviour
                     continue;
             }
 
-            //Grade ÇÊÅÍ
+            //Grade í•„í„°
             if (filter.Grade != CardGrade.None && cardMasterData.CardGrade != filter.Grade)
                 continue;
             
-            //Type ÇÊÅÍ
+            //Type í•„í„°
             if (filter.Type != CardType.None && cardMasterData.CardType != filter.Type)
                 continue;
 
-            //TeamName ÇÊÅÍ
+            //TeamName í•„í„°
             if (!string.IsNullOrEmpty(filter.TeamName) && cardMasterData.TeamName != filter.TeamName)
                 continue;
 
@@ -131,7 +130,7 @@ public class InventoryManager : MonoBehaviour
         return result;
     }
     
-    //ÀÎº¥Åä¸®¿¡¼­ Ä«µå ¹İÈ¯
+    //ì¸ë²¤í† ë¦¬ì—ì„œ ì¹´ë“œ ë°˜í™˜
     public CardInstance GetCard(int instanceId)
     {
         CardInstance card = _cards.Find(card => card.InstanceId == instanceId);
@@ -143,7 +142,7 @@ public class InventoryManager : MonoBehaviour
         return card;
     }
 
-    //ÀÎº¥Åä¸®¿¡¼­ ÀüÃ¼ Ä«µå ¹İÈ¯
+    //ì¸ë²¤í† ë¦¬ì—ì„œ ì „ì²´ ì¹´ë“œ ë°˜í™˜
     public IReadOnlyList<CardInstance> GetAllCards()
     {
         return _cards;

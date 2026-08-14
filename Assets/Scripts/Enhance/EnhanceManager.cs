@@ -1,15 +1,15 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// °­È­ ·ÎÁ÷
-/// 1. Àç·á °ËÁõ, Àç·á ¼Ò¸ğ, °­È­ Àû¿ë
+/// ê°•í™” ë¡œì§
+/// 1. ì¬ë£Œ ê²€ì¦, ì¬ë£Œ ì†Œëª¨, ê°•í™” ì ìš©
 /// </summary>
 public class EnhanceManager : MonoBehaviour
 {
     public static EnhanceManager Instance { get; private set; }
 
-    [Header("ÃÖ´ë °­È­ ·¹º§ ¼³Á¤")]
+    [Header("ìµœëŒ€ ê°•í™” ë ˆë²¨ ì„¤ì •")]
     [SerializeField]
     private int _maxEnhanceLevel = 10;
     [SerializeField]
@@ -28,7 +28,7 @@ public class EnhanceManager : MonoBehaviour
         }
     }
 
-    //Ä«µå °­È­
+    //ì¹´ë“œ ê°•í™”
     public bool Enhance(int targetInstanceId, List<int> materialInstanceIds)
     {
         CardInstance cardInstance = InventoryManager.Instance.GetCard(targetInstanceId);
@@ -56,7 +56,7 @@ public class EnhanceManager : MonoBehaviour
             return false;
         }
         
-        //Ä«µå ¼Ò¸ê ÈÄ °­È­
+        //ì¹´ë“œ ì†Œë©¸ í›„ ê°•í™”
         foreach(CardInstance material in materials)
         {
             InventoryManager.Instance.RemoveCard(material.InstanceId);
@@ -65,18 +65,18 @@ public class EnhanceManager : MonoBehaviour
         return true;
     }
 
-    //ÇØ´ç Ä«µå°¡ °­È­ °¡´ÉÇÑÁö °Ë»ç
+    //í•´ë‹¹ ì¹´ë“œê°€ ê°•í™” ê°€ëŠ¥í•œì§€ ê²€ì‚¬
     public bool CanEnhance(int targetInstanceId)
     {
         CardInstance cardInstance = InventoryManager.Instance.GetCard(targetInstanceId);
         
-        //Ä«µå¸¦ ¸øÃ£´Â °æ¿ì Á¦¿Ü
+        //ì¹´ë“œë¥¼ ëª»ì°¾ëŠ” ê²½ìš° ì œì™¸
         if (cardInstance == null)
         {
             return false;
         }
 
-        //ÃÖ´ë °­È­°¡ µÇ¾îÀÖ´Â Ä«µå´Â Á¦¿Ü
+        //ìµœëŒ€ ê°•í™”ê°€ ë˜ì–´ìˆëŠ” ì¹´ë“œëŠ” ì œì™¸
         if (cardInstance.EnhanceLevel >= _maxEnhanceLevel)
         {
             return false;
@@ -85,8 +85,8 @@ public class EnhanceManager : MonoBehaviour
         return true;
     }
 
-    //´ë»ó Ä«µåÀÇ µ¿ÀÏ Ä«µå(µ¿ÀÏ Á¾·ù*ÀÌ¸§*ÆÀ, ´Ù¸¥ ³âµµ °¡´É) ¸ñ·Ï ¹İÈ¯
-    //Àç·á·Î ¾µ ¼ö ÀÖ´Â Ä«µå Ç¥½Ã¿ë
+    //ëŒ€ìƒ ì¹´ë“œì˜ ë™ì¼ ì¹´ë“œ(ë™ì¼ ì¢…ë¥˜*ì´ë¦„*íŒ€, ë‹¤ë¥¸ ë…„ë„ ê°€ëŠ¥) ëª©ë¡ ë°˜í™˜
+    //ì¬ë£Œë¡œ ì“¸ ìˆ˜ ìˆëŠ” ì¹´ë“œ í‘œì‹œìš©
     public List<CardInstance> GetIdenticalCards(int targetInstanceId)
     {
         CardInstance cardInstance = InventoryManager.Instance.GetCard(targetInstanceId);
@@ -121,10 +121,10 @@ public class EnhanceManager : MonoBehaviour
 
     }
 
-    //Àç·á Ä«µå ¸ñ·ÏÀÌ °­È­ Á¶°ÇÀ» ¸¸Á·ÇÏ´ÂÁö °Ë»ç
+    //ì¬ë£Œ ì¹´ë“œ ëª©ë¡ì´ ê°•í™” ì¡°ê±´ì„ ë§Œì¡±í•˜ëŠ”ì§€ ê²€ì‚¬
     private bool ValidateMaterials(CardInstance target, List<CardInstance> materials)
     {
-        //°­È­´Â ÇÑ ¹ø¿¡ ÇÑ Ä«µå¸¸ »ç¿ë
+        //ê°•í™”ëŠ” í•œ ë²ˆì— í•œ ì¹´ë“œë§Œ ì‚¬ìš©
         if (materials == null || materials.Count != 1)
         {
             return false;
@@ -138,17 +138,17 @@ public class EnhanceManager : MonoBehaviour
 
         foreach (CardInstance material in materials)
         {
-            //ÀÚ±â ÀÚ½Å Á¦¿Ü
+            //ìê¸° ìì‹  ì œì™¸
             if (target.InstanceId == material.InstanceId)
             {
                 return false;
             }
-            //Àá±İ Á¦¿Ü
+            //ì ê¸ˆ ì œì™¸
             if (material.IsLocked)
             {
                 return false;
             }
-            //µ¥ÀÌÅÍ°¡ Á¸ÀçÇÏÁö ¾Ê´Â Ä«µå Á¦¿Ü
+            //ë°ì´í„°ê°€ ì¡´ì¬í•˜ì§€ ì•ŠëŠ” ì¹´ë“œ ì œì™¸
             if (material.CardId <= 0)
             {
                 return false;
@@ -160,7 +160,7 @@ public class EnhanceManager : MonoBehaviour
                 return false;
             }
 
-            //Ä«µå Å¸ÀÔ, ÀÌ¸§, ÆÀÀÌ¸§ ºñ±³
+            //ì¹´ë“œ íƒ€ì…, ì´ë¦„, íŒ€ì´ë¦„ ë¹„êµ
             if (data.CardType != materialData.CardType)
             {
                 return false;

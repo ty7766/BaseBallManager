@@ -1,2 +1,2 @@
-public enum CardType { None = 0, Normal, Signature, GoldenGlove};
-//* Âü°í : ÀÎº¥Åä¸® °Ë»ö Áß ÀüÃ¼ °Ë»ö ±â´ÉÀ» À§ÇØ None Ãß°¡
+ï»¿public enum CardType { None = 0, Normal, Signature, GoldenGlove};
+//* ì°¸ê³  : ì¸ë²¤í† ë¦¬ ê²€ìƒ‰ ì¤‘ ì „ì²´ ê²€ìƒ‰ ê¸°ëŠ¥ì„ ìœ„í•´ None ì¶”ê°€

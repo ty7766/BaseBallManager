@@ -1,6 +1,6 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 /// <summary>
-/// °æ±â ÀüÃ¼ ÁøÇà »óÈ²À» ½Ã¹Ä·¹ÀÌ¼Ç
+/// ê²½ê¸° ì „ì²´ ì§„í–‰ ìƒí™©ì„ ì‹œë®¬ë ˆì´ì…˜
 /// </summary>
 public class GameSimulator
 {
@@ -12,7 +12,7 @@ public class GameSimulator
     private readonly IGameInterruptHandler _interruptHandler;
 
 
-    //¾Ë°í¸®Áò °è»ê±â ÃÊ±âÈ­
+    //ì•Œê³ ë¦¬ì¦˜ ê³„ì‚°ê¸° ì´ˆê¸°í™”
     public GameSimulator(int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
     {
         _batterOutcomeCalc = new BatterOutcomeCalculator();
@@ -23,7 +23,7 @@ public class GameSimulator
         _interruptHandler = interruptHandler;
     }
     
-    //°æ±â ·çÇÁ ½ÇÇà ÈÄ GameResult ¹İÈ¯
+    //ê²½ê¸° ë£¨í”„ ì‹¤í–‰ í›„ GameResult ë°˜í™˜
     public GameResult SimulateGame(SimulationContext context)
     {
         GameState gameState = new GameState(context);
@@ -37,29 +37,29 @@ public class GameSimulator
         return new GameResult(gameState.HomeScore, gameState.AwayScore, logs);
     }
 
-    //Å¸¼® 1È¸ Ã³¸® (È®·ü ÆÇÁ¤, Åõ±¸¼ö ¼Ò¸ğ, Áø·ç Ã³¸®, Åõ±³ ÆÇ´Ü)
+    //íƒ€ì„ 1íšŒ ì²˜ë¦¬ (í™•ë¥  íŒì •, íˆ¬êµ¬ìˆ˜ ì†Œëª¨, ì§„ë£¨ ì²˜ë¦¬, íˆ¬êµ íŒë‹¨)
     private void SimulateAtBat(GameState gameState, SimulationContext context, List<SimulationBatterLog> logs)
     {
         bool isTopInning = gameState.IsTopInning;
 
-        //°ø°İÆÀ Å¸ÀÚ ½º³À¼¦
+        //ê³µê²©íŒ€ íƒ€ì ìŠ¤ëƒ…ìƒ·
         HitterSnapshot hitter = isTopInning ? context.AwayLineup[gameState.AwayBattingIndex] :
             context.HomeLineup[gameState.HomeBattingIndex];
 
-        //¼öºñÆÀ Åõ¼ö ½º³À¼¦
+        //ìˆ˜ë¹„íŒ€ íˆ¬ìˆ˜ ìŠ¤ëƒ…ìƒ·
         PitcherState defPitcherState = isTopInning ? gameState.HomePitcherState : gameState.AwayPitcherState;
         PitcherSnapshot pitcher = defPitcherState.GetFatiguedSnapshot();
 
-        //Æò±Õ ¼öºñ·Â °è»ê
+        //í‰ê·  ìˆ˜ë¹„ë ¥ ê³„ì‚°
         HitterSnapshot[] defenseLineup = isTopInning ? context.HomeLineup : context.AwayLineup;
         float avgDefense = CalcAverageDefense(defenseLineup);
 
-        //Å¸¼® °á°ú + Åõ±¸ ¼ö ¼Ò¸ğ
+        //íƒ€ì„ ê²°ê³¼ + íˆ¬êµ¬ ìˆ˜ ì†Œëª¨
         BatterOutcome outcome = _batterOutcomeCalc.Calculate(gameState, hitter, pitcher, avgDefense);
         int pitchCount = _pitchCountCalc.Calculate(outcome, hitter, pitcher);
         defPitcherState.ConsumePitches(pitchCount);
 
-        //µæÁ¡ ¹İ¿µ + ÁÖÀÚ Ãâ·ç + Å¸¼ø º¯°æ
+        //ë“ì  ë°˜ì˜ + ì£¼ì ì¶œë£¨ + íƒ€ìˆœ ë³€ê²½
         int scoreBefore = isTopInning ? gameState.AwayScore : gameState.HomeScore;
         int inningRunsBefore = defPitcherState.CurrentInningRuns;
 
@@ -76,10 +76,10 @@ public class GameSimulator
         }
 
         int effectiveInningRuns = inningRunsBefore + runsScored;
-        //·Î±× Ãâ·Â
+        //ë¡œê·¸ ì¶œë ¥
         logs.Add(new SimulationBatterLog(outcome, pitchCount, runsScored, hitter.Name));
 
-        //Åõ¼ö ±³Ã¼
+        //íˆ¬ìˆ˜ êµì²´
         if (_pitcherChangeEval.ShouldChange(defPitcherState, gameState, effectiveInningRuns))
         {
             int nextSlot = _pitcherChangeEval.GetNextPitcherSlot(defPitcherState, gameState);
@@ -87,7 +87,7 @@ public class GameSimulator
                 gameState.SubstitutePitcher(context, isHome: isTopInning, nextSlot);
         }
 
-        //±³Ã¼ ÀÎÅÍ·´Æ® È£Ãâ
+        //êµì²´ ì¸í„°ëŸ½íŠ¸ í˜¸ì¶œ
         if (_interruptHandler != null)
         {
             InterruptDecision decision = _interruptHandler.OnAtBatEnded(gameState, context);
@@ -95,7 +95,7 @@ public class GameSimulator
         }
     }
 
-    //¼öºñÆÀ ¶óÀÎ¾÷ ¼öºñ ½ºÅÈ Æò±Õ ¹× Á¤±ÔÈ­
+    //ìˆ˜ë¹„íŒ€ ë¼ì¸ì—… ìˆ˜ë¹„ ìŠ¤íƒ¯ í‰ê·  ë° ì •ê·œí™”
     private float CalcAverageDefense(HitterSnapshot[] lineup)
     {
         float sumDefense = 0f;
@@ -108,13 +108,13 @@ public class GameSimulator
         return sumDefense / 9f / 100f;
     }
 
-    //ÀÎÅÍ·´Æ® Àû¿ë
+    //ì¸í„°ëŸ½íŠ¸ ì ìš©
     private void ApplyInterruptDecision(InterruptDecision decision, GameState state, SimulationContext context)
     {
         bool isHomeDefending = state.IsTopInning;
         bool ishomeAttacking = !state.IsTopInning;
 
-        //1. ´ëÅ¸ ±³Ã¼ Ã³¸®
+        //1. ëŒ€íƒ€ êµì²´ ì²˜ë¦¬
         HitterSnapshot[] attackLineup = ishomeAttacking ? context.HomeLineup : context.AwayLineup;
         HitterSnapshot[] attackBench = ishomeAttacking ? context.HomeBench : context.AwayBench;
 
@@ -125,7 +125,7 @@ public class GameSimulator
             attackLineup[sub.BattingOrderIndex] = attackBench[sub.BenchIndex];
         }
 
-        //2. Åõ¼ö ±³Ã¼ Ã³¸®
+        //2. íˆ¬ìˆ˜ êµì²´ ì²˜ë¦¬
         if (decision.PitcherSubstitutionSlot != -1)
         {
             int originPitcherSlotIndex = isHomeDefending ? state.HomePitcherState.PitcherSlotIndex : state.AwayPitcherState.PitcherSlotIndex;

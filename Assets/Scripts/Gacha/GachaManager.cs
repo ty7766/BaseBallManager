@@ -1,16 +1,16 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// »Ì±â ½Ã½ºÅÛ Àü¹İ ·ÎÁ÷
-/// ÀÏ¹İ »Ì±â, ½Ã±×´ÏÃÄ »Ì±â Ä«¿îÅÍ °ü¸®, ÃµÀå ½Ã½ºÅÛ °ü¸®
-/// * »Ì±â¸¦ ÇÒ ¶§¸¶´Ù GachaResult Data°¡ ³ª¿È *
+/// ë½‘ê¸° ì‹œìŠ¤í…œ ì „ë°˜ ë¡œì§
+/// ì¼ë°˜ ë½‘ê¸°, ì‹œê·¸ë‹ˆì³ ë½‘ê¸° ì¹´ìš´í„° ê´€ë¦¬, ì²œì¥ ì‹œìŠ¤í…œ ê´€ë¦¬
+/// * ë½‘ê¸°ë¥¼ í•  ë•Œë§ˆë‹¤ GachaResult Dataê°€ ë‚˜ì˜´ *
 /// </summary>
 public class GachaManager : MonoBehaviour
 {
     public static GachaManager Instance {  get; private set; }
 
-    [Header("ÀÏ¹İ »Ì±â È®·ü ±¸°£ ¼³Á¤")]
+    [Header("ì¼ë°˜ ë½‘ê¸° í™•ë¥  êµ¬ê°„ ì„¤ì •")]
     [SerializeField]
     private float _grade3ProbabilityNor = 0.70f;
     [SerializeField]
@@ -18,7 +18,7 @@ public class GachaManager : MonoBehaviour
     [SerializeField]
     private float _grade5ProbabilityNor = 0.05f;
 
-    [Header("½Ã±×´ÏÃÄ »Ì±â È®·ü ±¸°£ ¼³Á¤")]
+    [Header("ì‹œê·¸ë‹ˆì³ ë½‘ê¸° í™•ë¥  êµ¬ê°„ ì„¤ì •")]
     [SerializeField]
     private float _grade4ProbabilitySig = 0.80f;
     [SerializeField]
@@ -37,7 +37,7 @@ public class GachaManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            //¸Ş¼Òµå
+            //ë©”ì†Œë“œ
         }
         else
         {
@@ -45,12 +45,12 @@ public class GachaManager : MonoBehaviour
         }
     }
 
-    //1¿¬Â÷ »Ì±â (Ä«µå µ¥ÀÌÅÍ 1°³ ¹İÈ¯)
+    //1ì—°ì°¨ ë½‘ê¸° (ì¹´ë“œ ë°ì´í„° 1ê°œ ë°˜í™˜)
     public GachaResult Roll1(GachaType gachaType)
     {
         if (InventoryManager.Instance.IsFull)
         {
-            Debug.LogWarning("[GachaManager] ÀÎº¥Åä¸®°¡ ²Ë Â÷¼­ »Ì±â¸¦ ÁøÇàÇÒ ¼ö ¾ø½À´Ï´Ù!");
+            Debug.LogWarning("[GachaManager] ì¸ë²¤í† ë¦¬ê°€ ê½‰ ì°¨ì„œ ë½‘ê¸°ë¥¼ ì§„í–‰í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
             return null;
         }
 
@@ -63,12 +63,12 @@ public class GachaManager : MonoBehaviour
         return gachaResult;
     }
 
-    //10¿¬Â÷ »Ì±â
+    //10ì—°ì°¨ ë½‘ê¸°
     public List<GachaResult> Roll10(GachaType gachaType)
     {
         if (InventoryManager.Instance.Count + 10 > InventoryManager.Instance.GetMaxCapacity())
         {
-            Debug.LogWarning("[GachaManager] ÀÎº¥Åä¸®¿¡ °ø°£ÀÌ ¾ø¾î »Ì±â¸¦ ÁøÇàÇÒ ¼ö ¾ø½À´Ï´Ù!");
+            Debug.LogWarning("[GachaManager] ì¸ë²¤í† ë¦¬ì— ê³µê°„ì´ ì—†ì–´ ë½‘ê¸°ë¥¼ ì§„í–‰í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
             return null;
         }
 
@@ -81,7 +81,7 @@ public class GachaManager : MonoBehaviour
                 gachaResults.Add(result);
         }
 
-        //10¿¬ ÃµÀå : 4¼º ÀÌ»óÀÌ ÇÏ³ªµµ ¾øÀ¸¸é ¸¶Áö¸· °á°ú¸¦ ±³Ã¼
+        //10ì—° ì²œì¥ : 4ì„± ì´ìƒì´ í•˜ë‚˜ë„ ì—†ìœ¼ë©´ ë§ˆì§€ë§‰ ê²°ê³¼ë¥¼ êµì²´
         bool hasFourStarOrAbove = false;
         foreach (GachaResult result in gachaResults)
         {
@@ -97,14 +97,14 @@ public class GachaManager : MonoBehaviour
             CardGrade forcedGrade;
             if (gachaType == GachaType.Normal)
             {
-                // Star4 : Star5 = 0.25 : 0.05 ¡æ Star4°¡ 83%, Star5°¡ 17%
+                // Star4 : Star5 = 0.25 : 0.05 â†’ Star4ê°€ 83%, Star5ê°€ 17%
                 float star4Ratio = _grade4ProbabilityNor / (_grade4ProbabilityNor +
             _grade5ProbabilityNor);
                 forcedGrade = Random.value < star4Ratio ? CardGrade.Star4 : CardGrade.Star5;
             }
             else
             {
-                // Star4 : Star5 = 0.80 : 0.20 ¡æ Star4°¡ 80%, Star5°¡ 20%
+                // Star4 : Star5 = 0.80 : 0.20 â†’ Star4ê°€ 80%, Star5ê°€ 20%
                 float star4Ratio = _grade4ProbabilitySig / (_grade4ProbabilitySig +
             _grade5ProbabilitySig);
                 forcedGrade = Random.value < star4Ratio ? CardGrade.Star4 : CardGrade.Star5;
@@ -161,11 +161,11 @@ public class GachaManager : MonoBehaviour
 
         if (string.IsNullOrEmpty(teamName))
         {
-            Debug.LogWarning("[GachaManager] ÇÃ·¹ÀÌ¾î ÆÀ ÀÌ¸§ÀÌ ¼³Á¤µÇÁö ¾Ê¾Ò½À´Ï´Ù.");
+            Debug.LogWarning("[GachaManager] í”Œë ˆì´ì–´ íŒ€ ì´ë¦„ì´ ì„¤ì •ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤.");
             return -1;
         }
 
-        //ÀÏ¹İ »Ì±âÀÎ °æ¿ì ÃµÀå ½Ã ÀÚÆÀ ³ë¸» 5¼º È®Á¤
+        //ì¼ë°˜ ë½‘ê¸°ì¸ ê²½ìš° ì²œì¥ ì‹œ ìíŒ€ ë…¸ë§ 5ì„± í™•ì •
         if (gachaType == GachaType.Normal)
         {
             targetGrade = CardGrade.Star5;
@@ -195,26 +195,26 @@ public class GachaManager : MonoBehaviour
             }
         }
 
-        //¸®½ºÆ®°¡ ºñ¾úÀ½À» ¹æÁö
+        //ë¦¬ìŠ¤íŠ¸ê°€ ë¹„ì—ˆìŒì„ ë°©ì§€
         if (pool.Count == 0)
         {
-            Debug.LogWarning("[GachaManager] : ÇöÀç °¡Ã­ ¸®½ºÆ®°¡ ºñ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[GachaManager] : í˜„ì¬ ê°€ì±  ë¦¬ìŠ¤íŠ¸ê°€ ë¹„ì–´ìˆìŠµë‹ˆë‹¤.");
             return -1;
         }
 
-        //·£´ıÀ¸·Î ¸®½ºÆ®¿¡¼­ ÇÏ³ª ¼±ÅÃ
+        //ëœë¤ìœ¼ë¡œ ë¦¬ìŠ¤íŠ¸ì—ì„œ í•˜ë‚˜ ì„ íƒ
         return pool[Random.Range(0, pool.Count)];
     }
 
-    //È®·ü ±â¹İÀ¸·Î µî±Ş °áÁ¤
+    //í™•ë¥  ê¸°ë°˜ìœ¼ë¡œ ë“±ê¸‰ ê²°ì •
     private CardGrade DecideGrade(GachaType gachaType)
     {
-        //Random.value(0.0 ~ 1.0)·Î »ÌÀº ³­¼ö¸¦ ´©Àû È®·ü ±¸°£°ú ºñ±³ÇØ¼­ µî±Ş °áÁ¤
+        //Random.value(0.0 ~ 1.0)ë¡œ ë½‘ì€ ë‚œìˆ˜ë¥¼ ëˆ„ì  í™•ë¥  êµ¬ê°„ê³¼ ë¹„êµí•´ì„œ ë“±ê¸‰ ê²°ì •
         float roll = Random.value;
 
         if (gachaType == GachaType.Normal)
         {
-            //ÀÏ¹İ »Ì±â (3¼º ~ 5¼º)
+            //ì¼ë°˜ ë½‘ê¸° (3ì„± ~ 5ì„±)
             if (roll < _grade3ProbabilityNor)
                 return CardGrade.Star3;
             else if (roll < _grade3ProbabilityNor + _grade4ProbabilityNor)
@@ -224,7 +224,7 @@ public class GachaManager : MonoBehaviour
         }
         else
         {
-            //½Ã±×´ÏÃÄ »Ì±â (4¼º ~ 5¼º)
+            //ì‹œê·¸ë‹ˆì³ ë½‘ê¸° (4ì„± ~ 5ì„±)
             if (roll < _grade4ProbabilitySig)
                 return CardGrade.Star4;
             else
@@ -232,11 +232,11 @@ public class GachaManager : MonoBehaviour
         }
     }
 
-    //GachaType¿¡ ¸Â´Â ·£´ı Ä«µå id¸¦ ¹İÈ¯
+    //GachaTypeì— ë§ëŠ” ëœë¤ ì¹´ë“œ idë¥¼ ë°˜í™˜
     private int PickCardFromPool(GachaType gachaType, CardGrade grade)
     {
         CardType targetType = CardType.Normal;
-        //ÀÏ¹İ »Ì±âÀÎ °æ¿ì
+        //ì¼ë°˜ ë½‘ê¸°ì¸ ê²½ìš°
         if (gachaType == GachaType.Signature && grade == CardGrade.Star5)
         {
             targetType = Random.value < _gradeSigProbabilitySig ? CardType.Signature : CardType.Normal;
@@ -244,43 +244,43 @@ public class GachaManager : MonoBehaviour
 
         CardDataManager dataManager = CardDataManager.Instance;
         
-        //Á¶°Ç¿¡ ¸Â´Â Ä«µå ID ¸ñ·ÏÀ» ´ãÀ» ¸®½ºÆ®
+        //ì¡°ê±´ì— ë§ëŠ” ì¹´ë“œ ID ëª©ë¡ì„ ë‹´ì„ ë¦¬ìŠ¤íŠ¸
         List<int> pool = new List<int>();
 
-        //ÀüÃ¼ Å¸ÀÚ ¼øÈ¸ÇÏ¸ç Á¶°Ç¿¡ ¸Â´Â Ä«µå¸¸ ¸®½ºÆ®¿¡ ´ã±â
+        //ì „ì²´ íƒ€ì ìˆœíšŒí•˜ë©° ì¡°ê±´ì— ë§ëŠ” ì¹´ë“œë§Œ ë¦¬ìŠ¤íŠ¸ì— ë‹´ê¸°
         foreach(HitterMasterData hitter in dataManager.GetAllHitters())
         {
             if (hitter.CardGrade == grade && hitter.CardType == targetType)
                 pool.Add(hitter.CardId);
         }
 
-        //ÀüÃ¼ Åõ¼ö ¼øÈ¸ÇÏ¸ç Á¶°Ç¿¡ ¸Â´Â Ä«µå¸¸ ¸®½ºÆ®¿¡ ´ã±â
+        //ì „ì²´ íˆ¬ìˆ˜ ìˆœíšŒí•˜ë©° ì¡°ê±´ì— ë§ëŠ” ì¹´ë“œë§Œ ë¦¬ìŠ¤íŠ¸ì— ë‹´ê¸°
         foreach(PitcherMasterData pitcher in dataManager.GetAllPitchers())
         {
             if (pitcher.CardGrade == grade && pitcher.CardType == targetType)
                 pool.Add(pitcher.CardId);
         }
 
-        //¸®½ºÆ®°¡ ºñ¾úÀ½À» ¹æÁö
+        //ë¦¬ìŠ¤íŠ¸ê°€ ë¹„ì—ˆìŒì„ ë°©ì§€
         if (pool.Count == 0)
         {
-            Debug.LogWarning("[GachaManager] : ÇöÀç °¡Ã­ ¸®½ºÆ®°¡ ºñ¾îÀÖ½À´Ï´Ù.");
+            Debug.LogWarning("[GachaManager] : í˜„ì¬ ê°€ì±  ë¦¬ìŠ¤íŠ¸ê°€ ë¹„ì–´ìˆìŠµë‹ˆë‹¤.");
             return -1;
         }
 
-        //·£´ıÀ¸·Î ¸®½ºÆ®¿¡¼­ ÇÏ³ª ¼±ÅÃ
+        //ëœë¤ìœ¼ë¡œ ë¦¬ìŠ¤íŠ¸ì—ì„œ í•˜ë‚˜ ì„ íƒ
         return pool[Random.Range(0, pool.Count)];
     }
 
-    //»Ì±â Ä«¿îÅÍ °ü¸®
+    //ë½‘ê¸° ì¹´ìš´í„° ê´€ë¦¬
     private bool IncrementAndCheckPity(GachaType gachaType)
     {
-        //»Ì±â ÃµÀå Ä«¿îÅÍ¸¦ 1 ¿Ã¸®±â
+        //ë½‘ê¸° ì²œì¥ ì¹´ìš´í„°ë¥¼ 1 ì˜¬ë¦¬ê¸°
         if (gachaType == GachaType.Normal)
         {
             _normalPityCount++;
 
-            //ÃµÀå¿¡ µµ´ŞÇÏ¸é true¹İÈ¯, Ä«¿îÅÍ ¸®¼Â
+            //ì²œì¥ì— ë„ë‹¬í•˜ë©´ trueë°˜í™˜, ì¹´ìš´í„° ë¦¬ì…‹
             if (_normalPityCount >= PityLimit)
             {
                 _normalPityCount = 0;
@@ -295,7 +295,7 @@ public class GachaManager : MonoBehaviour
         {
             _signaturePityCount++;
 
-            //ÃµÀå¿¡ µµ´ŞÇÏ¸é true¹İÈ¯, Ä«¿îÅÍ ¸®¼Â
+            //ì²œì¥ì— ë„ë‹¬í•˜ë©´ trueë°˜í™˜, ì¹´ìš´í„° ë¦¬ì…‹
             if (_signaturePityCount >= PityLimit)
             {
                 _signaturePityCount = 0;

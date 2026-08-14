@@ -1,13 +1,13 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 
 /// <summary>
-/// ÀÌ¹ø Å¸¼® ÈÄ ½Ã¹Ä·¹ÀÌ¼Ç È£Ãâ (±³Ã¼ ÀÎÅÍ·´Æ®)
+/// ì´ë²ˆ íƒ€ì„ í›„ ì‹œë®¬ë ˆì´ì…˜ í˜¸ì¶œ (êµì²´ ì¸í„°ëŸ½íŠ¸)
 /// </summary>
 
 public class InterruptDecision
 {
-    public int PitcherSubstitutionSlot { get; }    //ÇØ´ç ½½·ÔÀ¸·Î ±³Ã¼
-    public IReadOnlyList<Hittersubstitution> HitterSubstitutions    { get; }    //´ëÅ¸ ±³Ã¼ ¸ñ·Ï
+    public int PitcherSubstitutionSlot { get; }    //í•´ë‹¹ ìŠ¬ë¡¯ìœ¼ë¡œ êµì²´
+    public IReadOnlyList<Hittersubstitution> HitterSubstitutions    { get; }    //ëŒ€íƒ€ êµì²´ ëª©ë¡
 
     public InterruptDecision(int pitcherSubstitutionSlot, IReadOnlyList<Hittersubstitution> hitterSubstitutions)
     {

@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class BreakthroughManager : MonoBehaviour
 {
@@ -39,7 +39,7 @@ public class BreakthroughManager : MonoBehaviour
         {
             return false;
         }
-        //ÈÆ·ÃÀÌ ¸¸·¾ÀÌ¾î¾ß µ¹ÆÄ °¡´É
+        //í›ˆë ¨ì´ ë§Œë ™ì´ì–´ì•¼ ëŒíŒŒ ê°€ëŠ¥
         if (cardInstance.TrainLevel < TrainManager.Instance.GetMaxTrainLevel())
         {
             return false;

@@ -1,18 +1,18 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 
 public class CardInstance
 {
-    public int InstanceId { get; private set; }             //ÀÎ½ºÅÏ½ºID
-    public int CardId { get; private set; }                  //Ä«µå ID - CSV¿Í ¿¬°á
-    public int EnhanceLevel { get; private set; }           //°­È­ ·¹º§
-    public int TrainLevel { get; private set; }              //ÈÆ·Ã ·¹º§
-    public bool IsLocked { get; private set; }               //Àá±İ »óÅÂ
-    public bool BreakthroughUsed { get; private set; }       //ÈÆ·Ã µ¹ÆÄ »ç¿ë ¿©ºÎ
+    public int InstanceId { get; private set; }             //ì¸ìŠ¤í„´ìŠ¤ID
+    public int CardId { get; private set; }                  //ì¹´ë“œ ID - CSVì™€ ì—°ê²°
+    public int EnhanceLevel { get; private set; }           //ê°•í™” ë ˆë²¨
+    public int TrainLevel { get; private set; }              //í›ˆë ¨ ë ˆë²¨
+    public bool IsLocked { get; private set; }               //ì ê¸ˆ ìƒíƒœ
+    public bool BreakthroughUsed { get; private set; }       //í›ˆë ¨ ëŒíŒŒ ì‚¬ìš© ì—¬ë¶€
 
     private int[] _trainDelta;
-    public IReadOnlyList<int> TrainDelta => _trainDelta;     //ÈÆ·Ã ½ºÅÈ ºĞ¹è°ª
+    public IReadOnlyList<int> TrainDelta => _trainDelta;     //í›ˆë ¨ ìŠ¤íƒ¯ ë¶„ë°°ê°’
 
-    //Ä«µå¸¦ Ã³À½ È¹µæÇßÀ» ¶§ÀÇ ÃÊ±â°ª »ı¼ºÀÚ
+    //ì¹´ë“œë¥¼ ì²˜ìŒ íšë“í–ˆì„ ë•Œì˜ ì´ˆê¸°ê°’ ìƒì„±ì
     public CardInstance(int instanceId, int cardId)
     {
         InstanceId = instanceId;
@@ -25,23 +25,23 @@ public class CardInstance
     }
 
     /// <summary>
-    /// (¿ÜºÎ Á¢±Ù¿ë) Ä«µåÀÇ ÀÎ°ÔÀÓ ¼Ó¼ºÀ» °ü¸® ¹× È£Ãâ
+    /// (ì™¸ë¶€ ì ‘ê·¼ìš©) ì¹´ë“œì˜ ì¸ê²Œì„ ì†ì„±ì„ ê´€ë¦¬ ë° í˜¸ì¶œ
     /// </summary>
 
-    //Ä«µå Àá±İ ¼³Á¤
+    //ì¹´ë“œ ì ê¸ˆ ì„¤ì •
     public void SetLocked(bool locked)
     {
         IsLocked = locked;
     }
 
-    //°­È­ ·¹º§ 1 Áõ°¡
+    //ê°•í™” ë ˆë²¨ 1 ì¦ê°€
     public void ApplyEnhance()
     {
         EnhanceLevel++;
     }
 
-    //ÈÆ·Ã ·¹º§ 1 Áõ°¡ + ½ºÅÈ ºĞ¹è ¹İ¿µ
-    //delta : ÀÌ¹ø ·¹º§ ¾÷¿¡¼­ ¿À¸¥ °¢ ½ºÅÈ Áõ°¡·®
+    //í›ˆë ¨ ë ˆë²¨ 1 ì¦ê°€ + ìŠ¤íƒ¯ ë¶„ë°° ë°˜ì˜
+    //delta : ì´ë²ˆ ë ˆë²¨ ì—…ì—ì„œ ì˜¤ë¥¸ ê° ìŠ¤íƒ¯ ì¦ê°€ëŸ‰
     public void ApplyTrain(int[] delta)
     {
         for (int i = 0;  i < _trainDelta.Length; i++)
@@ -52,7 +52,7 @@ public class CardInstance
         TrainLevel++;
     }
 
-    //µ¹ÆÄ ¿Ï·á Ç¥½Ã
+    //ëŒíŒŒ ì™„ë£Œ í‘œì‹œ
     public void ApplyBreakthrough()
     {
         BreakthroughUsed = true;

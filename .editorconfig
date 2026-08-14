@@ -1,0 +1,10 @@
+root = true
+
+# 소스 파일 인코딩 고정.
+# CP949로 저장되면 Roslyn이 UTF-8로 읽어 한글 문자열/주석이 깨진다.
+[*.cs]
+charset = utf-8-bom
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+insert_final_newline = true
