@@ -15,6 +15,20 @@ public static class SimulationContextBuilder
             return null;
         }
 
+        if (LineUpManager.Instance == null)
+        {
+            Debug.LogError("[SimulationContextBuilder]: LineUpManager가 씬에 없습니다");
+            return null;
+        }
+
+        //라인업이 비면 스냅샷 배열 길이가 9·7과 어긋나 SimulationContext 생성자가 예외를 던진다.
+        //여기서 null로 걸러 호출자(LeagueRunner)가 하루치를 통째로 중단하도록 한다
+        if (!LineUpManager.Instance.IsLineupComplete())
+        {
+            Debug.LogError("[SimulationContextBuilder]: 플레이어 라인업이 완성되지 않았습니다 (야수 9 + 투수 11)");
+            return null;
+        }
+
         HitterSnapshot[] lineup = BuildHitterSnapshots(LineUpManager.Instance.GetHittersInBattingOrder());
         HitterSnapshot[] bench = BuildHitterSnapshots(LineUpManager.Instance.GetBenchInstanceIds());
         PitcherSnapshot[] pitchers = BuildPitcherStaff(playerRotationIndex);

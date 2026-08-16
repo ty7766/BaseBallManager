@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
 /// 진루 시스템
@@ -13,19 +14,20 @@ public class BaseRunningCalculator
     private const float AdvanceChanceCoefficient = 0.12f;
 
     //베이스, 득점, 아웃 갱신
-    public void Apply(BatterOutcome outcome, int batterInstanceId, GameState state, SimulationContext context)
+    public void Apply(BatterOutcome outcome, int batterInstanceId, GameState state, SimulationContext context,
+        List<int> scoredRunnerIds)
     {
         switch(outcome)
         {
             case BatterOutcome.HomeRun:
                 {
                     if (state.ThirdBase != -1)
-                        Score(state);
+                        Score(state, state.ThirdBase, scoredRunnerIds);
                     if (state.SecondBase != -1)
-                        Score(state);
+                        Score(state, state.SecondBase, scoredRunnerIds);
                     if (state.FirstBase != -1)
-                        Score(state);
-                    Score(state);
+                        Score(state, state.FirstBase, scoredRunnerIds);
+                    Score(state, batterInstanceId, scoredRunnerIds);
 
                     state.SetThirdBase(-1);
                     state.SetSecondBase(-1);
@@ -35,11 +37,11 @@ public class BaseRunningCalculator
             case BatterOutcome.Triple:
                 {
                     if (state.ThirdBase != -1)
-                        Score(state);
+                        Score(state, state.ThirdBase, scoredRunnerIds);
                     if (state.SecondBase != -1)
-                        Score(state);
+                        Score(state, state.SecondBase, scoredRunnerIds);
                     if (state.FirstBase != -1)
-                        Score(state);
+                        Score(state, state.FirstBase, scoredRunnerIds);
 
                     state.SetSecondBase(-1);
                     state.SetFirstBase(-1);
@@ -50,16 +52,16 @@ public class BaseRunningCalculator
                 {
                     if (state.ThirdBase != -1)
                     {
-                        Score(state);
+                        Score(state, state.ThirdBase, scoredRunnerIds);
                         state.SetThirdBase(-1);
                     }
                     if (state.SecondBase != -1)
-                        Score(state);
+                        Score(state, state.SecondBase, scoredRunnerIds);
                     if (state.FirstBase != -1)
                     {
                         HitterSnapshot runner = FindRunnerSnapshot(state.FirstBase, context, state.IsTopInning);
                         if (TryAdvance(runner))
-                            Score(state);
+                            Score(state, runner.InstanceId, scoredRunnerIds);
                         else
                             state.SetThirdBase(runner.InstanceId);
                     }
@@ -71,14 +73,14 @@ public class BaseRunningCalculator
                 {
                     if (state.ThirdBase != -1)
                     {
-                        Score(state);
+                        Score(state, state.ThirdBase, scoredRunnerIds);
                         state.SetThirdBase(-1);
                     }
                     if (state.SecondBase != -1)
                     {
                         HitterSnapshot runner = FindRunnerSnapshot(state.SecondBase, context, state.IsTopInning);
                         if (TryAdvance(runner))
-                            Score(state);
+                            Score(state, runner.InstanceId, scoredRunnerIds);
                         else
                             state.SetThirdBase(runner.InstanceId);
                         state.SetSecondBase(-1);
@@ -108,7 +110,7 @@ public class BaseRunningCalculator
                         {
                             if (state.ThirdBase != -1)
                             {
-                                Score(state);
+                                Score(state, state.ThirdBase, scoredRunnerIds);
                             }
                             state.SetThirdBase(state.SecondBase);
                             state.SetSecondBase(state.FirstBase);
@@ -148,7 +150,7 @@ public class BaseRunningCalculator
                     if (TryAdvance(runner))
                     {
                         state.SetThirdBase(-1);
-                        Score(state);
+                        Score(state, runner.InstanceId, scoredRunnerIds);
                     }
                 }
                 break;
@@ -167,7 +169,7 @@ public class BaseRunningCalculator
                         {
                             if (state.ThirdBase != -1)
                             {
-                                Score(state);
+                                Score(state, state.ThirdBase, scoredRunnerIds);
                             }
                             state.SetThirdBase(state.SecondBase);
                             state.SetSecondBase(state.FirstBase);
@@ -200,10 +202,11 @@ public class BaseRunningCalculator
         return Random.value < probRun;
     }
 
-    //득점 처리
-    private void Score(GameState state)
+    //득점 처리. 홈을 밟은 주자를 함께 기록해 선수별 득점(R) 집계에 쓴다
+    private void Score(GameState state, int runnerInstanceId, List<int> scoredRunnerIds)
     {
         state.AddRun();
+        scoredRunnerIds.Add(runnerInstanceId);
     }
 
     //현재 베이스에 있는 주자의 스냅샷 탐색

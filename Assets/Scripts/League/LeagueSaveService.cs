@@ -45,6 +45,7 @@ public class LeagueSaveService
             GameCount = season.TotalDayCount,
             SeriesLength = season.Schedule.SeriesLength,
             CurrentDayIndex = season.CurrentDayIndex,
+            RewardsGranted = season.RewardsGranted,
             Records = new TeamRecordSaveData[records.Count]
         };
 
@@ -109,7 +110,7 @@ public class LeagueSaveService
             records.Add(ToTeamRecord(recordData));
         }
 
-        return new LeagueSeason(schedule, new LeagueStandings(records), saveData.CurrentDayIndex);
+        return new LeagueSeason(schedule, new LeagueStandings(records), saveData.CurrentDayIndex, saveData.RewardsGranted);
     }
 
     //저장된 리그 삭제 (재도전 시작 시)

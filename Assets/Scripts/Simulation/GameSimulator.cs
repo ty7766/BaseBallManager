@@ -11,6 +11,9 @@ public class GameSimulator
 
     private readonly IGameInterruptHandler _interruptHandler;
 
+    //타석마다 재사용하는 득점 주자 버퍼. 매 타석 새 List를 만들면 일괄 시뮬에서 GC 압박이 됨
+    private readonly List<int> _scoredRunnerBuffer = new List<int>(4);
+
 
     //알고리즘 계산기 초기화
     public GameSimulator(int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
@@ -63,9 +66,15 @@ public class GameSimulator
         int scoreBefore = isTopInning ? gameState.AwayScore : gameState.HomeScore;
         int inningRunsBefore = defPitcherState.CurrentInningRuns;
 
+        //Apply()가 이닝을 넘기면 Inning · OutCount가 바뀌므로 기록용 값은 미리 잡아둔다
+        int inning = gameState.Inning;
+        int outCountBefore = gameState.OutCount;
+
+        _scoredRunnerBuffer.Clear();
+
         gameState.AdvanceBatter();
-        _baseRunningCalc.Apply(outcome, hitter.InstanceId, gameState, context);
-        
+        _baseRunningCalc.Apply(outcome, hitter.InstanceId, gameState, context, _scoredRunnerBuffer);
+
         int runsScored = (isTopInning ? gameState.AwayScore : gameState.HomeScore) - scoreBefore;
         bool inningEnded = (isTopInning != gameState.IsTopInning);
 
@@ -76,8 +85,14 @@ public class GameSimulator
         }
 
         int effectiveInningRuns = inningRunsBefore + runsScored;
-        //로그 출력
-        logs.Add(new SimulationBatterLog(outcome, pitchCount, runsScored, hitter.Name));
+
+        //로그 출력. 버퍼는 다음 타석에 재사용되므로 이 타석 몫만 복사해 넘긴다
+        logs.Add(new SimulationBatterLog(outcome, pitchCount, runsScored, hitter.Name,
+            inning, isTopInning, outCountBefore,
+            hitter.InstanceId, pitcher.InstanceId, pitcher.Name,
+            _scoredRunnerBuffer.Count == 0
+                ? System.Array.Empty<int>()
+                : _scoredRunnerBuffer.ToArray()));
 
         //투수 교체
         if (_pitcherChangeEval.ShouldChange(defPitcherState, gameState, effectiveInningRuns))

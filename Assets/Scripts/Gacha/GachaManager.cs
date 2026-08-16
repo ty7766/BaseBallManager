@@ -10,6 +10,10 @@ public class GachaManager : MonoBehaviour
 {
     public static GachaManager Instance {  get; private set; }
 
+    //세이브 저장용 (기획서 3장 - 천장 카운터는 세션을 넘어가도 유지)
+    public int NormalPityCount => _normalPityCount;
+    public int SignaturePityCount => _signaturePityCount;
+
     [Header("일반 뽑기 확률 구간 설정")]
     [SerializeField]
     private float _grade3ProbabilityNor = 0.70f;
@@ -54,9 +58,25 @@ public class GachaManager : MonoBehaviour
             return null;
         }
 
+        if (CurrencyManager.Instance == null)
+        {
+            Debug.LogError("[GachaManager] CurrencyManager가 씬에 없습니다");
+            return null;
+        }
+
+        CurrencyType ticketType = GetTicketType(gachaType);
+
+        //뽑기권부터 확인한다. 뽑은 뒤에 차감하므로 실패 시 환불 처리가 필요 없음
+        if (!CurrencyManager.Instance.CanAfford(ticketType, 1))
+        {
+            Debug.LogWarning($"[GachaManager] 뽑기권이 부족합니다 (보유 {CurrencyManager.Instance.GetAmount(ticketType)})");
+            return null;
+        }
+
         GachaResult gachaResult = RollOnce(gachaType);
         if (gachaResult != null)
         {
+            CurrencyManager.Instance.Spend(ticketType, 1);
             InventoryManager.Instance.AddCard(gachaResult.CardId);
         }
 
@@ -69,6 +89,20 @@ public class GachaManager : MonoBehaviour
         if (InventoryManager.Instance.Count + 10 > InventoryManager.Instance.GetMaxCapacity())
         {
             Debug.LogWarning("[GachaManager] 인벤토리에 공간이 없어 뽑기를 진행할 수 없습니다!");
+            return null;
+        }
+
+        if (CurrencyManager.Instance == null)
+        {
+            Debug.LogError("[GachaManager] CurrencyManager가 씬에 없습니다");
+            return null;
+        }
+
+        CurrencyType ticketType = GetTicketType(gachaType);
+
+        if (!CurrencyManager.Instance.CanAfford(ticketType, 10))
+        {
+            Debug.LogWarning($"[GachaManager] 뽑기권이 부족합니다 (보유 {CurrencyManager.Instance.GetAmount(ticketType)} / 필요 10)");
             return null;
         }
 
@@ -119,12 +153,40 @@ public class GachaManager : MonoBehaviour
             }
         }
 
+        //실제로 나온 장수만큼만 차감한다 (카드 풀이 비어 결과가 모자란 경우 과금 방지)
+        if (gachaResults.Count > 0)
+            CurrencyManager.Instance.Spend(ticketType, gachaResults.Count);
+
         foreach (GachaResult result in gachaResults)
         {
             InventoryManager.Instance.AddCard(result.CardId);
         }
 
         return gachaResults;
+    }
+
+    //세이브 복원용 천장 카운터 주입
+    public void RestorePityCounts(int normalPityCount, int signaturePityCount)
+    {
+        if (normalPityCount < 0 || signaturePityCount < 0)
+        {
+            Debug.LogError($"[GachaManager] 복원할 천장 카운터가 음수입니다 (일반 {normalPityCount} / 시그 {signaturePityCount})");
+            return;
+        }
+
+        _normalPityCount = normalPityCount;
+        _signaturePityCount = signaturePityCount;
+    }
+
+    //뽑기 종류 -> 소모 뽑기권 (기획서 3장)
+    private static CurrencyType GetTicketType(GachaType gachaType)
+    {
+        return gachaType switch
+        {
+            GachaType.Normal => CurrencyType.NormalTicket,
+            GachaType.Signature => CurrencyType.SignatureTicket,
+            _ => CurrencyType.None
+        };
     }
 
     private GachaResult RollOnce(GachaType gachaType)
