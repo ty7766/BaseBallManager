@@ -78,6 +78,14 @@ public class GameState
         //3아웃 되면 초 -> 말
         if (IsTopInning)
         {
+            //9회 이후 초가 끝난 시점에 홈팀이 앞서 있으면 말 공격을 하지 않고 그대로 끝난다.
+            //홈팀은 이미 이겨 있어 더 칠 이유가 없고, 치게 두면 득실차만 부풀려진다 (순위 타이브레이커 2순위 - 기획서 7.7)
+            if (Inning >= 9 && HomeScore > AwayScore)
+            {
+                IsGameOver = true;
+                return;
+            }
+
             IsTopInning = false;    //초 -> 말
             HomePitcherState.ResetInningStats();
             return;

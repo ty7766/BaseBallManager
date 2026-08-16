@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 /// <summary>
 /// 경기 전체 진행 상황을 시뮬레이션
 /// </summary>
@@ -102,11 +103,13 @@ public class GameSimulator
                 gameState.SubstitutePitcher(context, isHome: isTopInning, nextSlot);
         }
 
-        //교체 인터럽트 호출
+        //교체 인터럽트 호출.
+        //isTopInning은 Apply() 전에 잡아둔 값을 넘긴다. 이 타석이 3아웃이면 Apply()가 공수를 뒤집어버리므로,
+        //그대로 두면 사용자가 예약한 교체가 상대 팀 라인업에 적용된다 (AI는 벤치가 비어 있어 예외까지 남)
         if (_interruptHandler != null)
         {
             InterruptDecision decision = _interruptHandler.OnAtBatEnded(gameState, context);
-            ApplyInterruptDecision(decision, gameState, context);
+            ApplyInterruptDecision(decision, gameState, context, isTopInning);
         }
     }
 
@@ -123,11 +126,12 @@ public class GameSimulator
         return sumDefense / 9f / 100f;
     }
 
-    //인터럽트 적용
-    private void ApplyInterruptDecision(InterruptDecision decision, GameState state, SimulationContext context)
+    //인터럽트 적용. isTopInning은 방금 끝난 타석 시점의 값 (Apply() 이후 값이 아님)
+    private void ApplyInterruptDecision(InterruptDecision decision, GameState state, SimulationContext context, bool isTopInning)
     {
-        bool isHomeDefending = state.IsTopInning;
-        bool ishomeAttacking = !state.IsTopInning;
+        //초 = 원정 공격 / 홈 수비
+        bool isHomeDefending = isTopInning;
+        bool ishomeAttacking = !isTopInning;
 
         //1. 대타 교체 처리
         HitterSnapshot[] attackLineup = ishomeAttacking ? context.HomeLineup : context.AwayLineup;
@@ -135,6 +139,19 @@ public class GameSimulator
 
         foreach (var sub in decision.HitterSubstitutions)
         {
+            //벤치가 없는 팀(AI - 기획서 7.8)에 대타 지시가 오면 조용히 넘긴다
+            if (sub.BenchIndex < 0 || sub.BenchIndex >= attackBench.Length)
+            {
+                Debug.LogWarning($"[GameSimulator]: 벤치 {sub.BenchIndex}번이 없어 대타 교체를 건너뜁니다 (벤치 {attackBench.Length}칸)");
+                continue;
+            }
+
+            if (sub.BattingOrderIndex < 0 || sub.BattingOrderIndex >= attackLineup.Length)
+            {
+                Debug.LogWarning($"[GameSimulator]: 타순 {sub.BattingOrderIndex}번이 라인업 범위를 벗어났습니다");
+                continue;
+            }
+
             int originHitterInstanceId = attackLineup[sub.BattingOrderIndex].InstanceId;
             state.MarkHitterUsed(ishomeAttacking, originHitterInstanceId);
             attackLineup[sub.BattingOrderIndex] = attackBench[sub.BenchIndex];

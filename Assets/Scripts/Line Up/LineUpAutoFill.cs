@@ -7,7 +7,8 @@ using UnityEngine;
 /// <remarks>
 /// 편성 자체는 사용자가 UI에서 직접 하는 것이 기본이다(기획서 6.4 - 타순 직접 지정).
 /// 이 클래스는 "자동 편성" 버튼의 구현부이자, UI가 없는 현재 라인업을 채울 수 있는 유일한 경로다.
-/// 기준은 강화·훈련이 반영된 최종 OVR 내림차순이며, 사용자가 이후 손으로 고치는 것을 전제한 근사치다.
+/// 기준은 강화·훈련이 반영된 역할별 편성 점수 내림차순이며, 사용자가 이후 손으로 고치는 것을 전제한 근사치다.
+/// OVR(4스탯 단순 평균)은 선발 기준으로 쓰지 않는다 - ScoreHitter · ScorePitcher 주석 참고.
 /// </remarks>
 public static class LineUpAutoFill
 {
@@ -39,9 +40,9 @@ public static class LineUpAutoFill
 
         CollectCandidates(hitters, pitchers);
 
-        //최종 OVR 내림차순 - 이후 모든 선택이 "남은 것 중 첫 번째"로 끝난다
-        hitters.Sort(CompareByOvrDescending);
-        pitchers.Sort(CompareByOvrDescending);
+        //편성 점수 내림차순 - 이후 모든 선택이 "남은 것 중 첫 번째"로 끝난다
+        hitters.Sort(CompareByScoreDescending);
+        pitchers.Sort(CompareByScoreDescending);
 
         HashSet<int> usedInstanceIds = new HashSet<int>();
 
@@ -67,29 +68,28 @@ public static class LineUpAutoFill
             if (masterData == null)
                 continue;
 
-            int ovr = CardStatsCalculator.CalculateFinalOVR(masterData.OVR, card.EnhanceLevel, card.TrainDelta);
-
-            if (masterData is HitterMasterData)
+            if (masterData is HitterMasterData hitterData)
             {
                 //포지션 표기가 CSV 규칙을 벗어난 카드는 어느 슬롯에도 못 넣으므로 제외
                 if (HitterPositionParser.TryParse(masterData.Position, out HitterPosition hitterPosition))
-                    hitters.Add(new Candidate(card.InstanceId, ovr, (int)hitterPosition));
+                    hitters.Add(new Candidate(card.InstanceId, ScoreHitter(hitterData, card), (int)hitterPosition));
             }
-            else if (PitcherPositionParser.TryParse(masterData.Position, out PitcherPosition pitcherPosition))
+            else if (masterData is PitcherMasterData pitcherData
+                && PitcherPositionParser.TryParse(masterData.Position, out PitcherPosition pitcherPosition))
             {
-                pitchers.Add(new Candidate(card.InstanceId, ovr, (int)pitcherPosition));
+                pitchers.Add(new Candidate(card.InstanceId, ScorePitcher(pitcherData, card, pitcherPosition), (int)pitcherPosition));
             }
         }
     }
 
-    //수비 8자리 + DH를 고른 뒤 OVR 순으로 타순을 매긴다
+    //수비 8자리 + DH를 고른 뒤 타격 점수 순으로 타순을 매긴다
     private static void FillHitters(List<Candidate> hitters, HashSet<int> usedInstanceIds)
     {
         //(슬롯, 후보) 쌍을 모아둔다. 타순은 9명이 다 정해진 뒤에야 알 수 있음
         List<(HitterPosition slot, Candidate candidate)> selected =
             new List<(HitterPosition slot, Candidate candidate)>(DefensePositions.Length + 1);
 
-        //제약이 강한 수비 자리부터 채운다. DH를 먼저 채우면 최고 OVR 선수가 빠져 포수 자리가 빌 수 있음
+        //제약이 강한 수비 자리부터 채운다. DH를 먼저 채우면 최상위 선수가 빠져 포수 자리가 빌 수 있음
         foreach (HitterPosition position in DefensePositions)
         {
             int index = FindFirstUnused(hitters, usedInstanceIds, (int)position);
@@ -104,7 +104,7 @@ public static class LineUpAutoFill
             selected.Add((position, hitters[index]));
         }
 
-        //DH는 남은 타자 중 최고 OVR (포지션 무관)
+        //DH는 남은 타자 중 최고 점수 (포지션 무관)
         int dhIndex = FindFirstUnused(hitters, usedInstanceIds, -1);
 
         if (dhIndex != -1)
@@ -113,8 +113,8 @@ public static class LineUpAutoFill
             selected.Add((HitterPosition.DH, hitters[dhIndex]));
         }
 
-        //타순은 OVR 내림차순 (단순 근사 - 사용자가 UI에서 조정하는 것을 전제)
-        selected.Sort((left, right) => right.candidate.Ovr.CompareTo(left.candidate.Ovr));
+        //타순은 타격 점수 내림차순 (단순 근사 - 사용자가 UI에서 조정하는 것을 전제)
+        selected.Sort((left, right) => right.candidate.Score.CompareTo(left.candidate.Score));
 
         for (int i = 0; i < selected.Count; i++)
         {
@@ -164,7 +164,52 @@ public static class LineUpAutoFill
         }
     }
 
-    //아직 쓰지 않은 후보 중 첫 번째(= 최고 OVR). position이 -1이면 포지션을 따지지 않는다
+    /// <summary>
+    /// 타자 편성 점수 - 타격(파워·정확)에 2배 가중
+    /// </summary>
+    /// <remarks>
+    /// OVR(4스탯 단순 평균)로 고르면 안 된다. 실측 결과 OVR과 정확의 상관은 +0.33에 불과해,
+    /// 주루·수비가 좋고 타격이 나쁜 선수가 상위로 올라온다.
+    /// (예: 정확 48인 카드가 주루 84·수비 80 덕에 OVR 전체 4위)
+    /// 실제로 OVR 기준으로 9명을 뽑으면 정확 평균이 타격 기준 대비 12점 낮았다.
+    /// 주루·수비도 진루·실책에 쓰이므로 0으로 두지 않고 절반만 반영한다.
+    /// </remarks>
+    private static int ScoreHitter(HitterMasterData data, CardInstance card)
+    {
+        int power = CardStatsCalculator.CalculateFinalStat(data.Power, card.EnhanceLevel, card.TrainDelta[0]);
+        int contact = CardStatsCalculator.CalculateFinalStat(data.Contact, card.EnhanceLevel, card.TrainDelta[1]);
+        int run = CardStatsCalculator.CalculateFinalStat(data.Run, card.EnhanceLevel, card.TrainDelta[2]);
+        int defense = CardStatsCalculator.CalculateFinalStat(data.Defense, card.EnhanceLevel, card.TrainDelta[3]);
+
+        return (power + contact) * 2 + run + defense;
+    }
+
+    /// <summary>
+    /// 투수 편성 점수 - 구위·제구 중심. 지구력은 선발에만 가중
+    /// </summary>
+    /// <remarks>
+    /// 투수 OVR은 지구력과의 상관이 +0.92라 사실상 지구력 순위가 된다.
+    /// 불펜은 지구력이 35~45로 설계돼 있어(짧게 던지는 보직) OVR이 구조적으로 낮고,
+    /// 구위가 좋아도 밀린다. 그래서 결과에 직접 쓰이는 구위·제구·구속으로 고르고,
+    /// 긴 이닝을 책임지는 선발만 지구력을 함께 본다.
+    /// </remarks>
+    private static int ScorePitcher(PitcherMasterData data, CardInstance card, PitcherPosition position)
+    {
+        int velo = CardStatsCalculator.CalculateFinalStat(data.Velocity, card.EnhanceLevel, card.TrainDelta[0]);
+        int stuff = CardStatsCalculator.CalculateFinalStat(data.Stuff, card.EnhanceLevel, card.TrainDelta[1]);
+        int control = CardStatsCalculator.CalculateFinalStat(data.Control, card.EnhanceLevel, card.TrainDelta[2]);
+        int stamina = CardStatsCalculator.CalculateFinalStat(data.Stamina, card.EnhanceLevel, card.TrainDelta[3]);
+
+        int score = (stuff + control) * 2 + velo;
+
+        //선발은 오래 던져야 하므로 지구력이 실제 성능에 직결된다
+        if (position == PitcherPosition.SP)
+            score += stamina;
+
+        return score;
+    }
+
+    //아직 쓰지 않은 후보 중 첫 번째(= 최고 점수). position이 -1이면 포지션을 따지지 않는다
     private static int FindFirstUnused(List<Candidate> candidates, HashSet<int> usedInstanceIds, int position)
     {
         for (int i = 0; i < candidates.Count; i++)
@@ -181,10 +226,10 @@ public static class LineUpAutoFill
         return -1;
     }
 
-    //OVR 내림차순
-    private static int CompareByOvrDescending(Candidate left, Candidate right)
+    //편성 점수 내림차순
+    private static int CompareByScoreDescending(Candidate left, Candidate right)
     {
-        return right.Ovr.CompareTo(left.Ovr);
+        return right.Score.CompareTo(left.Score);
     }
 
     /// <summary>
@@ -193,13 +238,13 @@ public static class LineUpAutoFill
     private readonly struct Candidate
     {
         public int InstanceId { get; }
-        public int Ovr { get; }
+        public int Score { get; }
         public int Position { get; }
 
-        public Candidate(int instanceId, int ovr, int position)
+        public Candidate(int instanceId, int score, int position)
         {
             InstanceId = instanceId;
-            Ovr = ovr;
+            Score = score;
             Position = position;
         }
     }
