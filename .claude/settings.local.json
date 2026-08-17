@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "auto",
     "allow": [
       "Read",
       "Glob",
@@ -39,7 +38,9 @@
       "Bash(python -c \"import json;d=json.load\\(open\\('.claude/settings.local.json',encoding='utf-8'\\)\\);print\\('OK', len\\(d['permissions']['allow']\\), 'rules'\\)\")",
       "Bash(node -e \"const d=require\\('./.claude/settings.local.json'\\);console.log\\('OK',d.permissions.allow.length,'rules'\\)\")",
       "PowerShell($p = \"C:\\\\Users\\\\hyojo\\\\Desktop\\\\Unity Proj\\\\BaseBallManager\\\\Assets\\\\Scripts\\\\Line Up\\\\LineUpManager.cs\"; $enc = [System.Text.Encoding]::GetEncoding\\(949\\); $lines = $enc.GetString\\([System.IO.File]::ReadAllBytes\\($p\\)\\) -split \"`r?`n\"; for \\($i=0; $i -lt $lines.Count; $i++\\) { if \\($lines[$i] -match \"GetHittersInBattingOrder\"\\) { \"FOUND at $\\($i+1\\)\" } }; \"TOTAL LINES: $\\($lines.Count\\)\")",
-      "PowerShell($p = \"C:\\\\Users\\\\hyojo\\\\Desktop\\\\Unity Proj\\\\BaseBallManager\\\\Assets\\\\Scripts\\\\Line Up\\\\LineUpManager.cs\"; $enc = [System.Text.Encoding]::GetEncoding\\(949\\); $lines = $enc.GetString\\([System.IO.File]::ReadAllBytes\\($p\\)\\) -split \"`r?`n\"; 244..331 | ForEach-Object { if \\($_ -lt $lines.Count\\) { \"$\\($_+1\\): $\\($lines[$_]\\)\" } })"
-    ]
+      "PowerShell($p = \"C:\\\\Users\\\\hyojo\\\\Desktop\\\\Unity Proj\\\\BaseBallManager\\\\Assets\\\\Scripts\\\\Line Up\\\\LineUpManager.cs\"; $enc = [System.Text.Encoding]::GetEncoding\\(949\\); $lines = $enc.GetString\\([System.IO.File]::ReadAllBytes\\($p\\)\\) -split \"`r?`n\"; 244..331 | ForEach-Object { if \\($_ -lt $lines.Count\\) { \"$\\($_+1\\): $\\($lines[$_]\\)\" } })",
+      "Bash(grep -n \"^#\\\\{1,3\\\\} \" \"베이스볼_매니저_기획서.md\")"
+    ],
+    "defaultMode": "auto"
   }
 }

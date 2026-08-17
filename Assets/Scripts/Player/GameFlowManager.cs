@@ -17,7 +17,7 @@ public class GameFlowManager : MonoBehaviour
 
     [Header("게임 시작 지급 (기획서 5장)")]
     [SerializeField, Tooltip("튜토리얼 완료 보상 일반 뽑기권")]
-    private int _tutorialTicketReward = 50;
+    private int _tutorialTicketReward = 100;
 
     private static readonly string[] TeamNames =
     {

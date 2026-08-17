@@ -89,13 +89,13 @@ public class GachaManager : MonoBehaviour
         if (InventoryManager.Instance.Count + 10 > InventoryManager.Instance.GetMaxCapacity())
         {
             Debug.LogWarning("[GachaManager] 인벤토리에 공간이 없어 뽑기를 진행할 수 없습니다!");
-            return null;
+            return new List<GachaResult>();
         }
 
         if (CurrencyManager.Instance == null)
         {
             Debug.LogError("[GachaManager] CurrencyManager가 씬에 없습니다");
-            return null;
+            return new List<GachaResult>();
         }
 
         CurrencyType ticketType = GetTicketType(gachaType);
@@ -103,7 +103,7 @@ public class GachaManager : MonoBehaviour
         if (!CurrencyManager.Instance.CanAfford(ticketType, 10))
         {
             Debug.LogWarning($"[GachaManager] 뽑기권이 부족합니다 (보유 {CurrencyManager.Instance.GetAmount(ticketType)} / 필요 10)");
-            return null;
+            return new List<GachaResult>();
         }
 
         List<GachaResult> gachaResults = new List<GachaResult>(10);
