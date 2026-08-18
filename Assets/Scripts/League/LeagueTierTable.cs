@@ -85,6 +85,50 @@ public class LeagueTierTable : ScriptableObject
         return entry.GoldReward;
     }
 
+    //리그 종료 보상 골든글러브 포인트의 기준값 (기획서 7.9 · 9.1)
+    public int GetGoldenGlovePointReward(LeagueTier tier)
+    {
+        if (!TryGetEntry(tier, out LeagueTierEntry entry))
+        {
+            return 0;
+        }
+
+        return entry.GoldenGlovePointReward;
+    }
+
+    //리그 종료 보상 시그니쳐 뽑기권의 기준값 (기획서 9.1)
+    public int GetSignatureTicketReward(LeagueTier tier)
+    {
+        if (!TryGetEntry(tier, out LeagueTierEntry entry))
+        {
+            return 0;
+        }
+
+        return entry.SignatureTicketReward;
+    }
+
+    //경기 1건당 훈련돌파 카드 획득 확률 (%)
+    public int GetPerGameBreakthroughCardChance(LeagueTier tier)
+    {
+        if (!TryGetEntry(tier, out LeagueTierEntry entry))
+        {
+            return 0;
+        }
+
+        return entry.PerGameBreakthroughCardChance;
+    }
+
+    //경기 1건당 강화 전용 카드 획득 확률 (%)
+    public int GetPerGameEnhanceCardChance(LeagueTier tier)
+    {
+        if (!TryGetEntry(tier, out LeagueTierEntry entry))
+        {
+            return 0;
+        }
+
+        return entry.PerGameEnhanceCardChance;
+    }
+
     //최종 순위별 골드 배수. 범위를 벗어난 순위는 0배 (보상 없음)
     public float GetRankGoldMultiplier(int rank)
     {

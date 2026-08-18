@@ -236,7 +236,13 @@ public class LeagueManager : MonoBehaviour
             return null;
         }
 
-        return _runner.SimulateNextGame();
+        LeagueDayResult result = _runner.SimulateNextGame();
+
+        //경기당 보상은 실제로 경기가 진행됐을 때만 (기획서 9.1)
+        if (result != null)
+            _rewardService.GrantPerGameRewards(_currentTier);
+
+        return result;
     }
 
     //저장된 리그가 있는지 (이어하기 버튼 노출 판단용)
