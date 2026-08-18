@@ -1,4 +1,6 @@
-﻿/// <summary>
+﻿using System.Collections.Generic;
+
+/// <summary>
 /// 시뮬레이션 경기 중 타자의 상태 로그 출력용
 /// </summary>
 
@@ -23,11 +25,33 @@ public class SimulationBatterLog
     public int RunsScored {  get; }             //이번 타석에서 난 득점
     public string BatterName { get; }           //로그 출력용 타자 이름
 
-    public SimulationBatterLog(BatterOutcome outcome, int pitchCount, int runsScored, string batterName)
+    public int Inning { get; }                  //타석이 벌어진 이닝
+    public bool IsTopInning { get; }            //true = 초(원정 공격)
+    public int OutCountBefore { get; }          //타석 시작 시점의 아웃 카운트
+
+    public int BatterInstanceId { get; }        //선수별 기록 집계 키
+    public int PitcherInstanceId { get; }       //상대한 투수 (기록 집계 키)
+    public string PitcherName { get; }          //로그 출력용 투수 이름
+
+    //이번 타석에서 홈을 밟은 주자들. 선수별 득점(R) 집계에 필요하다
+    public IReadOnlyList<int> ScoredRunnerIds { get; }
+
+    public SimulationBatterLog(BatterOutcome outcome, int pitchCount, int runsScored, string batterName,
+        int inning, bool isTopInning, int outCountBefore,
+        int batterInstanceId, int pitcherInstanceId, string pitcherName, IReadOnlyList<int> scoredRunnerIds)
     {
         Outcome = outcome;
         PitchCount = pitchCount;
         RunsScored = runsScored;
         BatterName = batterName;
+
+        Inning = inning;
+        IsTopInning = isTopInning;
+        OutCountBefore = outCountBefore;
+
+        BatterInstanceId = batterInstanceId;
+        PitcherInstanceId = pitcherInstanceId;
+        PitcherName = pitcherName;
+        ScoredRunnerIds = scoredRunnerIds;
     }
 }

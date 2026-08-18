@@ -81,6 +81,25 @@ public class BreakthroughManager : MonoBehaviour
             return false;
         }
 
+        if (CurrencyManager.Instance == null)
+        {
+            Debug.LogError("[BreakthroughManager] : CurrencyManager가 씬에 없습니다");
+            return false;
+        }
+
+        int cost = GetBreakthroughCost(instanceId);
+
+        //-1은 카드 종류·등급 조합이 비용표에 없다는 뜻이라 데이터 이상 신호
+        if (cost <= 0)
+        {
+            Debug.LogError($"[BreakthroughManager] : 돌파 비용을 구하지 못했습니다 (instanceId {instanceId})");
+            return false;
+        }
+
+        //부족 사유는 CurrencyManager가 로그로 남김
+        if (!CurrencyManager.Instance.Spend(CurrencyType.BreakthroughCard, cost))
+            return false;
+
         CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
         cardInstance.ApplyBreakthrough();
         return true;

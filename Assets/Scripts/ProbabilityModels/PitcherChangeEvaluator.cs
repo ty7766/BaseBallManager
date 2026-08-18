@@ -52,7 +52,9 @@ public class PitcherChangeEvaluator
     {
 
         int scoreDiff = 0;
-        bool isHomePitching = !gameState.IsTopInning;
+
+        //초(IsTopInning) = 원정 공격 = 홈 수비. GameSimulator가 수비 투수를 고르는 기준과 같아야 한다
+        bool isHomePitching = gameState.IsTopInning;
 
         //현재 투구팀이 홈인지 원정인지 판별후 현재 점수차 계산
         if (isHomePitching)

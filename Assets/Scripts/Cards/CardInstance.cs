@@ -24,6 +24,30 @@ public class CardInstance
         BreakthroughUsed = false;
     }
 
+    //세이브 복원 전용 생성자 - 저장된 상태를 그대로 되살린다
+    public CardInstance(int instanceId, int cardId, int enhanceLevel, int trainLevel,
+        bool breakthroughUsed, int[] trainDelta, bool isLocked)
+    {
+        InstanceId = instanceId;
+        CardId = cardId;
+        EnhanceLevel = enhanceLevel;
+        TrainLevel = trainLevel;
+        BreakthroughUsed = breakthroughUsed;
+        IsLocked = isLocked;
+
+        _trainDelta = new int[4];
+
+        //세이브가 깨졌더라도 스탯 계산이 터지지 않도록 4칸은 항상 확보한다
+        if (trainDelta == null || trainDelta.Length != 4)
+        {
+            UnityEngine.Debug.LogError($"[CardInstance] : 복원할 훈련 분배값이 올바르지 않습니다 (instanceId {instanceId})");
+            return;
+        }
+
+        //외부 배열을 그대로 들고 있으면 세이브 DTO 쪽 수정이 카드에 새어 들어온다
+        System.Array.Copy(trainDelta, _trainDelta, 4);
+    }
+
     /// <summary>
     /// (외부 접근용) 카드의 인게임 속성을 관리 및 호출
     /// </summary>

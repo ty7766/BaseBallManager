@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 /// <summary>
 /// 경기 전체 진행 상황을 시뮬레이션
 /// </summary>
@@ -10,6 +11,9 @@ public class GameSimulator
     private readonly PitcherChangeEvaluator _pitcherChangeEval;
 
     private readonly IGameInterruptHandler _interruptHandler;
+
+    //타석마다 재사용하는 득점 주자 버퍼. 매 타석 새 List를 만들면 일괄 시뮬에서 GC 압박이 됨
+    private readonly List<int> _scoredRunnerBuffer = new List<int>(4);
 
 
     //알고리즘 계산기 초기화
@@ -63,9 +67,15 @@ public class GameSimulator
         int scoreBefore = isTopInning ? gameState.AwayScore : gameState.HomeScore;
         int inningRunsBefore = defPitcherState.CurrentInningRuns;
 
+        //Apply()가 이닝을 넘기면 Inning · OutCount가 바뀌므로 기록용 값은 미리 잡아둔다
+        int inning = gameState.Inning;
+        int outCountBefore = gameState.OutCount;
+
+        _scoredRunnerBuffer.Clear();
+
         gameState.AdvanceBatter();
-        _baseRunningCalc.Apply(outcome, hitter.InstanceId, gameState, context);
-        
+        _baseRunningCalc.Apply(outcome, hitter.InstanceId, gameState, context, _scoredRunnerBuffer);
+
         int runsScored = (isTopInning ? gameState.AwayScore : gameState.HomeScore) - scoreBefore;
         bool inningEnded = (isTopInning != gameState.IsTopInning);
 
@@ -76,8 +86,14 @@ public class GameSimulator
         }
 
         int effectiveInningRuns = inningRunsBefore + runsScored;
-        //로그 출력
-        logs.Add(new SimulationBatterLog(outcome, pitchCount, runsScored, hitter.Name));
+
+        //로그 출력. 버퍼는 다음 타석에 재사용되므로 이 타석 몫만 복사해 넘긴다
+        logs.Add(new SimulationBatterLog(outcome, pitchCount, runsScored, hitter.Name,
+            inning, isTopInning, outCountBefore,
+            hitter.InstanceId, pitcher.InstanceId, pitcher.Name,
+            _scoredRunnerBuffer.Count == 0
+                ? System.Array.Empty<int>()
+                : _scoredRunnerBuffer.ToArray()));
 
         //투수 교체
         if (_pitcherChangeEval.ShouldChange(defPitcherState, gameState, effectiveInningRuns))
@@ -87,11 +103,13 @@ public class GameSimulator
                 gameState.SubstitutePitcher(context, isHome: isTopInning, nextSlot);
         }
 
-        //교체 인터럽트 호출
+        //교체 인터럽트 호출.
+        //isTopInning은 Apply() 전에 잡아둔 값을 넘긴다. 이 타석이 3아웃이면 Apply()가 공수를 뒤집어버리므로,
+        //그대로 두면 사용자가 예약한 교체가 상대 팀 라인업에 적용된다 (AI는 벤치가 비어 있어 예외까지 남)
         if (_interruptHandler != null)
         {
             InterruptDecision decision = _interruptHandler.OnAtBatEnded(gameState, context);
-            ApplyInterruptDecision(decision, gameState, context);
+            ApplyInterruptDecision(decision, gameState, context, isTopInning);
         }
     }
 
@@ -108,11 +126,12 @@ public class GameSimulator
         return sumDefense / 9f / 100f;
     }
 
-    //인터럽트 적용
-    private void ApplyInterruptDecision(InterruptDecision decision, GameState state, SimulationContext context)
+    //인터럽트 적용. isTopInning은 방금 끝난 타석 시점의 값 (Apply() 이후 값이 아님)
+    private void ApplyInterruptDecision(InterruptDecision decision, GameState state, SimulationContext context, bool isTopInning)
     {
-        bool isHomeDefending = state.IsTopInning;
-        bool ishomeAttacking = !state.IsTopInning;
+        //초 = 원정 공격 / 홈 수비
+        bool isHomeDefending = isTopInning;
+        bool ishomeAttacking = !isTopInning;
 
         //1. 대타 교체 처리
         HitterSnapshot[] attackLineup = ishomeAttacking ? context.HomeLineup : context.AwayLineup;
@@ -120,6 +139,19 @@ public class GameSimulator
 
         foreach (var sub in decision.HitterSubstitutions)
         {
+            //벤치가 없는 팀(AI - 기획서 7.8)에 대타 지시가 오면 조용히 넘긴다
+            if (sub.BenchIndex < 0 || sub.BenchIndex >= attackBench.Length)
+            {
+                Debug.LogWarning($"[GameSimulator]: 벤치 {sub.BenchIndex}번이 없어 대타 교체를 건너뜁니다 (벤치 {attackBench.Length}칸)");
+                continue;
+            }
+
+            if (sub.BattingOrderIndex < 0 || sub.BattingOrderIndex >= attackLineup.Length)
+            {
+                Debug.LogWarning($"[GameSimulator]: 타순 {sub.BattingOrderIndex}번이 라인업 범위를 벗어났습니다");
+                continue;
+            }
+
             int originHitterInstanceId = attackLineup[sub.BattingOrderIndex].InstanceId;
             state.MarkHitterUsed(ishomeAttacking, originHitterInstanceId);
             attackLineup[sub.BattingOrderIndex] = attackBench[sub.BenchIndex];

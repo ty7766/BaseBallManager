@@ -20,12 +20,19 @@ public class LeagueManager : MonoBehaviour
     [SerializeField]
     private int _pullThreshold = 3;
 
-    [Header("임시 - 플레이어 인벤토리·라인업 공급 경로가 생기면 해제할 것")]
+    [Header("리그 종료 보상 (기획서 7.1 · 7.9)")]
+    [SerializeField, Tooltip("이 순위 이내면 다음 티어 해금")]
+    private int _unlockRankThreshold = 2;
+    [SerializeField, Tooltip("우승 시 지급하는 골카 전용 카드 수")]
+    private int _goldenGloveEnhanceCardReward = 1;
+
+    [Header("디버그 - 켜면 플레이어 팀도 AI 로스터로 대체해 라인업 없이 리그를 돌린다")]
     [SerializeField]
-    private bool _useAiRosterForPlayerTeam = true;
+    private bool _useAiRosterForPlayerTeam = false;
 
     private LeagueRunner _runner;
     private LeagueSaveService _saveService;
+    private LeagueRewardService _rewardService;
 
     private void Awake()
     {
@@ -36,6 +43,7 @@ public class LeagueManager : MonoBehaviour
 
             //저장소 교체 지점 - 서버 저장으로 바꿀 땐 여기만 바뀐다 (기획서 10장)
             _saveService = new LeagueSaveService(new LocalFileStorage());
+            _rewardService = new LeagueRewardService(_tierTable, _unlockRankThreshold, _goldenGloveEnhanceCardReward);
         }
         else
         {
@@ -64,6 +72,30 @@ public class LeagueManager : MonoBehaviour
         {
             Debug.LogError("[LeagueManager]: 플레이어 팀이 선택되지 않았습니다");
             return false;
+        }
+
+        //해금 조건 (기획서 7.1 - 직전 리그 정규시즌 2등 이상)
+        if (!PlayerDataManager.Instance.IsTierUnlocked(tier))
+        {
+            Debug.LogWarning($"[LeagueManager]: {tier} 리그가 아직 해금되지 않았습니다 (현재 해금 {PlayerDataManager.Instance.HighestUnlockedTier})");
+            return false;
+        }
+
+        //라인업 20칸을 모두 채워야 입장 가능 (기획서 6.3).
+        //디버그 토글로 AI 로스터를 쓰는 동안은 플레이어 라인업 자체가 쓰이지 않으므로 건너뛴다
+        if (!_useAiRosterForPlayerTeam)
+        {
+            if (LineUpManager.Instance == null)
+            {
+                Debug.LogError("[LeagueManager]: LineUpManager가 씬에 없습니다");
+                return false;
+            }
+
+            if (!LineUpManager.Instance.IsLineupComplete())
+            {
+                Debug.LogWarning("[LeagueManager]: 라인업이 완성되지 않아 리그에 입장할 수 없습니다 (야수 9 + 투수 11)");
+                return false;
+            }
         }
 
         //로스터 실패 원인은 AiRosterManager가 로그로 남김
@@ -182,6 +214,19 @@ public class LeagueManager : MonoBehaviour
     public bool DeleteSavedLeague()
     {
         return _saveService.Delete();
+    }
+
+    //정규시즌 종료 보상 수령 + 다음 티어 해금 (기획서 7.1 · 7.9). 실패하거나 이미 받았으면 null
+    public LeagueRewardResult ClaimSeasonRewards()
+    {
+        if (_runner == null)
+        {
+            Debug.LogError("[LeagueManager]: 시작된 리그가 없습니다");
+            return null;
+        }
+
+        //실패 원인은 보상 서비스가 로그로 남김
+        return _rewardService.Grant(_runner.Season);
     }
 
     //현재 순위표 (기획서 7.7)

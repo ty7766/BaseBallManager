@@ -265,8 +265,8 @@ public class LineUpManager : MonoBehaviour
         return true;
     }
 
-    //이미 배치되어있는 카드인지 확인
-    private bool IsCardAssigned(int instanceId)
+    //이미 배치되어있는 카드인지 확인 (분해 차단 판정에도 사용 - 기획서 9.2)
+    public bool IsCardAssigned(int instanceId)
     {
         //히터 슬롯에 이미 배치되어있는지 확인
         foreach(var hitterID in _hitterSlots.Values)
@@ -344,5 +344,23 @@ public class LineUpManager : MonoBehaviour
 
         Array.Copy(source, result, source.Length);
         return result;
+    }
+
+    //야수 슬롯 1칸 조회 (빈 슬롯은 (-1, 0)). 라인업이 미완성이어도 읽을 수 있어 세이브에 사용
+    public (int instanceId, int battingOrder) GetHitterSlot(HitterPosition slot)
+    {
+        return _hitterSlots[slot];
+    }
+
+    //전 슬롯 비우기 (세이브 복원 직전 - 이전 상태가 남아 중복 배치로 복원이 실패하는 것을 막음)
+    public void ClearAll()
+    {
+        foreach (HitterPosition position in System.Enum.GetValues(typeof(HitterPosition)))
+            _hitterSlots[position] = (-1, 0);
+
+        Array.Fill(_benchSlots, -1);
+
+        foreach (int[] slots in _pitcherSlots.Values)
+            Array.Fill(slots, -1);
     }
 }
