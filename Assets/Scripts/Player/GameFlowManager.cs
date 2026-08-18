@@ -19,6 +19,9 @@ public class GameFlowManager : MonoBehaviour
     [SerializeField, Tooltip("튜토리얼 완료 보상 일반 뽑기권")]
     private int _tutorialTicketReward = 100;
 
+    [SerializeField, Tooltip("팀별 시작 지급 시그니쳐 카드 표. 비워두면 시작 카드를 지급하지 않는다")]
+    private StartingSignatureTable _startingSignatureTable;
+
     private static readonly string[] TeamNames =
     {
         "기아", "삼성", "LG", "한화", "두산", "SSG", "KT", "NC", "키움", "롯데"
@@ -78,19 +81,7 @@ public class GameFlowManager : MonoBehaviour
 
         PlayerDataManager.Instance.SetPlayerTeam(teamName);
 
-        //TODO: 팀별 지급 시그니쳐 카드가 확정되면(기획서 12장 TBD) 표에서 읽도록 교체.
-        //현재는 해당 팀 시그니쳐 카드 중 무작위 1장
-        int startingCardId = PickStartingSignatureCardId(teamName);
-
-        if (startingCardId == -1)
-        {
-            //시그니쳐 카드가 아직 CSV에 없는 상태. 팀 선택 자체는 성공으로 둔다
-            Debug.LogWarning($"[GameFlowManager]: '{teamName}' 팀의 시그니쳐 카드가 없어 시작 카드를 지급하지 못했습니다");
-        }
-        else
-        {
-            InventoryManager.Instance.AddCard(startingCardId);
-        }
+        GrantStartingSignatureCard(teamName);
 
         return true;
     }
@@ -130,26 +121,37 @@ public class GameFlowManager : MonoBehaviour
         return false;
     }
 
-    //해당 팀 시그니쳐 카드 중 무작위 1장. 없으면 -1
-    private static int PickStartingSignatureCardId(string teamName)
+    /// <summary>
+    /// 팀 선택 시 기본 시그니쳐 카드 1장 지급 (기획서 5장의 2단계)
+    /// </summary>
+    /// <remarks>
+    /// 지급하지 못해도 팀 선택 자체는 성공으로 둔다.
+    /// 시그니쳐 카드 마스터 데이터가 아직 없는 상태에서도 게임을 시작할 수 있어야 하기 때문이다.
+    /// </remarks>
+    private void GrantStartingSignatureCard(string teamName)
     {
-        List<int> pool = new List<int>();
-
-        foreach (HitterMasterData hitter in CardDataManager.Instance.GetAllHitters())
+        if (_startingSignatureTable == null)
         {
-            if (hitter.TeamName == teamName && hitter.CardType == CardType.Signature)
-                pool.Add(hitter.CardId);
+            Debug.LogWarning("[GameFlowManager]: 시작 시그니쳐 표가 연결되어 있지 않아 시작 카드를 지급하지 않았습니다");
+            return;
         }
 
-        foreach (PitcherMasterData pitcher in CardDataManager.Instance.GetAllPitchers())
+        //0은 "아직 정하지 않음"이라는 정상 상태 (세션 33의 빈 슬롯 센티넬)
+        int startingCardId = _startingSignatureTable.GetCardId(teamName);
+
+        if (startingCardId == 0)
         {
-            if (pitcher.TeamName == teamName && pitcher.CardType == CardType.Signature)
-                pool.Add(pitcher.CardId);
+            Debug.LogWarning($"[GameFlowManager]: '{teamName}' 팀에 지정된 시작 시그니쳐 카드가 없습니다");
+            return;
         }
 
-        if (pool.Count == 0)
-            return -1;
+        //표에 적힌 카드가 CSV에서 사라졌다면 데이터 불일치라 LogError
+        if (CardDataManager.Instance.GetCardMasterData(startingCardId) == null)
+        {
+            Debug.LogError($"[GameFlowManager]: '{teamName}' 팀의 시작 카드(cardId {startingCardId})가 마스터 데이터에 없습니다");
+            return;
+        }
 
-        return pool[Random.Range(0, pool.Count)];
+        InventoryManager.Instance.AddCard(startingCardId);
     }
 }
