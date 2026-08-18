@@ -17,6 +17,8 @@ public class HitterGameStats
     public int Runs { get; private set; }               //득점
     public int Walks { get; private set; }              //볼넷
     public int StrikeOuts { get; private set; }         //삼진
+    public int StolenBases { get; private set; }        //도루 성공 (기획서 8.3.1)
+    public int CaughtStealing { get; private set; }     //도루 실패
 
     //경기 타율. 타수가 0이면 0 (표기는 UI에서 .000 형태로)
     public float Average => AtBats == 0 ? 0f : (float)Hits / AtBats;
@@ -68,5 +70,14 @@ public class HitterGameStats
     public void AddRun()
     {
         Runs++;
+    }
+
+    //도루 시도 1건 반영 (기획서 8.3.1). 타석·타수와 무관한 별개 기록
+    public void AddStealAttempt(bool isSuccess)
+    {
+        if (isSuccess)
+            StolenBases++;
+        else
+            CaughtStealing++;
     }
 }

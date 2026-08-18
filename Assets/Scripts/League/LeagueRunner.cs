@@ -2,8 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 리그 경기 진행 (하루 단위 시뮬 + 순위표 반영)
+/// 리그 경기 진행 (1경기 단위 시뮬 + 순위표 반영)
 /// </summary>
+/// <remarks>
+/// 진행 단위는 항상 "내 경기 1건 + 같은 날 AI끼리 4경기"다 (기획서 7.4).
+/// AI 경기를 함께 돌리는 이유는 순위표가 10팀 전체의 승·패·무를 요구하기 때문이다 (기획서 7.7).
+/// </remarks>
 public class LeagueRunner
 {
     public LeagueSeason Season { get; }
@@ -14,15 +18,15 @@ public class LeagueRunner
     private readonly GameSimulator _simulator;
 
     public LeagueRunner(LeagueSeason season, IReadOnlyDictionary<string, AiTeamRoster> rosters,
-        bool useAiRosterForPlayerTeam, int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
+        int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
     {
         Season = season;
-        ContextFactory = new LeagueGameContextFactory(rosters, season.PlayerTeamName, useAiRosterForPlayerTeam);
+        ContextFactory = new LeagueGameContextFactory(rosters, season.PlayerTeamName);
         _simulator = new GameSimulator(pullThreshold, interruptHandler);
     }
 
-    //하루치(5경기) 진행. 시즌이 끝났거나 실패하면 null
-    public LeagueDayResult SimulateNextDay()
+    //경기 1개 진행 (내 경기 1건 + AI끼리 4경기). 시즌이 끝났거나 실패하면 null
+    public LeagueDayResult SimulateNextGame()
     {
         if (Season.IsFinished)
         {
@@ -63,32 +67,6 @@ public class LeagueRunner
         Season.AdvanceDay();
 
         return LastDayResult;
-    }
-
-    //여러 날 한꺼번에 진행 (기획서 7.4 일괄 시뮬). 반환값은 실제 진행한 일수
-    public int SimulateDays(int dayCount)
-    {
-        if (dayCount <= 0)
-        {
-            Debug.LogWarning($"[LeagueRunner]: 진행할 경기 수가 {dayCount}입니다");
-            return 0;
-        }
-
-        int simulatedCount = 0;
-
-        //중간 날짜의 타석 로그는 보관하지 않음 - 일괄 시뮬은 박스스코어 위주 (기획서 8.5)
-        for (int i = 0; i < dayCount; i++)
-        {
-            if (Season.IsFinished)
-                break;
-
-            if (SimulateNextDay() == null)
-                break;
-
-            simulatedCount++;
-        }
-
-        return simulatedCount;
     }
 
     //경기 1건의 시뮬 입력 구성

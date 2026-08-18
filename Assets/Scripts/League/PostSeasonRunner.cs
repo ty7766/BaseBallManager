@@ -19,6 +19,10 @@ public class PostSeasonRunner
 
     public bool IsFinished => _currentSeriesIndex >= _series.Count;
 
+    //세이브 기록용 (기획서 7.6)
+    public int CurrentSeriesIndex => _currentSeriesIndex;
+    public IReadOnlyDictionary<string, int> RotationIndices => _rotationIndices;
+
     //한국시리즈 우승 팀 (끝나기 전이면 null)
     public string ChampionTeamName => IsFinished ? _series[_series.Count - 1].WinnerTeamName : null;
 
@@ -37,13 +41,13 @@ public class PostSeasonRunner
     private int _currentSeriesIndex;
 
     private PostSeasonRunner(List<PostSeasonSeries> series, LeagueGameContextFactory contextFactory,
-        Dictionary<string, int> rotationIndices, int pullThreshold)
+        Dictionary<string, int> rotationIndices, int pullThreshold, int currentSeriesIndex = 0)
     {
         _series = series;
         _contextFactory = contextFactory;
         _rotationIndices = rotationIndices;
         _simulator = new GameSimulator(pullThreshold);
-        _currentSeriesIndex = 0;
+        _currentSeriesIndex = currentSeriesIndex;
     }
 
     //정규시즌 결과로 대진표 구성. 조건을 못 채우면 null
@@ -89,6 +93,50 @@ public class PostSeasonRunner
         return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold);
     }
 
+    /// <summary>
+    /// 저장된 진행도로 복원 (기획서 7.6). 데이터가 깨졌으면 null
+    /// </summary>
+    /// <remarks>
+    /// 대진표는 정규시즌 순위로 다시 뽑지 않고 <b>저장된 그대로</b> 되살린다.
+    /// 순위표에서 다시 뽑으면 같은 결과가 나오긴 하지만, 이미 진행된 시리즈의 승자가 다음 시리즈에
+    /// 채워져 있는 상태까지는 재현되지 않는다.
+    /// </remarks>
+    public static PostSeasonRunner Restore(PostSeasonSaveData saveData, LeagueGameContextFactory contextFactory, int pullThreshold = 3)
+    {
+        if (saveData == null || saveData.Series == null || saveData.Series.Length == 0)
+        {
+            Debug.LogError("[PostSeasonRunner]: 복원할 포스트시즌 데이터가 비어 있습니다");
+            return null;
+        }
+
+        if (saveData.CurrentSeriesIndex < 0 || saveData.CurrentSeriesIndex > saveData.Series.Length)
+        {
+            Debug.LogError($"[PostSeasonRunner]: 진행 중인 시리즈 번호({saveData.CurrentSeriesIndex})가 범위를 벗어났습니다 (시리즈 {saveData.Series.Length}개)");
+            return null;
+        }
+
+        List<PostSeasonSeries> series = new List<PostSeasonSeries>(saveData.Series.Length);
+
+        foreach (PostSeasonSeriesSaveData seriesData in saveData.Series)
+        {
+            if (seriesData == null)
+            {
+                Debug.LogError("[PostSeasonRunner]: 시리즈 데이터 중 비어 있는 항목이 있습니다");
+                return null;
+            }
+
+            series.Add(ToSeries(seriesData));
+        }
+
+        Dictionary<string, int> rotationIndices = ToRotationIndices(saveData);
+
+        //로테이션이 비면 전 팀이 선발 1번부터 다시 던지게 되어 기획서 6.2가 깨진다
+        if (rotationIndices == null)
+            return null;
+
+        return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold, saveData.CurrentSeriesIndex);
+    }
+
     //경기 1건 진행. 더 진행할 경기가 없거나 실패하면 null
     public LeagueGameScore? SimulateNextGame()
     {
@@ -103,6 +151,15 @@ public class PostSeasonRunner
         if (string.IsNullOrEmpty(series.LowerSeedTeamName))
         {
             Debug.LogError($"[PostSeasonRunner]: {series.Round} 상대 팀이 정해지지 않았습니다");
+            return null;
+        }
+
+        //무승부는 승수를 올리지 않아 재경기가 된다 (기획서 7.5). 반복이 끝나지 않는 경우를 대비한 상한
+        int maxGameCount = series.WinsToClinch * 2 + 5;
+
+        if (series.Scores.Count >= maxGameCount)
+        {
+            Debug.LogError($"[PostSeasonRunner]: {series.Round}가 {maxGameCount}경기를 넘겼습니다 (무승부 반복)");
             return null;
         }
 
@@ -131,47 +188,6 @@ public class PostSeasonRunner
             AdvanceSeries(series);
 
         return score;
-    }
-
-    //현재 시리즈가 끝날 때까지 진행. 실패하면 null
-    public PostSeasonSeries SimulateNextSeries()
-    {
-        PostSeasonSeries series = CurrentSeries;
-
-        if (series == null)
-        {
-            Debug.LogWarning("[PostSeasonRunner]: 포스트시즌이 이미 끝났습니다");
-            return null;
-        }
-
-        //무승부 재경기가 반복돼도 멈추도록 상한을 둠
-        int maxGameCount = series.WinsToClinch * 2 + 5;
-
-        while (!series.IsFinished)
-        {
-            if (series.Scores.Count >= maxGameCount)
-            {
-                Debug.LogError($"[PostSeasonRunner]: {series.Round}가 {maxGameCount}경기를 넘겼습니다 (무승부 반복)");
-                return null;
-            }
-
-            if (SimulateNextGame() == null)
-                return null;
-        }
-
-        return series;
-    }
-
-    //남은 시리즈를 전부 진행. 우승 팀 반환, 실패 시 null
-    public string SimulateAll()
-    {
-        while (!IsFinished)
-        {
-            if (SimulateNextSeries() == null)
-                return null;
-        }
-
-        return ChampionTeamName;
     }
 
     //다음 시리즈로 승자 전달 후 인덱스 이동
@@ -209,5 +225,48 @@ public class PostSeasonRunner
     private int GetRotationIndex(string teamName)
     {
         return _rotationIndices.TryGetValue(teamName, out int index) ? index : 0;
+    }
+
+    //저장 형태 -> 시리즈
+    private static PostSeasonSeries ToSeries(PostSeasonSeriesSaveData seriesData)
+    {
+        PostSeasonGameSaveData[] games = seriesData.Games ?? System.Array.Empty<PostSeasonGameSaveData>();
+        List<LeagueGameScore> scores = new List<LeagueGameScore>(games.Length);
+
+        foreach (PostSeasonGameSaveData gameData in games)
+        {
+            if (gameData == null)
+                continue;
+
+            scores.Add(new LeagueGameScore(
+                new LeagueGame(gameData.HomeTeamName, gameData.AwayTeamName),
+                gameData.HomeScore, gameData.AwayScore));
+        }
+
+        return new PostSeasonSeries((PostSeasonRound)seriesData.Round,
+            seriesData.HigherSeedTeamName, seriesData.LowerSeedTeamName,
+            seriesData.WinsToClinch, seriesData.HigherSeedWins, seriesData.LowerSeedWins, scores);
+    }
+
+    //저장 형태 -> 팀별 누적 경기 수. 길이가 어긋나면 null
+    private static Dictionary<string, int> ToRotationIndices(PostSeasonSaveData saveData)
+    {
+        string[] teamNames = saveData.RotationTeamNames;
+        int[] gameCounts = saveData.RotationGameCounts;
+
+        if (teamNames == null || gameCounts == null || teamNames.Length != gameCounts.Length)
+        {
+            Debug.LogError("[PostSeasonRunner]: 저장된 선발 로테이션 정보가 올바르지 않습니다 (팀명·경기 수 배열 길이 불일치)");
+            return null;
+        }
+
+        Dictionary<string, int> rotationIndices = new Dictionary<string, int>(teamNames.Length);
+
+        for (int i = 0; i < teamNames.Length; i++)
+        {
+            rotationIndices[teamNames[i]] = gameCounts[i];
+        }
+
+        return rotationIndices;
     }
 }

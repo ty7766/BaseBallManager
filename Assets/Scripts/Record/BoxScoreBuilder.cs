@@ -10,8 +10,12 @@ using UnityEngine;
 /// </remarks>
 public static class BoxScoreBuilder
 {
-    //타석 로그 -> 박스스코어. 로그가 없으면 null
-    public static BoxScore Build(IReadOnlyList<SimulationBatterLog> logs)
+    /// <summary>
+    /// 타석·도루 로그 -> 박스스코어. 로그가 없으면 null
+    /// </summary>
+    /// <param name="stealLogs">도루 기록 (기획서 8.3.1). 없으면 SB/CS가 0으로 남는다</param>
+    public static BoxScore Build(IReadOnlyList<SimulationBatterLog> logs,
+        IReadOnlyList<SimulationStealLog> stealLogs = null)
     {
         if (logs == null)
         {
@@ -71,6 +75,19 @@ public static class BoxScoreBuilder
             {
                 if (log.IsTopInning) homeErrors++;
                 else awayErrors++;
+            }
+        }
+
+        //⑥ 도루 (기획서 8.3.1). 타석 로그를 다 돌린 뒤에 처리한다 - 주자는 반드시 그 전에 타석에 섰으므로
+        //이 시점이면 선수 항목이 이미 만들어져 있다
+        if (stealLogs != null)
+        {
+            foreach (SimulationStealLog stealLog in stealLogs)
+            {
+                TeamAccumulator attack = stealLog.IsTopInning ? away : home;
+
+                if (!attack.TryAddStealAttempt(stealLog.RunnerInstanceId, stealLog.IsSuccess))
+                    Debug.LogError($"[BoxScoreBuilder]: 타석 기록이 없는 주자가 도루했습니다 (instanceId {stealLog.RunnerInstanceId})");
             }
         }
 
@@ -136,6 +153,16 @@ public static class BoxScoreBuilder
                 return false;
 
             stats.AddRun();
+            return true;
+        }
+
+        //이미 타석에 선 적 있는 선수에게 도루 기록을 붙인다. 모르는 주자면 false
+        public bool TryAddStealAttempt(int instanceId, bool isSuccess)
+        {
+            if (!_hitterLookup.TryGetValue(instanceId, out HitterGameStats stats))
+                return false;
+
+            stats.AddStealAttempt(isSuccess);
             return true;
         }
 
