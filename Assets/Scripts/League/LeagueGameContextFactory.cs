@@ -10,14 +10,10 @@ public class LeagueGameContextFactory
     private readonly IReadOnlyDictionary<string, AiTeamRoster> _rosters;
     private readonly string _playerTeamName;
 
-    //TODO: 플레이어 인벤토리·라인업 공급 경로가 생기면 false로 두고 이 필드를 제거
-    private readonly bool _useAiRosterForPlayerTeam;
-
-    public LeagueGameContextFactory(IReadOnlyDictionary<string, AiTeamRoster> rosters, string playerTeamName, bool useAiRosterForPlayerTeam)
+    public LeagueGameContextFactory(IReadOnlyDictionary<string, AiTeamRoster> rosters, string playerTeamName)
     {
         _rosters = rosters;
         _playerTeamName = playerTeamName;
-        _useAiRosterForPlayerTeam = useAiRosterForPlayerTeam;
     }
 
     //경기가 플레이어 팀 경기인지
@@ -29,7 +25,7 @@ public class LeagueGameContextFactory
     //경기 1건의 시뮬 입력 구성. 실패 시 null
     public SimulationContext Create(LeagueGame game, int homeRotationIndex, int awayRotationIndex)
     {
-        if (IsPlayerGame(game) && !_useAiRosterForPlayerTeam)
+        if (IsPlayerGame(game))
         {
             bool isPlayerHome = game.HomeTeamName == _playerTeamName;
             AiTeamRoster opponent = GetRoster(game.GetOpponent(_playerTeamName));

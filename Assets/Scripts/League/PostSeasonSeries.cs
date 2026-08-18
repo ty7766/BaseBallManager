@@ -50,6 +50,27 @@ public class PostSeasonSeries
         HigherSeedWins = higherSeedAdvantageWins;
     }
 
+    /// <summary>
+    /// 세이브 복원 전용 생성자 (기획서 7.6)
+    /// </summary>
+    /// <remarks>
+    /// 누적 경로(<see cref="AddScore"/>)는 그대로 두고 별도 입구를 낸다.
+    /// 승수 프로퍼티의 private set을 열지 않으므로 일반 코드에서는 여전히 수정할 수 없다.
+    /// </remarks>
+    public PostSeasonSeries(PostSeasonRound round, string higherSeedTeamName, string lowerSeedTeamName,
+        int winsToClinch, int higherSeedWins, int lowerSeedWins, IReadOnlyList<LeagueGameScore> scores)
+    {
+        Round = round;
+        HigherSeedTeamName = higherSeedTeamName;
+        LowerSeedTeamName = lowerSeedTeamName;
+        WinsToClinch = winsToClinch;
+        HigherSeedWins = higherSeedWins;
+        LowerSeedWins = lowerSeedWins;
+
+        if (scores != null)
+            _scores.AddRange(scores);
+    }
+
     //상대가 아직 정해지지 않은 시리즈에 승자를 채워 넣음
     public void SetLowerSeedTeam(string teamName)
     {
