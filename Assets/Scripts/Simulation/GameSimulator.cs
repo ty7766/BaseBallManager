@@ -9,6 +9,7 @@ public class GameSimulator
     private readonly BaseRunningCalculator _baseRunningCalc;
     private readonly PitchCountCalculator _pitchCountCalc;
     private readonly PitcherChangeEvaluator _pitcherChangeEval;
+    private readonly StealCalculator _stealCalc;
 
     private readonly IGameInterruptHandler _interruptHandler;
 
@@ -23,28 +24,37 @@ public class GameSimulator
         _baseRunningCalc = new BaseRunningCalculator();
         _pitchCountCalc = new PitchCountCalculator();
         _pitcherChangeEval = new PitcherChangeEvaluator(pullThreshold);
+        _stealCalc = new StealCalculator();
 
         _interruptHandler = interruptHandler;
     }
-    
+
     //경기 루프 실행 후 GameResult 반환
     public GameResult SimulateGame(SimulationContext context)
     {
         GameState gameState = new GameState(context);
         List<SimulationBatterLog> logs = new List<SimulationBatterLog>();
+        List<SimulationStealLog> stealLogs = new List<SimulationStealLog>();
 
         while (!gameState.IsGameOver)
         {
-            SimulateAtBat(gameState, context, logs);
+            SimulateAtBat(gameState, context, logs, stealLogs);
         }
 
-        return new GameResult(gameState.HomeScore, gameState.AwayScore, logs);
+        return new GameResult(gameState.HomeScore, gameState.AwayScore, logs, stealLogs);
     }
 
-    //타석 1회 처리 (확률 판정, 투구수 소모, 진루 처리, 투교 판단)
-    private void SimulateAtBat(GameState gameState, SimulationContext context, List<SimulationBatterLog> logs)
+    //타석 1회 처리 (도루 판정, 확률 판정, 투구수 소모, 진루 처리, 투교 판단)
+    private void SimulateAtBat(GameState gameState, SimulationContext context,
+        List<SimulationBatterLog> logs, List<SimulationStealLog> stealLogs)
     {
         bool isTopInning = gameState.IsTopInning;
+
+        //투구 전에 도루를 먼저 판정한다 (기획서 8.3.1).
+        //실패로 3아웃이 되면 이 타석 자체가 없어지므로 여기서 돌아간다.
+        //타순을 전진시키지 않으므로 같은 타자가 다음 이닝 선두 타자가 된다(실제 야구 규칙)
+        if (!TryResolveSteal(gameState, context, isTopInning, stealLogs))
+            return;
 
         //공격팀 타자 스냅샷
         HitterSnapshot hitter = isTopInning ? context.AwayLineup[gameState.AwayBattingIndex] :
@@ -111,6 +121,59 @@ public class GameSimulator
             InterruptDecision decision = _interruptHandler.OnAtBatEnded(gameState, context);
             ApplyInterruptDecision(decision, gameState, context, isTopInning);
         }
+    }
+
+    /// <summary>
+    /// 타석 시작 전 도루 판정 (기획서 8.3.1). 이어서 타석을 진행해도 되면 true
+    /// </summary>
+    /// <remarks>
+    /// false를 반환하는 경우는 <b>도루 실패로 이닝이 끝났을 때</b>뿐이다.
+    /// 이때 타순을 전진시키면 안 된다 - 실제 야구에서는 그 타자가 다음 이닝 선두 타자로 다시 나온다.
+    /// </remarks>
+    private bool TryResolveSteal(GameState gameState, SimulationContext context, bool isTopInning,
+        List<SimulationStealLog> stealLogs)
+    {
+        StealAttempt attempt = _stealCalc.DecideAttempt(gameState, context, isTopInning);
+
+        if (!attempt.Exists)
+            return true;
+
+        //AddOut()이 이닝을 넘기면 값이 바뀌므로 기록용 값은 미리 잡아둔다
+        int inning = gameState.Inning;
+        int outCountBefore = gameState.OutCount;
+
+        bool isSuccess = _stealCalc.IsSuccess(attempt, gameState, context, isTopInning);
+
+        if (isSuccess)
+        {
+            //출발 베이스를 비우고 다음 베이스로 옮긴다
+            if (attempt.FromBase == 1)
+            {
+                gameState.SetFirstBase(-1);
+                gameState.SetSecondBase(attempt.RunnerInstanceId);
+            }
+            else
+            {
+                gameState.SetSecondBase(-1);
+                gameState.SetThirdBase(attempt.RunnerInstanceId);
+            }
+        }
+        else
+        {
+            //주자 아웃. 베이스를 먼저 비워야 3아웃 잔루 처리와 겹치지 않는다
+            if (attempt.FromBase == 1)
+                gameState.SetFirstBase(-1);
+            else
+                gameState.SetSecondBase(-1);
+
+            gameState.AddOut();
+        }
+
+        stealLogs.Add(new SimulationStealLog(inning, isTopInning, outCountBefore,
+            attempt.RunnerInstanceId, attempt.RunnerName, attempt.FromBase, isSuccess));
+
+        //이닝이 넘어갔거나(3아웃) 경기가 끝났으면 이 타석은 없던 일이 된다
+        return !gameState.IsGameOver && isTopInning == gameState.IsTopInning;
     }
 
     //수비팀 라인업 수비 스탯 평균 및 정규화
