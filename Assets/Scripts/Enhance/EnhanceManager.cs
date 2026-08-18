@@ -1,10 +1,17 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// 강화 로직
-/// 1. 재료 검증, 재료 소모, 강화 적용
+/// 강화 로직 (기획서 2.1)
 /// </summary>
+/// <remarks>
+/// 재료는 둘 중 하나를 고른다 - <b>동일 카드 1장</b>(<see cref="EnhanceWithIdenticalCard"/>) 또는
+/// <b>강화 전용 카드 5장</b>(<see cref="EnhanceWithEnhanceCards"/>).
+/// 전용 카드는 인벤토리 카드가 아니라 <see cref="CurrencyType"/> 재화로 다룬다.
+/// 카드로 만들면 마스터 CSV에 스탯·포지션이 없는 유령 카드가 200장 한도를 잡아먹고,
+/// 라인업·분해·필터가 전부 예외 분기를 갖게 된다.
+/// </remarks>
 public class EnhanceManager : MonoBehaviour
 {
     public static EnhanceManager Instance { get; private set; }
@@ -12,7 +19,7 @@ public class EnhanceManager : MonoBehaviour
     [Header("최대 강화 레벨 설정")]
     [SerializeField]
     private int _maxEnhanceLevel = 10;
-    [SerializeField]
+    [SerializeField, Tooltip("전용 카드로 1레벨 올리는 데 드는 장수 (기획서 2.1)")]
     private int _enhanceMaterialCount = 5;
 
     private void Awake()
@@ -28,8 +35,8 @@ public class EnhanceManager : MonoBehaviour
         }
     }
 
-    //카드 강화
-    public bool Enhance(int targetInstanceId, List<int> materialInstanceIds)
+    //동일 카드 1장을 재료로 강화 (기획서 2.1 - 동일 종류·이름·팀, 년도는 달라도 됨)
+    public bool EnhanceWithIdenticalCard(int targetInstanceId, List<int> materialInstanceIds)
     {
         CardInstance cardInstance = InventoryManager.Instance.GetCard(targetInstanceId);
         if (cardInstance == null)
@@ -63,6 +70,86 @@ public class EnhanceManager : MonoBehaviour
         }
         cardInstance.ApplyEnhance();
         return true;
+    }
+
+    /// <summary>
+    /// 강화 전용 카드 5장을 재료로 강화 (기획서 2.1)
+    /// </summary>
+    /// <remarks>
+    /// 대상 카드의 종류·등급에 맞는 전용 카드만 쓸 수 있다(3성 카드에 4성 전용 카드 불가).
+    /// 전용 카드는 재화이므로 인벤토리를 건드리지 않는다.
+    /// </remarks>
+    public bool EnhanceWithEnhanceCards(int targetInstanceId)
+    {
+        CardInstance cardInstance = InventoryManager.Instance.GetCard(targetInstanceId);
+
+        if (cardInstance == null)
+            return false;
+
+        if (!CanEnhance(targetInstanceId))
+            return false;
+
+        if (CurrencyManager.Instance == null)
+        {
+            Debug.LogError("[EnhanceManager] : CurrencyManager가 씬에 없습니다");
+            return false;
+        }
+
+        CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardInstance.CardId);
+
+        if (masterData == null)
+        {
+            Debug.LogError($"[EnhanceManager] : 마스터 데이터를 찾지 못했습니다 (cardId {cardInstance.CardId})");
+            return false;
+        }
+
+        CurrencyType enhanceCardType = GetRequiredEnhanceCardType(masterData);
+
+        //부족 사유는 CurrencyManager가 로그로 남김
+        if (!CurrencyManager.Instance.Spend(enhanceCardType, _enhanceMaterialCount))
+            return false;
+
+        cardInstance.ApplyEnhance();
+
+        return true;
+    }
+
+    /// <summary>
+    /// 이 카드를 강화하는 데 필요한 전용 카드 종류와 장수. 조회 실패 시 <c>CurrencyType.None</c>
+    /// </summary>
+    /// <remarks>UI가 "5성 전용 카드 5장 필요 (보유 3장)" 같은 표기를 만들 때 쓴다</remarks>
+    public (CurrencyType enhanceCardType, int count) GetRequiredEnhanceCard(int targetInstanceId)
+    {
+        CardInstance cardInstance = InventoryManager.Instance.GetCard(targetInstanceId);
+
+        if (cardInstance == null)
+            return (CurrencyType.None, 0);
+
+        CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardInstance.CardId);
+
+        if (masterData == null)
+            return (CurrencyType.None, 0);
+
+        return (GetRequiredEnhanceCardType(masterData), _enhanceMaterialCount);
+    }
+
+    //카드 종류·등급 -> 대응하는 강화 전용 카드 재화 (기획서 2.1 전용 카드 표)
+    private static CurrencyType GetRequiredEnhanceCardType(CardMasterData masterData)
+    {
+        //시그니쳐·골든글러브는 5성 고정이라 등급을 보지 않는다 (기획서 1.2)
+        if (masterData.CardType == CardType.Signature)
+            return CurrencyType.EnhanceCardSignature;
+
+        if (masterData.CardType == CardType.GoldenGlove)
+            return CurrencyType.EnhanceCardGoldenGlove;
+
+        return masterData.CardGrade switch
+        {
+            CardGrade.Star3 => CurrencyType.EnhanceCardStar3,
+            CardGrade.Star4 => CurrencyType.EnhanceCardStar4,
+            CardGrade.Star5 => CurrencyType.EnhanceCardStar5,
+            _ => throw new ArgumentException($"알 수 없는 카드 등급: {masterData.CardGrade}")
+        };
     }
 
     //해당 카드가 강화 가능한지 검사
