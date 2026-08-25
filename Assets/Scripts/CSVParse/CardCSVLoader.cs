@@ -3,19 +3,27 @@ using System.Text;
 using System.Collections.Generic;
 using System;
 
+/// <summary>
+/// CSV 파일을 읽어 카드 객체로 변환
+/// </summary>
+
 public class CardCSVLoader
 {
-    //CSV 파일을 읽어오는 함수
+    //CSV 파일 읽기
     private string ReadCSV(string resourcePath)
     {
-        //[resourcePath]에 있는 파일을 읽음
         TextAsset asset = Resources.Load<TextAsset>(resourcePath);
+        if (asset == null)
+        {
+            Debug.LogError($"[CardCSVLoader]:{resourcePath}가 올바른 경로가 아닙니다.");
+            return null;
+        }
         string text = Encoding.UTF8.GetString(asset.bytes);
 
         return text;
     }
 
-    //CSV 첫째 줄(속성)을 받아서 딕셔너리에 저장하는 함수
+    //CSV 첫째 줄(속성)을 받아서 딕셔너리에 저장
     private Dictionary<string, int> ParseHeaders(string headerLine)
     {
         Dictionary<string, int> headers = new Dictionary<string, int>();
@@ -23,14 +31,12 @@ public class CardCSVLoader
 
         //파싱한 정보들을 딕셔너리에 저장
         for (int i = 0; i < columns.Length; i++)
-        {
             headers[columns[i]] = i;
-        }
 
         return headers;
     }
 
-    //CardType을 분류해주는 함수
+    //CardType을 분류
     private CardType ParseCardType(string value)
     {
         switch(value)
