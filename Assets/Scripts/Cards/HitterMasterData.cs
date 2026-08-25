@@ -1,3 +1,6 @@
+﻿/// <summary>
+/// 타자 도감 데이터
+/// </summary>
 
 public class HitterMasterData : CardMasterData
 {
