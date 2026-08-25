@@ -29,23 +29,21 @@ public class GameSimulator
         _interruptHandler = interruptHandler;
     }
 
-    //경기 루프 실행 후 GameResult 반환
+    //경기 루프 실행 후 GameResult 반환. 진행 규칙을 한 벌로 유지하기 위해 GameSession을 통해 돌린다
     public GameResult SimulateGame(SimulationContext context)
     {
-        GameState gameState = new GameState(context);
-        List<SimulationBatterLog> logs = new List<SimulationBatterLog>();
-        List<SimulationStealLog> stealLogs = new List<SimulationStealLog>();
+        GameSession session = new GameSession(context, this);
 
-        while (!gameState.IsGameOver)
+        while (session.StepAtBat())
         {
-            SimulateAtBat(gameState, context, logs, stealLogs);
         }
 
-        return new GameResult(gameState.HomeScore, gameState.AwayScore, logs, stealLogs);
+        return session.BuildResult();
     }
 
     //타석 1회 처리 (도루 판정, 확률 판정, 투구수 소모, 진루 처리, 투교 판단)
-    private void SimulateAtBat(GameState gameState, SimulationContext context,
+    //GameSession이 타석 단위로 호출한다. 프로젝트 밖에 내놓는 API가 아니므로 internal
+    internal void SimulateAtBat(GameState gameState, SimulationContext context,
         List<SimulationBatterLog> logs, List<SimulationStealLog> stealLogs)
     {
         bool isTopInning = gameState.IsTopInning;

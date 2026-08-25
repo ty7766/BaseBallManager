@@ -17,7 +17,7 @@ public class GameFlowManager : MonoBehaviour
 
     [Header("게임 시작 지급 (기획서 5장)")]
     [SerializeField, Tooltip("튜토리얼 완료 보상 일반 뽑기권")]
-    private int _tutorialTicketReward = 100;
+    private int _tutorialTicketReward = 150;
 
     [SerializeField, Tooltip("팀별 시작 지급 시그니쳐 카드 표. 비워두면 시작 카드를 지급하지 않는다")]
     private StartingSignatureTable _startingSignatureTable;
