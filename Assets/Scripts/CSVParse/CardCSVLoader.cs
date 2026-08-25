@@ -31,42 +31,28 @@ public class CardCSVLoader
 
         //파싱한 정보들을 딕셔너리에 저장
         for (int i = 0; i < columns.Length; i++)
-            headers[columns[i]] = i;
+            headers[columns[i].Trim()] = i;
 
         return headers;
     }
 
     //CardType을 분류
-    private CardType ParseCardType(string value)
+    private CardType ParseCardType(string value) => value switch
     {
-        switch(value)
-        {
-            case "N":
-                return CardType.Normal;
-            case "S":
-                return CardType.Signature;
-            case "G":
-                return CardType.GoldenGlove;
-            default:
-                throw new Exception($"알 수 없는 cardType: {value}");
-        }
-    }
+        "N" => CardType.Normal,
+        "S" => CardType.Signature,
+        "G" => CardType.GoldenGlove,
+        _ => throw new ArgumentException($"알 수 없는 cardType: {value}")
+    };
 
     //CardGrade를 분류해주는 함수
-    private CardGrade ParseCardGrade(string value)
+    private CardGrade ParseCardGrade(string value) => value switch
     {
-        switch (value)
-        {
-            case "3":
-                return CardGrade.Star3;
-            case "4":
-                return CardGrade.Star4;
-            case "5":
-                return CardGrade.Star5;
-            default:
-                throw new Exception($"알 수 없는 cardGrade: {value}");
-        }
-    }
+        "N" => CardGrade.Star3,
+        "S" => CardGrade.Star4,
+        "G" => CardGrade.Star5,
+        _ => throw new ArgumentException($"알 수 없는 cardGrade: {value}")
+    };
 
     //선수 데이터의 공통 속성을 파싱하는 메소드
     private (int cardId, string name, string teamName, int year, 
