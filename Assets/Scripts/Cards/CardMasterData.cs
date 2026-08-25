@@ -1,4 +1,6 @@
-
+﻿/// <summary>
+/// 카드의 정보
+/// </summary>
 public abstract class CardMasterData
 {
     public int          CardId      { get; private set; }
@@ -8,10 +10,9 @@ public abstract class CardMasterData
     public CardType     CardType    { get; private set; }
     public CardGrade    CardGrade   { get; private set; }
     public string       Position    { get; private set; }
-    public int          OVR         {  get; private set; }
+    public int          OVR         { get; private set; }
 
-
-
+    //생성자
     public CardMasterData(int cardId, string name, string teamName, int year, CardType cardType, CardGrade cardGrade, string position, int ovr)
     {
         CardId = cardId;
