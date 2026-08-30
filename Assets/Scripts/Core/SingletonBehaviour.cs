@@ -4,7 +4,7 @@ using UnityEngine.UIElements;
 /// <summary>
 /// 싱글톤 공통 부모
 /// </summary>
-public class SingletonBehaviour<T> : MonoBehaviour where T : SingletonBehaviour<T>
+public abstract class SingletonBehaviour<T> : MonoBehaviour where T : SingletonBehaviour<T>
 {
     public static T Instance { get; private set; }
 
