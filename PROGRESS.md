@@ -2491,3 +2491,84 @@ Claude 제안값(300 / 15,000 / 20)보다 크게 높다. **골든글러브는 �
 - `CardMasterData.OVR`은 "강화·훈련 전 기본값"인데 이름이 최종값처럼 읽힘 → `BaseOVR` 검토
 - `HitterMasterData.Run` — C#에서 `Run`은 "실행"으로 읽히기 쉬움 → `Speed` 등 검토
 - 생성자 매개변수 12개 · 전부 `int`가 섞여 있어 순서가 밀려도 컴파일이 통과함 (현재 호출자가 CSV 로더 하나뿐이라 안전)
+
+---
+
+### 세션 42 (2026-08-30) — 코드 검수 계속 (CardInstance ~ CardFilter)
+
+**브랜치**: `refactoring/Code-Structure-Refactoring`
+
+**🔴 검수 중 발견한 치명적 버그 (✅ 수정 완료)**
+
+`CardCSVLoader.ParseCardGrade`가 등급 값으로 `"N"/"S"/"G"`를 받고 있었다. CSV의 `grade` 열은 `3`/`4`/`5`라
+첫 카드에서 `ArgumentException`이 터져 **게임이 아예 안 뜨는 상태였다.**
+커밋 `e4db93f`(switch expression 단축) 때 바로 위의 `ParseCardType`을 복사하면서 값이 함께 딸려 왔다.
+`"3"/"4"/"5"`로 되돌려 해소.
+
+📝 교훈: switch expression 축약처럼 "모양만 바꾸는" 리팩토링에서도 **분기 값 자체가 바뀔 수 있다.**
+인접한 비슷한 메서드를 복사할 때 특히 위험하다.
+
+```csharp
+"3" => CardGrade.Star3, "4" => CardGrade.Star4, "5" => CardGrade.Star5
+```
+
+**검수 진행 상황**
+
+| # | 파일 | 상태 |
+|---|---|---|
+| 1~6 | `CardType` / `CardGrade` / `CardMasterData` / `HitterMasterData` / `PitcherMasterData` / `CardCSVLoader` | ✅ (세션 41) |
+| 7 | `Cards/CardInstance.cs` | ✅ 검수 완료 |
+| 8 | `Cards/CardDataManager.cs` | ✅ 검수 완료 |
+| 9 | `Inventory/PlayerTypeFilter.cs` | ✅ 변경 없음 |
+| 10 | `Inventory/CardFilter.cs` | ✅ 검수 완료 |
+| 11 | `Inventory/InventoryManager.cs` | ⏭️ **다음 시작 지점** |
+
+**변경 내역**
+
+`Cards/CardInstance.cs`
+- 생성자 2개 → `: this()` 위임 (배열 할당 1회로 축소)
+- `_trainDelta` `readonly` / `TrainStatCount` 상수 도입
+- `ApplyTrain` 인자 검증 추가 + 반환형 `void` → `bool`
+- 매개변수명 오타 수정 (`encreasedStat` → `increasedStat`)
+
+`Assets/Scripts/Core/SingletonBehaviour.cs` **(신규)**
+- 프로젝트 싱글톤 15종의 공통 부모. `abstract class SingletonBehaviour<T> where T : SingletonBehaviour<T>`
+- `Awake`에서 중복 제거 + `Instance` 등록 + `DontDestroyOnLoad`까지 전담
+- 자식 초기화는 `protected virtual void OnSingletonAwake()` 훅으로
+
+`Cards/CardDataManager.cs`
+- `SingletonBehaviour<CardDataManager>` 상속으로 전환 (첫 적용 사례)
+- `Add` → `TryAdd` + `LogError` — cardId 중복 시 원인 불명으로 죽던 것 해소
+- 딕셔너리를 선언 시 생성 + `readonly`, 로드는 `Clear()` 후 채움 → null 검사 3개 제거
+- `GetAll*` 반환형 `IEnumerable` → `ValueCollection`
+
+`Inventory/CardFilter.cs`
+- `public` 필드 → `{ get; set; }` 프로퍼티
+
+📝 주요 설계 결정:
+- **`OnSingletonAwake` 훅 vs `virtual Awake`** → 훅 채택. `virtual`로 열면 자식이 `base.Awake()`를
+  한 번만 빼먹어도 **에러 없이 조용히 싱글톤 등록이 안 된다.** 훅은 빼먹을 자리가 없다
+- **`ValueCollection` 반환** — `IEnumerable`로 반환하면 `foreach`마다 열거자(struct)가 박싱돼 힙에 올라간다.
+  `GachaManager`가 뽑기마다 도는 경로라 모바일 GC에 직결
+- **딕셔너리 null 검사를 넣지 않고 없앴다** — 선언 시 생성하면 null이 되는 순간 자체가 사라진다.
+  조회 메서드가 늘 때마다 검사를 따라 붙이는 구조를 끊음
+- **`CardFilter`는 `class` 유지** — `struct`로 바꾸면 UI가 필터를 들고 조건을 바꿀 때
+  값 복사 때문에 "바꿨는데 반영 안 됨" 버그가 나기 쉽다. 생성 빈도도 버튼 클릭 시뿐이라 성능 이득 없음
+
+**⏭️ 미처리 호출부 (해당 파일 검수 차례에 처리)**
+
+| 고칠 곳 | 내용 |
+|---|---|
+| `Train/TrainManager.cs:104` | `ApplyTrain` 반환값 무시 → `return cardInstance.ApplyTrain(delta);` |
+| `Train/TrainManager.cs:97,101` | `new int[4]` / `Random.Range(0,4)`의 `4`가 `CardInstance.TrainStatCount`와 따로 놈 |
+
+**⏭️ 나머지 싱글톤 14종**
+`SingletonBehaviour` 전환은 검수 차례가 온 매니저부터 하나씩 진행한다.
+초기화 코드가 있어 `OnSingletonAwake`가 필요한 것은 `LineUpManager`(슬롯 초기화) ·
+`LeagueManager`(세이브 서비스 생성) 2개. 나머지는 `Awake` 삭제로 끝.
+
+**📌 검수 진행 규칙 (세션 42 확정)**
+- 작성자가 지적을 안 고치고 넘어가면 **재량 판단**으로 보고 다시 꺼내지 않는다
+- 시그니처 변경으로 다른 스크립트가 깨져도 **그 파일 검수 차례에** 함께 고친다
+- null·범위 검사가 한 클래스 여러 메서드에 중복되면 **private 헬퍼로 묶는다.**
+  단, 필드 null처럼 생성 시점에 보장 가능한 것은 검사를 묶지 말고 **없앤다**

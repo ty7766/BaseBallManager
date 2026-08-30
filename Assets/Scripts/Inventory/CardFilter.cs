@@ -3,7 +3,7 @@
 /// </summary>
 public class CardFilter
 {
-    public PlayerTypeFilter PlayerType  {  get; set; }
+    public PlayerTypeFilter PlayerType  { get; set; }
     public CardGrade        Grade       { get; set; }
     public CardType         Type        { get; set; }
     public string           TeamName    { get; set; }
