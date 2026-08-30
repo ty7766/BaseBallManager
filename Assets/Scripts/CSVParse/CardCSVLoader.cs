@@ -55,9 +55,9 @@ public class CardCSVLoader
     //CardGrade를 분류
     private CardGrade ParseCardGrade(string value) => value switch
     {
-        "N" => CardGrade.Star3,
-        "S" => CardGrade.Star4,
-        "G" => CardGrade.Star5,
+        "3" => CardGrade.Star3,
+        "4" => CardGrade.Star4,
+        "5" => CardGrade.Star5,
         _ => throw new ArgumentException($"알 수 없는 cardGrade: {value}")
     };
 
