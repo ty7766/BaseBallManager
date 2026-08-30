@@ -2446,3 +2446,48 @@ Claude 제안값(300 / 15,000 / 20)보다 크게 높다. **골든글러브는 �
 
 - 5.3% 데드락 → **시작 지급 150장**으로 종결 (코드·씬·기획서 반영 완료)
 - 카드 조합 → 구현·검증·기획서 2.3 신설 완료
+
+---
+
+## 🔍 코드 검수 · 리팩토링 진행 (세션 41, 2026-08-25 착수)
+
+**방식**: 작성자가 파일명을 부르면 Claude가 해당 `.cs` 전문에 인라인 주석으로 해설 → 작성자가 검수·수정.
+작성 순서(git 커밋 기준)대로 진행한다. 실제 파일은 작성자가 직접 고친다.
+
+**진행 상황**
+
+| # | 파일 | 상태 |
+|---|---|---|
+| 1 | `Cards/CardType.cs` | ✅ 검수 완료 (변경 없음) |
+| 2 | `Cards/CardGrade.cs` | ✅ 검수 완료 (변경 없음) |
+| 3 | `Cards/CardMasterData.cs` | ✅ 검수 완료 (변경 없음) |
+| 4 | `Cards/HitterMasterData.cs` | ✅ 검수 완료 (변경 없음) |
+| 5 | `Cards/PitcherMasterData.cs` | ✅ 검수 완료 (변경 없음) |
+| 6 | `CSVParse/CardCSVLoader.cs` | ✅ 검수 완료 (변경 없음) |
+| 7 | `Cards/CardInstance.cs` | ⏭️ **다음 시작 지점** |
+
+**논의 결과 — `LoadHitters` / `LoadPitchers` 공통화는 보류 (작성자 판단)**
+
+- 실측 호출 횟수: `CardDataManager.LoadCardMasterData()`(`Awake` 내부, `DontDestroyOnLoad`)에서
+  **앱 실행당 각 1회**. 나머지 호출처는 에디터 툴 `CardCatalog`뿐이라 게임 성능과 무관
+- 공통화의 실익은 성능이 아니라 **"고칠 곳이 한 군데냐 두 군데냐"**. 카드 종류가 타자·투수 2개로 고정이고
+  더 늘어날 일이 없어 지금은 코드량만 늘어난다
+- **로더에 검사 로직(널 체크 등)을 추가하게 되는 시점에 다시 판단**한다
+
+**🔴 CardCSVLoader에서 발견된 개선 후보 (미적용 — 작성자 판단 대기)**
+
+| 위험도 | 항목 |
+|---|---|
+| 🔴 | `ReadCSV`에 `asset == null` 검사 없음 → 파일명 오타 시 **어느 파일인지 안 나오고** `asset.bytes`에서 터짐 |
+| 🔴 | `ParseHeaders`에 `.Trim()` 없음 → 시트 컬럼명 뒤 공백 하나에 `headers["team"]`이 터짐 |
+| 🟡 | `throw new Exception` → `ArgumentException`이 정확 (CLAUDE.md 3-2) |
+| 🟡 | `ParseCardType` / `ParseCardGrade`를 `switch expression`으로 축약 가능 (CLAUDE.md 3-3) |
+| 🟢 | 주석 번호가 1 → 3 → 4로 건너뜀 / `ReadAllLines` 위치가 `ReadCSV` 바로 아래가 아님 |
+
+**📝 CardMasterData 계열 개선 후보 (미적용)**
+
+- `Position`이 문자열 → 오타가 컴파일에서 안 잡힘. 자식 클래스로 내려 `HitterPosition` / `PitcherPosition` enum으로 두면 해결.
+  **투수는 값이 SP/RP/CP 3개뿐이라 특히 이득이 크다**
+- `CardMasterData.OVR`은 "강화·훈련 전 기본값"인데 이름이 최종값처럼 읽힘 → `BaseOVR` 검토
+- `HitterMasterData.Run` — C#에서 `Run`은 "실행"으로 읽히기 쉬움 → `Speed` 등 검토
+- 생성자 매개변수 12개 · 전부 `int`가 섞여 있어 순서가 밀려도 컴파일이 통과함 (현재 호출자가 CSV 로더 하나뿐이라 안전)
