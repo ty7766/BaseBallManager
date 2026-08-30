@@ -1,14 +1,14 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 /// <summary>
-/// 
+/// 카드 마스터 데이터 보관,조회
 /// </summary>
+
 public class CardDataManager : SingletonBehaviour<CardDataManager>
 {
-    private Dictionary<int, HitterMasterData> _hitters;
-    private Dictionary<int, PitcherMasterData> _pitchers;
+    private readonly Dictionary<int, HitterMasterData> _hitters = new Dictionary<int, HitterMasterData>();
+    private readonly Dictionary<int, PitcherMasterData> _pitchers = new Dictionary<int, PitcherMasterData>();
 
     protected override void OnSingletonAwake()
     {
@@ -16,13 +16,13 @@ public class CardDataManager : SingletonBehaviour<CardDataManager>
     }
 
     //전체 타자 목록 반환
-    public IEnumerable<HitterMasterData> GetAllHitters()
+    public Dictionary<int, HitterMasterData>.ValueCollection GetAllHitters()
     {
         return _hitters.Values;
     }
 
     //전체 투수 목록 반환
-    public IEnumerable<PitcherMasterData> GetAllPitchers()
+    public Dictionary<int, PitcherMasterData>.ValueCollection GetAllPitchers()
     {
         return _pitchers.Values;
     }
@@ -68,7 +68,7 @@ public class CardDataManager : SingletonBehaviour<CardDataManager>
         CardCSVLoader loader = new CardCSVLoader();
 
         List<HitterMasterData> hitterList = loader.LoadHitters();
-        _hitters = new Dictionary<int, HitterMasterData>();
+        _hitters.Clear();
         foreach (HitterMasterData hitter in hitterList)
         {
             if (!_hitters.TryAdd(hitter.CardId, hitter))
@@ -78,7 +78,7 @@ public class CardDataManager : SingletonBehaviour<CardDataManager>
         }
 
         List<PitcherMasterData> pitcherList = loader.LoadPitchers();
-        _pitchers = new Dictionary<int, PitcherMasterData>();
+        _pitchers.Clear();
         foreach (PitcherMasterData pitcher in pitcherList)
         {
             if (!_pitchers.TryAdd(pitcher.CardId, pitcher))
