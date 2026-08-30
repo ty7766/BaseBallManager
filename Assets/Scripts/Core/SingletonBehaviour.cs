@@ -1,6 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.UIElements;
-
 /// <summary>
 /// 싱글톤 공통 부모
 /// </summary>
