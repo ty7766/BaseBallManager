@@ -1,46 +1,30 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
-
-public class CardDataManager : MonoBehaviour
+/// <summary>
+/// 
+/// </summary>
+public class CardDataManager : SingletonBehaviour<CardDataManager>
 {
-    public static CardDataManager Instance { get; private set; }
-
     private Dictionary<int, HitterMasterData> _hitters;
     private Dictionary<int, PitcherMasterData> _pitchers;
 
-    private void Awake()
+    protected override void OnSingletonAwake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            LoadCardMasterData();
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        LoadCardMasterData();
     }
 
-    //CSV에서 마스터데이터를 로드 -> Dictionary로 초기화
-    //cardId와 나머지 데이터를 저장하여 cardId로 확인할 수 있게 동작
-    private void LoadCardMasterData()
+    //전체 타자 목록 반환
+    public IEnumerable<HitterMasterData> GetAllHitters()
     {
-        CardCSVLoader loader = new CardCSVLoader();
-        List<HitterMasterData> hitterList = loader.LoadHitters();
-        _hitters = new Dictionary<int, HitterMasterData>();
-        foreach (HitterMasterData hitter in hitterList)
-        {
-            _hitters.Add(hitter.CardId, hitter);
-        }
+        return _hitters.Values;
+    }
 
-        List<PitcherMasterData> pitcherList = loader.LoadPitchers();
-        _pitchers = new Dictionary<int, PitcherMasterData>();
-        foreach (PitcherMasterData pitcher in pitcherList)
-        {
-            _pitchers.Add(pitcher.CardId, pitcher);
-        }
+    //전체 투수 목록 반환
+    public IEnumerable<PitcherMasterData> GetAllPitchers()
+    {
+        return _pitchers.Values;
     }
 
     //cardId로 타자 검색
@@ -77,15 +61,30 @@ public class CardDataManager : MonoBehaviour
         }
     }
 
-    //전체 타자 목록 반환
-    public IEnumerable<HitterMasterData> GetAllHitters()
+    //CSV에서 마스터데이터를 로드 -> Dictionary로 초기화
+    //cardId와 나머지 데이터를 저장하여 cardId로 확인할 수 있게 동작
+    private void LoadCardMasterData()
     {
-        return _hitters.Values;
-    }
+        CardCSVLoader loader = new CardCSVLoader();
 
-    //전체 투수 목록 반환
-    public IEnumerable<PitcherMasterData> GetAllPitchers()
-    {
-        return _pitchers.Values;
+        List<HitterMasterData> hitterList = loader.LoadHitters();
+        _hitters = new Dictionary<int, HitterMasterData>();
+        foreach (HitterMasterData hitter in hitterList)
+        {
+            if (!_hitters.TryAdd(hitter.CardId, hitter))
+            {
+                Debug.LogError($"[CardDataManager]: CSV 파일에서 cardId가 중복된 카드가 있습니다. -> {hitter.CardId}");
+            }
+        }
+
+        List<PitcherMasterData> pitcherList = loader.LoadPitchers();
+        _pitchers = new Dictionary<int, PitcherMasterData>();
+        foreach (PitcherMasterData pitcher in pitcherList)
+        {
+            if (!_pitchers.TryAdd(pitcher.CardId, pitcher))
+            {
+                Debug.LogError($"[CardDataManager]: CSV 파일에서 cardId가 중복된 카드가 있습니다. -> {pitcher.CardId}");
+            }
+        }
     }
 }
