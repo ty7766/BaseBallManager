@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// CSV 파일에서 뽑아온 카드들의 속성과 잠금/훈련/강화/돌파 속성
+/// </summary>
 public class CardInstance
 {
     private const int TrainStatCount = 4;
