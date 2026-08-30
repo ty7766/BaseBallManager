@@ -3,10 +3,10 @@
 /// </summary>
 public class CardFilter
 {
-    public PlayerTypeFilter PlayerType;
-    public CardGrade Grade;
-    public CardType Type;
-    public string TeamName;
+    public PlayerTypeFilter PlayerType  {  get; set; }
+    public CardGrade        Grade       { get; set; }
+    public CardType         Type        { get; set; }
+    public string           TeamName    { get; set; }
 }
 
 //TODO : 선수 이름 검색 기능 추가 예정
