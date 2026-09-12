@@ -181,7 +181,7 @@ public class EnhanceManager : MonoBehaviour
         CardMasterData cardMasterData = CardDataManager.Instance.GetCardMasterData(cardInstance.CardId);
         if (cardMasterData == null) return new List<CardInstance>();
 
-        IReadOnlyList<CardInstance> allCards = InventoryManager.Instance.GetAllCards();
+        Dictionary<int, CardInstance>.ValueCollection allCards = InventoryManager.Instance.GetAllCards();
 
         List<CardInstance> result = new List<CardInstance>();
         foreach(CardInstance card in allCards)

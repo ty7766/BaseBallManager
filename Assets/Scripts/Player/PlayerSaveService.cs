@@ -33,7 +33,7 @@ public class PlayerSaveService
         if (!AreManagersReady())
             return false;
 
-        IReadOnlyList<CardInstance> cards = InventoryManager.Instance.GetAllCards();
+        Dictionary<int, CardInstance>.ValueCollection cards = InventoryManager.Instance.GetAllCards();
 
         PlayerSaveData saveData = new PlayerSaveData
         {
@@ -42,7 +42,7 @@ public class PlayerSaveService
             TutorialCompleted = PlayerDataManager.Instance.TutorialCompleted,
 
             NextInstanceId = InventoryManager.Instance.NextInstanceId,
-            MaxCapacity = InventoryManager.Instance.GetMaxCapacity(),
+            MaxCapacity = InventoryManager.Instance.MaxCapacity,
 
             NormalPityCount = GachaManager.Instance.NormalPityCount,
             SignaturePityCount = GachaManager.Instance.SignaturePityCount,
@@ -53,9 +53,13 @@ public class PlayerSaveService
 
         WriteCurrencies(saveData);
 
-        for (int i = 0; i < cards.Count; i++)
+        //ValueCollection은 인덱서가 없어 순회 중 직접 위치를 센다
+        int cardIndex = 0;
+
+        foreach (CardInstance card in cards)
         {
-            saveData.Cards[i] = ToSaveData(cards[i]);
+            saveData.Cards[cardIndex] = ToSaveData(card);
+            cardIndex++;
         }
 
         return _storage.Save(SaveKey, JsonUtility.ToJson(saveData, true));

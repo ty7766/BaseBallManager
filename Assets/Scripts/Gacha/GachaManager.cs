@@ -86,7 +86,7 @@ public class GachaManager : MonoBehaviour
     //10연차 뽑기
     public List<GachaResult> Roll10(GachaType gachaType)
     {
-        if (InventoryManager.Instance.Count + 10 > InventoryManager.Instance.GetMaxCapacity())
+        if (InventoryManager.Instance.Count + 10 > InventoryManager.Instance.MaxCapacity)
         {
             Debug.LogWarning("[GachaManager] 인벤토리에 공간이 없어 뽑기를 진행할 수 없습니다!");
             return new List<GachaResult>();

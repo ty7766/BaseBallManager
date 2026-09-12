@@ -2572,3 +2572,78 @@ Claude 제안값(300 / 15,000 / 20)보다 크게 높다. **골든글러브는 �
 - 시그니처 변경으로 다른 스크립트가 깨져도 **그 파일 검수 차례에** 함께 고친다
 - null·범위 검사가 한 클래스 여러 메서드에 중복되면 **private 헬퍼로 묶는다.**
   단, 필드 null처럼 생성 시점에 보장 가능한 것은 검사를 묶지 말고 **없앤다**
+
+---
+
+### 세션 43 (2026-09-12) — `InventoryManager` 검수 완료 (List → Dictionary 전환)
+
+**브랜치**: `refactoring/Code-Structure-Refactoring`
+
+**검수 진행 상황**
+
+| # | 파일 | 상태 |
+|---|---|---|
+| 1~10 | `CardType` ~ `CardFilter` | ✅ (세션 41·42) |
+| 11 | `Inventory/InventoryManager.cs` | ✅ 검수 완료 |
+| 12 | `Gacha/GachaType.cs` | ⏭️ **다음 시작 지점** |
+
+**작성자가 처리한 수정 (1차)**
+
+- `SingletonBehaviour<InventoryManager>` 상속 전환 (`Awake` + `Instance` 제거)
+- `MAX_CAPACITY = 200` 상수 도입 — `_maxCapacity` 기본값과 `_cards` 초기 용량을 한 값으로 묶음
+- `GetMaxCapacity()` → `MaxCapacity` 프로퍼티 (호출부 `GachaManager` · `PlayerSaveService` 동반 수정)
+- `Restore` 반환형 `void` → `bool` — 세이브 복원 실패가 조용히 넘어가던 것 해소
+- `Restore`의 `_cards = cards` 참조 대입 → `Clear()` + 채우기 (에일리어싱 제거)
+- `FindCard(int)` private 헬퍼로 `Find` 람다 3중복 제거
+- `GetFiltered` — `filter` null 검사 추가, 실패 시 빈 컬렉션 반환(3-2 준수), `CardDataManager.Instance` 루프 밖 캐싱
+- 로그 문구 정정, 무의미 분기 제거
+
+**Claude가 처리한 수정 (2차 — List → Dictionary)**
+
+`Inventory/InventoryManager.cs`
+- `List<CardInstance>` → **`Dictionary<int, CardInstance>`** (키 = `instanceId`)
+- `FindCard` → `TryGetValue`, `RemoveCard` → `Dictionary.Remove` 반환값 그대로 사용
+- `AddCard` → `_cards.Add(instanceId, card)` (발급 카운터라 키 중복 불가 → `TryAdd` 불필요)
+- `Restore` → `TryAdd` + `LogError`로 **손상 세이브의 중복 ID 방어** 추가
+- `GetAllCards()` 반환형 `IReadOnlyList<CardInstance>` → `Dictionary<int, CardInstance>.ValueCollection`
+
+`Enhance/EnhanceManager.cs:184` — `allCards` 지역변수 타입 변경
+`Player/PlayerSaveService.cs:36,56~63` — 타입 변경 + `cards[i]` 인덱서 루프를 `foreach` + 카운터로 교체
+(`ValueCollection`에는 인덱서가 없다)
+
+📝 주요 설계 결정 — **왜 Dictionary인가 (실측 근거)**
+
+`GetCard` 호출부가 **18곳**이고 전부 `List.Find` = O(n)이었다.
+
+| 경로 | 기존 순회 횟수 |
+|---|---|
+| 강화 1회 (재료 5장) | `GetCard` 5×200 + `RemoveCard` 5×(200 탐색 + 200 시프트) ≈ **3,200회** |
+| 경기 1회 컨텍스트 생성 | `SimulationContextBuilder`가 선수 26명 × 200 = **5,200회** |
+| 시즌 1회 (144경기) | 약 **75만 회** |
+
+`instanceId`는 `_nextInstanceId++`로 발급되는 고유 키라 애초에 Dictionary 구조였다.
+전환으로 조회·제거가 **O(1)**, `Find` 람다 클로저의 호출당 힙 할당도 사라졌다.
+순회 비용(`GetFiltered` · `GetAllCards`)은 O(n) 그대로다.
+
+- **순서 의존성 확인** — `GetAllCards` 호출부 3곳(`EnhanceManager` · `LineUpAutoFill` · `PlayerSaveService`)과
+  `GetFiltered`가 전부 순회만 하고 순서를 쓰지 않아 안전하다. 획득 순 정렬이 필요해지면 `InstanceId`가 그 키다
+- `CardDataManager`가 이미 `Dictionary<int, T>` + `ValueCollection` 반환 패턴이라 프로젝트 일관성도 맞다
+
+**검증 (스크래치패드 dotnet 하니스 — 검증 후 삭제)**
+
+- 런타임 스크립트 100개 전량 컴파일: **오류 0 · 경고 0**
+- `InventoryManager` 동작 테스트 **35건 통과** — 발급 ID 연속성, 제거 후 재발급 충돌, 포화 차단,
+  `Restore` 방어 3종(ID 역전 · 중복 키 · null), 외부 리스트 `Clear()` 후 에일리어싱 없음
+- `PlayerSaveService` 저장·복원 왕복 **14건 통과** — 중간 카드를 제거해 Dictionary에 빈 슬롯이 생긴 상태로
+  저장했을 때 세이브 배열에 빈 칸이 남지 않는지(`foreach` + 카운터 교체분) 확인
+
+**⏭️ 남은 개선 후보 (미적용 — 작성자 판단)**
+
+| 항목 | 내용 |
+|---|---|
+| `GetFiltered` 판정 로직 | 조건 4개 판정을 `CardFilter.Matches(CardMasterData)`로 이관하면 `GetFiltered`가 44줄 → 15줄. `CardFilter.cs`의 `//TODO : 선수 이름 검색` 추가 시 `InventoryManager`를 안 건드려도 된다 (OCP) |
+| `TryExpandCapacityWithGold` | 인벤토리가 `CurrencyManager` + 가격 정책을 아는 구조(SRP). 호출부가 없고 가격이 단일 값이라 **누진 곡선 도입 시점에 분리**로 보류 |
+
+**📌 컨벤션 추가 (세션 43 확정)**
+- `if`문 중괄호: **본문 한 줄이면 생략, 두 줄 이상이면 사용**
+- 검수 응답 형식: 지적과 수정안을 **코드 단에서 함께** 제시하고 `diff` 블록으로 기존/수정을 구분
