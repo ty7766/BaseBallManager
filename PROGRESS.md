@@ -2637,11 +2637,92 @@ Claude 제안값(300 / 15,000 / 20)보다 크게 높다. **골든글러브는 �
 - `PlayerSaveService` 저장·복원 왕복 **14건 통과** — 중간 카드를 제거해 Dictionary에 빈 슬롯이 생긴 상태로
   저장했을 때 세이브 배열에 빈 칸이 남지 않는지(`foreach` + 카운터 교체분) 확인
 
-**⏭️ 남은 개선 후보 (미적용 — 작성자 판단)**
+### 세션 43 (계속) — 3차: `maxCapacity` 단일화 + `CardFilter.Matches` 이관
+
+**🔴 `maxCapacity`를 하나로 통일하는 방법 (작성자 질문)**
+
+작성자가 `private const int _maxCapacity = MAX_CAPACITY;`로 시도했으나 **컴파일 에러**였다.
+`ExpandCapacity`의 `_maxCapacity += amount`와 `Restore`의 `_maxCapacity = maxCapacity`가 const에 대입하기 때문.
+`[SerializeField]`도 const에는 붙지 않는다(Unity는 const를 직렬화하지 않음).
+
+**두 값은 애초에 성격이 다르다** — `MAX_CAPACITY`는 컴파일 타임 고정값, `_maxCapacity`는 런타임 가변 + 세이브 대상.
+따라서 통일 방향은 **const를 없애고 `[SerializeField] _maxCapacity` 하나만 남기는 것**이다.
+
+const가 존재했던 이유는 두 가지뿐이었고 둘 다 없앨 수 있었다.
+1. `_maxCapacity`의 기본값 → `= 200`을 필드에 직접 쓰면 된다 (한 군데)
+2. `Dictionary` 초기 용량 → **버렸다**
+
+📝 **`Dictionary` 초기 용량을 버린 근거 (계산)**
+
+초기 용량을 `_maxCapacity`로 주려면 씬 역직렬화 이후여야 하므로 `OnSingletonAwake`에서 생성해야 하고,
+그러면 `readonly`와 "null이 되는 순간이 없다"는 보장(세션 42 결정)을 잃는다.
+
+반대로 용량 힌트를 버리면 잃는 것은 앱 실행당 리해싱 **1회분**이다.
+.NET `Dictionary`는 소수 단위로 증설되므로 200개를 담기까지 3→7→17→37→79→163→353,
+**재할당 7회 / 엔트리 이동 306회**. 앱 수명 전체에 한 번 발생한다.
+
+→ `readonly` + null 없음 + 단일 출처를 지키고 용량 힌트를 버리는 쪽이 압도적으로 이득.
+
+```
+- const int MAX_CAPACITY = 200;
+- [SerializeField] private int _maxCapacity = MAX_CAPACITY;
+- private readonly Dictionary<int, CardInstance> _cards = new Dictionary<int, CardInstance>(MAX_CAPACITY);
++ [SerializeField, Tooltip("기본 카드 보유 한도. 확장분은 여기에 더해진다")]
++ private int _maxCapacity = 200;
++ private readonly Dictionary<int, CardInstance> _cards = new Dictionary<int, CardInstance>();
+```
+
+⚠️ **주의**: `[SerializeField]` 기본값은 컴포넌트를 처음 붙일 때만 적용된다.
+씬의 `InventoryManager`에는 이미 값이 박혀 있으므로, 기본 한도를 바꿀 땐 **인스펙터 값도 함께** 고쳐야 한다.
+
+**`CardFilter.Matches` 이관 (적용)**
+
+`Inventory/CardFilter.cs`
+- `Matches(CardMasterData)` 추가 — 4개 조건 판정을 필터 자신이 맡는다
+- `MatchesPlayerType(CardMasterData)` private 분리 — `switch expression`(CLAUDE.md 3-3),
+  미처리 enum 멤버는 `throw new ArgumentException`. 200회 루프 안이라 `LogError`는 로그 폭주가 된다
+- `PitcherOnly` 판정을 `!isHitter` → **`is PitcherMasterData`** 로 교정.
+  기존 방식은 타자가 아닌 모든 타입을 투수로 통과시켰다
+
+`Inventory/InventoryManager.cs`
+- `GetFiltered` **44줄 → 20줄**. 순회만 하고 판정은 `filter.Matches(...)`에 위임
+- `result` 할당을 null 검사 뒤로 이동 — 실패 경로에서 헛할당하지 않는다
+
+→ `CardFilter.cs`의 `//TODO : 선수 이름 검색`을 넣을 때 **`InventoryManager`를 건드릴 필요가 없다** (OCP)
+
+**그 외 적용**
+
+- `FindCard` 제거 — `RemoveCard`가 `Dictionary.Remove`로 바뀌며 호출자가 2개로 줄고,
+  그중 `GetCard`는 한 줄 통과 함수였다. `GetCard`가 직접 `TryGetValue`하고 `SetLocked`는 `GetCard`를 쓴다
+- `Restore`의 `TryAdd` 실패 시 `_cards.Clear()` 추가 — 손상 세이브에서 **절반만 복원된 상태**를 남기지 않는다
+- `SetLocked (` 괄호 앞 공백 · 꼬리 공백 제거
+
+`Player/PlayerSaveService.cs:108` — **대기표에서 꺼내 함께 처리**
+```
+- InventoryManager.Instance.Restore(cards, saveData.NextInstanceId, saveData.MaxCapacity);
++ if (!InventoryManager.Instance.Restore(cards, saveData.NextInstanceId, saveData.MaxCapacity))
++     return false;
+```
+`Restore`를 `bool`로 바꾼 의미가 여기서 버려지고 있었다. `Load()`가 `true`를 반환하고
+`GameFlowManager.cs:57`이 그것을 "이어하기 성공"으로 써서, 인벤이 비었는데도 정상 로드로 보고됐다.
+
+**검증 (스크래치패드 dotnet 하니스 — 검증 후 삭제)**
+
+- 런타임 스크립트 100개 컴파일: **오류 0 · 경고 0**
+- 동작 테스트 **45건 전부 통과** (A 핵심동작 12 / B maxCapacity 7 / C Restore 8 / D 필터 8 / E 세이브왕복 10)
+- D는 마스터 데이터 실물(타자 159 · 투수 166 · 5성 72 · 두산 28)로 필터 결과 수를 교차 대조
+- E는 손상 세이브(중복 ID)를 주입해 `Load()`가 `false`를 반환하고 인벤이 비는지 확인
+
+📝 하니스 교훈 (기존 메모에 추가할 것):
+`SingletonBehaviour.Awake`는 `Instance`가 이미 있으면 **조기 반환**한다. 섹션마다 새 매니저를 만들려면
+`<Instance>k__BackingField`를 리플렉션으로 null로 밀어야 한다. 이걸 빼먹어 실패 9건이 났고,
+**전부 하니스 결함이었다**(런타임 코드는 정상). 아직 `SingletonBehaviour`로 전환되지 않은 매니저는
+백킹 필드가 자기 자신에 있으므로 `BaseType`을 따라 올라가며 찾아야 한다.
+
+**⏭️ 남은 개선 후보 (미적용)**
 
 | 항목 | 내용 |
 |---|---|
-| `GetFiltered` 판정 로직 | 조건 4개 판정을 `CardFilter.Matches(CardMasterData)`로 이관하면 `GetFiltered`가 44줄 → 15줄. `CardFilter.cs`의 `//TODO : 선수 이름 검색` 추가 시 `InventoryManager`를 안 건드려도 된다 (OCP) |
 | `TryExpandCapacityWithGold` | 인벤토리가 `CurrencyManager` + 가격 정책을 아는 구조(SRP). 호출부가 없고 가격이 단일 값이라 **누진 곡선 도입 시점에 분리**로 보류 |
 
 **📌 컨벤션 추가 (세션 43 확정)**

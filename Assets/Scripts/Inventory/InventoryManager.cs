@@ -5,9 +5,6 @@ using System.Collections.Generic;
 /// </summary>
 public class InventoryManager : SingletonBehaviour<InventoryManager>
 {
-    //기본 카드 보유 한도량
-    const int MAX_CAPACITY = 200;
-
     //프로퍼티
     public int Count => _cards.Count;
     public int NextInstanceId => _nextInstanceId;
@@ -17,8 +14,8 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
     public bool IsFull => Count >= _maxCapacity;
 
     //변수
-    [SerializeField]
-    private int _maxCapacity = MAX_CAPACITY;
+    [SerializeField, Tooltip("기본 카드 보유 한도. 확장분은 여기에 더해진다")]
+    private int _maxCapacity = 200;
 
     [Header("보유 한도 확장")]
     [SerializeField, Tooltip("1회 확장 시 늘어나는 칸 수")]
@@ -27,9 +24,7 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
     private int _expandGoldCost = 1000;
 
     private int _nextInstanceId = 1;
-
-    //키는 instanceId. 조회·제거가 O(1)이라야 강화 재료 루프와 시뮬 컨텍스트 생성이 선형 탐색을 반복하지 않는다
-    private readonly Dictionary<int, CardInstance> _cards = new Dictionary<int, CardInstance>(MAX_CAPACITY);
+    private readonly Dictionary<int, CardInstance> _cards = new Dictionary<int, CardInstance>();
 
     //인벤토리에 카드 추가. 발급된 instanceId 반환 (실패 시 -1)
     public int AddCard(int cardId)
@@ -62,10 +57,10 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
     }
 
     //카드 잠금
-    public bool SetLocked (int instanceId, bool locked)
+    public bool SetLocked(int instanceId, bool locked)
     {
-        CardInstance foundCard = FindCard(instanceId);
-        if (foundCard == null) 
+        CardInstance foundCard = GetCard(instanceId);
+        if (foundCard == null)
             return false;
 
         foundCard.SetLocked(locked);
@@ -123,10 +118,11 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
 
         foreach (CardInstance card in cards)
         {
-            //Add는 중복 키에서 예외를 던져 복원이 중단된다. 손상된 세이브를 원인과 함께 남기고 실패로 돌린다
+            //Add는 중복 키에서 예외를 던진다. 손상 세이브는 인벤을 비우고 실패로 돌려 절반만 복원된 상태를 막는다
             if (!_cards.TryAdd(card.InstanceId, card))
             {
                 Debug.LogError($"[InventoryManager] : 세이브에 중복된 카드 ID가 있습니다 : {card.InstanceId}");
+                _cards.Clear();
                 return false;
             }
         }
@@ -140,72 +136,42 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         return true;
     }
 
-    //인벤토리 필터링
+    //인벤토리 필터링. 판정 규칙은 CardFilter가 가진다
     public List<CardInstance> GetFiltered(CardFilter filter)
     {
         if (filter == null)
         {
-            Debug.LogError("[InventoryManager] : 필터가 적용되지 않았습니다.");
+            Debug.LogError("[InventoryManager] : 필터가 null입니다");
             return new List<CardInstance>();
         }
 
-        List<CardInstance> result = new List<CardInstance>();
         CardDataManager cardDataManager = CardDataManager.Instance;
 
         if (cardDataManager == null)
         {
-            Debug.LogError("[InventoryManager] : CardDataManager가 씬에 없습니다.");
+            Debug.LogError("[InventoryManager] : CardDataManager가 씬에 없습니다");
             return new List<CardInstance>();
         }
+
+        List<CardInstance> result = new List<CardInstance>();
 
         foreach (CardInstance card in _cards.Values)
         {
             CardMasterData cardMasterData = cardDataManager.GetCardMasterData(card.CardId);
+
+            //마스터 데이터가 없으면 인벤 데이터가 손상된 것이다. 경고는 GetCardMasterData가 남긴다
             if (cardMasterData == null)
                 continue;
 
-            //PlayerType 필터
-            if (filter.PlayerType != PlayerTypeFilter.All)
-            {
-                bool isHitter = cardMasterData is HitterMasterData;
-                if (filter.PlayerType == PlayerTypeFilter.HitterOnly && !isHitter)
-                    continue;
-                if (filter.PlayerType == PlayerTypeFilter.PitcherOnly && isHitter)
-                    continue;
-            }
-
-            //Grade 필터
-            if (filter.Grade != CardGrade.None && cardMasterData.CardGrade != filter.Grade)
-                continue;
-            
-            //Type 필터
-            if (filter.Type != CardType.None && cardMasterData.CardType != filter.Type)
-                continue;
-
-            //TeamName 필터
-            if (!string.IsNullOrEmpty(filter.TeamName) && cardMasterData.TeamName != filter.TeamName)
-                continue;
-
-            result.Add(card);
+            if (filter.Matches(cardMasterData))
+                result.Add(card);
         }
 
         return result;
     }
-    
+
     //인벤토리에서 카드 반환
     public CardInstance GetCard(int instanceId)
-    {
-        return FindCard(instanceId);
-    }
-
-    //인벤토리에서 전체 카드 반환
-    public Dictionary<int, CardInstance>.ValueCollection GetAllCards()
-    {
-        return _cards.Values;
-    }
-
-    //카드 찾기
-    private CardInstance FindCard(int instanceId)
     {
         if (!_cards.TryGetValue(instanceId, out CardInstance card))
         {
@@ -214,5 +180,11 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         }
 
         return card;
+    }
+
+    //인벤토리에서 전체 카드 반환
+    public Dictionary<int, CardInstance>.ValueCollection GetAllCards()
+    {
+        return _cards.Values;
     }
 }

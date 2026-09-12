@@ -105,7 +105,10 @@ public class PlayerSaveService
             cards.Add(ToCardInstance(cardData));
         }
 
-        InventoryManager.Instance.Restore(cards, saveData.NextInstanceId, saveData.MaxCapacity);
+        //복원 실패를 삼키면 인벤이 빈 채로 라인업까지 복원돼 "이어하기 성공"으로 보고된다
+        if (!InventoryManager.Instance.Restore(cards, saveData.NextInstanceId, saveData.MaxCapacity))
+            return false;
+
         GachaManager.Instance.RestorePityCounts(saveData.NormalPityCount, saveData.SignaturePityCount);
 
         RestoreLineUp(saveData.LineUp);
