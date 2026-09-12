@@ -2728,3 +2728,84 @@ const가 존재했던 이유는 두 가지뿐이었고 둘 다 없앨 수 있었
 **📌 컨벤션 추가 (세션 43 확정)**
 - `if`문 중괄호: **본문 한 줄이면 생략, 두 줄 이상이면 사용**
 - 검수 응답 형식: 지적과 수정안을 **코드 단에서 함께** 제시하고 `diff` 블록으로 기존/수정을 구분
+
+
+---
+
+### 세션 43 (계속) — 검수 #12~#14 (`GachaType` · `GachaResult` · `GachaManager`)
+
+| # | 파일 | 상태 |
+|---|---|---|
+| 12 | `Gacha/GachaType.cs` | ✅ |
+| 13 | `Gacha/GachaResult.cs` | ✅ |
+| 14 | `Gacha/GachaManager.cs` | ✅ (Claude가 직접 수정) |
+| 15 | `Player/PlayerDataManager.cs` | ⏭️ **다음 시작 지점** |
+
+**`GachaType.cs`**
+- BOM 추가 — `Assets/Scripts` 100개 중 유일하게 `.editorconfig`(`charset = utf-8-bom`) 위반이었다
+- `None = 0` 센티넬 추가. `Normal = 0`이면 인스펙터 미설정이 조용히 일반 뽑기가 된다
+  (`CurrencyType.None`과 같은 목적. 필터용 `CardGrade.None`과는 성격이 다르다)
+
+**`GachaResult.cs`**
+- `{ get; private set; }` → `{ get; }` — 생성 후 불변이 컴파일러로 강제된다
+- `Grade`/`Type` → `CardGrade`/`CardType` — `CardMasterData`와 이름을 맞췄다. `Type`은 `System.Type`으로 읽힌다
+
+**`GachaManager.cs` — 372줄 → 331줄**
+
+🔴 **천장 카운터가 뽑기 성공 전에 조작되던 버그 2건**
+
+`IncrementAndCheckPity`가 "증가 + 검사 + 리셋"을 한 메서드에서 하는 바람에:
+1. 천장이 터졌는데 `PickTeamConfirmedCard`가 `-1`이면 **보상 없이 카운터만 리셋**됐다.
+   시그니쳐 CSV가 작성 중이라 시그니쳐 50연차마다 실제로 발생하던 경로다
+2. `cardId == -1`(풀이 비어 실패)이면 뽑기권은 차감 안 되는데 **카운터는 올라갔다**
+
+→ `IsPityReached` / `GetPityCounter`(ref 반환) 2개로 쪼개고, `RollOnce`를
+**천장 확인 → 확정 카드 지급 성공 시에만 리셋 → 일반 뽑기 → 성공 시에만 증가** 순서로 재구성.
+확정 실패 시 카운터를 한계치에 유지해 다음 뽑기에서 다시 시도한다.
+
+🔴 **`_grade5Probability*`를 올려도 확률이 안 변하던 함정**
+
+`DecideGrade`에서 최고 등급은 `else`(나머지 전부)라 두 필드가 판정에 쓰이지 않았다.
+인스펙터에서 5성을 0.05→0.10으로 올려도 실제 확률은 그대로다.
+→ `OnValidate` + `WarnIfProbabilitySumInvalid`로 **확률 합이 1이 아니면 즉시 경고**.
+
+🟠 **카드 풀 캐싱**
+
+`PickCardFromPool`이 호출마다 타자 159 + 투수 166 = 325장을 전수 순회하고 `List`를 새로 할당했다.
+10연 1회 = **3,250회 순회 + List 10개**. 결과는 (등급, 종류) 조합별로 항상 같다.
+→ `Dictionary<(CardGrade, CardType), List<int>>` 지연 캐싱. 첫 1회만 325회, 이후 O(1) · 할당 0.
+`Awake`에서 미리 만들지 않는 이유는 `CardDataManager`가 먼저 로드됐다는 보장이 없어서다.
+**빈 풀은 캐시하지 않는다** — 로드 전에 호출되면 빈 결과가 영구히 굳는다.
+
+🟠 **중복 제거**
+- `Roll1`/`Roll10`의 가드 4덩어리 → `CanRoll(gachaType, count, out ticketType)` 하나로.
+  인벤 공간 체크도 통일됐다(`IsFull` vs `Count + 10 > MaxCapacity`로 갈려 있었다)
+- `Roll10`의 10연 천장 로직 → `ApplyTenRollPity`로 분리. if/else 두 블록이 필드만 달랐다
+- `IncrementAndCheckPity` 34줄 → `ref` 반환 헬퍼 2개
+- `PickTeamConfirmedCard`가 캐시된 5성 풀을 팀으로 한 번 더 거르는 방식으로 축약
+
+기타: `SingletonBehaviour` 전환 / `_gradeSigProbabilitySig` → `_signatureChanceOnStar5` /
+`_pityLimit`을 `const` → `[SerializeField]`(확률은 다 열려 있는데 천장만 const였다) /
+`BuildResult` 추출 / 로그 접두사 통일
+
+**검증 (스크래치패드 dotnet 하니스 — 검증 후 삭제)**
+
+- 런타임 스크립트 100개 컴파일: **오류 0 · 경고 0**
+- 동작 테스트 **27건 전부 통과**
+  - A 천장 타이밍 (`_pityLimit=5`일 때 정확히 5연차 발동) 2건
+  - B **확정 실패 시 카운터 유지** 3건 — 이번에 고친 버그
+  - C 뽑기 실패 시 카운터 증가 안 함 2건
+  - D 풀 캐싱 (동일 인스턴스 재사용 · 전수 순회와 크기 일치 · 빈 풀 미캐시) 4건
+  - E 등급 확률 10만회 실측 — **3성 69.88% / 4성 25.14% / 5성 4.98%** (설정값 70/25/5)
+  - F `OnValidate` 경고 출력 확인 (합 1.05에서 발동)
+  - G/H Roll10 10연 천장 · 뽑기권 차감 7건
+  - I 세이브 왕복 회귀 5건
+
+**📌 Unity 에디터 작업 추가**
+- `GachaManager` 인스펙터에서 **천장 = 50** 확인 (`_pityLimit`은 씬에 직렬화된 적 없는 새 필드)
+- 확률 6개 값이 그대로인지 확인 (`_gradeSigProbabilitySig` → `_signatureChanceOnStar5` 이름 변경으로
+  씬의 기존 값이 풀리고 코드 기본값 0.15가 적용된다)
+
+**📌 컨벤션 추가 (세션 43)**
+- 코드 주석은 **메서드당 한 줄 요약만**. 근거·부가 설명 주석은 코드에 넣지 않고 PROGRESS/응답에 쓴다
+- 검수에서 발견한 결함의 수정안은 **빈 뼈대가 아니라 완성 코드**로 제시한다

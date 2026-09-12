@@ -4,81 +4,62 @@ using System.Collections.Generic;
 /// <summary>
 /// 뽑기 시스템 전반 로직
 /// 일반 뽑기, 시그니쳐 뽑기 카운터 관리, 천장 시스템 관리
-/// * 뽑기를 할 때마다 GachaResult Data가 나옴 *
+/// 뽑기 1회마다 GachaResult 하나가 나온다
 /// </summary>
-public class GachaManager : MonoBehaviour
+public class GachaManager : SingletonBehaviour<GachaManager>
 {
-    public static GachaManager Instance {  get; private set; }
-
     //세이브 저장용 (기획서 3장 - 천장 카운터는 세션을 넘어가도 유지)
     public int NormalPityCount => _normalPityCount;
     public int SignaturePityCount => _signaturePityCount;
 
     [Header("일반 뽑기 확률 구간 설정")]
-    [SerializeField]
+    [SerializeField, Tooltip("3성 확률")]
     private float _grade3ProbabilityNor = 0.70f;
-    [SerializeField]
+    [SerializeField, Tooltip("4성 확률")]
     private float _grade4ProbabilityNor = 0.25f;
-    [SerializeField]
+    [SerializeField, Tooltip("5성 확률. 판정은 나머지 전부라 합이 1이어야 이 값과 일치한다")]
     private float _grade5ProbabilityNor = 0.05f;
 
     [Header("시그니쳐 뽑기 확률 구간 설정")]
-    [SerializeField]
+    [SerializeField, Tooltip("4성 확률")]
     private float _grade4ProbabilitySig = 0.80f;
-    [SerializeField]
+    [SerializeField, Tooltip("5성 확률. 판정은 나머지 전부라 합이 1이어야 이 값과 일치한다")]
     private float _grade5ProbabilitySig = 0.20f;
-    [SerializeField]
-    private float _gradeSigProbabilitySig = 0.15f;
+    [SerializeField, Tooltip("5성이 떴을 때 그것이 시그니쳐 카드일 확률")]
+    private float _signatureChanceOnStar5 = 0.15f;
+
+    [Header("천장")]
+    [SerializeField, Tooltip("천장이 발동하는 뽑기 횟수")]
+    private int _pityLimit = 50;
 
     private int _normalPityCount;
     private int _signaturePityCount;
 
-    private const int PityLimit = 50;
+    private readonly Dictionary<(CardGrade, CardType), List<int>> _cardPools
+        = new Dictionary<(CardGrade, CardType), List<int>>();
 
-    private void Awake()
+    //인스펙터 값 변경 시 에디터가 호출
+    private void OnValidate()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            //메소드
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        WarnIfProbabilitySumInvalid("일반",
+            _grade3ProbabilityNor + _grade4ProbabilityNor + _grade5ProbabilityNor);
+        WarnIfProbabilitySumInvalid("시그니쳐",
+            _grade4ProbabilitySig + _grade5ProbabilitySig);
     }
 
     //1연차 뽑기 (카드 데이터 1개 반환)
     public GachaResult Roll1(GachaType gachaType)
     {
-        if (InventoryManager.Instance.IsFull)
-        {
-            Debug.LogWarning("[GachaManager] 인벤토리가 꽉 차서 뽑기를 진행할 수 없습니다!");
+        if (!CanRoll(gachaType, 1, out CurrencyType ticketType))
             return null;
-        }
-
-        if (CurrencyManager.Instance == null)
-        {
-            Debug.LogError("[GachaManager] CurrencyManager가 씬에 없습니다");
-            return null;
-        }
-
-        CurrencyType ticketType = GetTicketType(gachaType);
-
-        //뽑기권부터 확인한다. 뽑은 뒤에 차감하므로 실패 시 환불 처리가 필요 없음
-        if (!CurrencyManager.Instance.CanAfford(ticketType, 1))
-        {
-            Debug.LogWarning($"[GachaManager] 뽑기권이 부족합니다 (보유 {CurrencyManager.Instance.GetAmount(ticketType)})");
-            return null;
-        }
 
         GachaResult gachaResult = RollOnce(gachaType);
-        if (gachaResult != null)
-        {
-            CurrencyManager.Instance.Spend(ticketType, 1);
-            InventoryManager.Instance.AddCard(gachaResult.CardId);
-        }
+
+        if (gachaResult == null)
+            return null;
+
+        CurrencyManager.Instance.Spend(ticketType, 1);
+        InventoryManager.Instance.AddCard(gachaResult.CardId);
 
         return gachaResult;
     }
@@ -86,76 +67,26 @@ public class GachaManager : MonoBehaviour
     //10연차 뽑기
     public List<GachaResult> Roll10(GachaType gachaType)
     {
-        if (InventoryManager.Instance.Count + 10 > InventoryManager.Instance.MaxCapacity)
-        {
-            Debug.LogWarning("[GachaManager] 인벤토리에 공간이 없어 뽑기를 진행할 수 없습니다!");
+        if (!CanRoll(gachaType, 10, out CurrencyType ticketType))
             return new List<GachaResult>();
-        }
-
-        if (CurrencyManager.Instance == null)
-        {
-            Debug.LogError("[GachaManager] CurrencyManager가 씬에 없습니다");
-            return new List<GachaResult>();
-        }
-
-        CurrencyType ticketType = GetTicketType(gachaType);
-
-        if (!CurrencyManager.Instance.CanAfford(ticketType, 10))
-        {
-            Debug.LogWarning($"[GachaManager] 뽑기권이 부족합니다 (보유 {CurrencyManager.Instance.GetAmount(ticketType)} / 필요 10)");
-            return new List<GachaResult>();
-        }
 
         List<GachaResult> gachaResults = new List<GachaResult>(10);
 
         for (int i = 0; i < 10; i++)
         {
             GachaResult result = RollOnce(gachaType);
+
             if (result != null)
                 gachaResults.Add(result);
         }
 
-        //10연 천장 : 4성 이상이 하나도 없으면 마지막 결과를 교체
-        bool hasFourStarOrAbove = false;
-        foreach (GachaResult result in gachaResults)
-        {
-            if (result.Grade >= CardGrade.Star4)
-            {
-                hasFourStarOrAbove = true;
-                break;
-            }
-        }
+        if (gachaResults.Count == 0)
+            return gachaResults;
 
-        if (!hasFourStarOrAbove && gachaResults.Count > 0)
-        {
-            CardGrade forcedGrade;
-            if (gachaType == GachaType.Normal)
-            {
-                // Star4 : Star5 = 0.25 : 0.05 → Star4가 83%, Star5가 17%
-                float star4Ratio = _grade4ProbabilityNor / (_grade4ProbabilityNor +
-            _grade5ProbabilityNor);
-                forcedGrade = Random.value < star4Ratio ? CardGrade.Star4 : CardGrade.Star5;
-            }
-            else
-            {
-                // Star4 : Star5 = 0.80 : 0.20 → Star4가 80%, Star5가 20%
-                float star4Ratio = _grade4ProbabilitySig / (_grade4ProbabilitySig +
-            _grade5ProbabilitySig);
-                forcedGrade = Random.value < star4Ratio ? CardGrade.Star4 : CardGrade.Star5;
-            }
-
-            int forcedId = PickCardFromPool(gachaType, forcedGrade);
-
-            if (forcedId != -1)
-            {
-                CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(forcedId);
-                gachaResults[gachaResults.Count - 1] = new GachaResult(forcedId, forcedGrade, masterData.CardType);
-            }
-        }
+        ApplyTenRollPity(gachaType, gachaResults);
 
         //실제로 나온 장수만큼만 차감한다 (카드 풀이 비어 결과가 모자란 경우 과금 방지)
-        if (gachaResults.Count > 0)
-            CurrencyManager.Instance.Spend(ticketType, gachaResults.Count);
+        CurrencyManager.Instance.Spend(ticketType, gachaResults.Count);
 
         foreach (GachaResult result in gachaResults)
         {
@@ -170,7 +101,7 @@ public class GachaManager : MonoBehaviour
     {
         if (normalPityCount < 0 || signaturePityCount < 0)
         {
-            Debug.LogError($"[GachaManager] 복원할 천장 카운터가 음수입니다 (일반 {normalPityCount} / 시그 {signaturePityCount})");
+            Debug.LogError($"[GachaManager] : 복원할 천장 카운터가 음수입니다 (일반 {normalPityCount} / 시그 {signaturePityCount})");
             return;
         }
 
@@ -189,94 +120,145 @@ public class GachaManager : MonoBehaviour
         };
     }
 
+    //뽑기 가능 여부 확인 + 소모할 뽑기권 종류 반환
+    private bool CanRoll(GachaType gachaType, int count, out CurrencyType ticketType)
+    {
+        ticketType = GetTicketType(gachaType);
+
+        if (InventoryManager.Instance == null || CurrencyManager.Instance == null)
+        {
+            Debug.LogError("[GachaManager] : InventoryManager 또는 CurrencyManager가 씬에 없습니다");
+            return false;
+        }
+
+        if (InventoryManager.Instance.Count + count > InventoryManager.Instance.MaxCapacity)
+        {
+            Debug.LogWarning($"[GachaManager] : 인벤토리에 {count}장을 넣을 공간이 없습니다");
+            return false;
+        }
+
+        if (!CurrencyManager.Instance.CanAfford(ticketType, count))
+        {
+            Debug.LogWarning($"[GachaManager] : 뽑기권이 부족합니다 (보유 {CurrencyManager.Instance.GetAmount(ticketType)} / 필요 {count})");
+            return false;
+        }
+
+        return true;
+    }
+
+    //1회 뽑기 - 천장 확인 후 일반 뽑기
     private GachaResult RollOnce(GachaType gachaType)
     {
-        CardGrade grade = DecideGrade(gachaType);
-        int cardId = PickCardFromPool(gachaType, grade);
-
-        bool isPity = IncrementAndCheckPity(gachaType);
-
-        if (isPity)
+        if (IsPityReached(gachaType))
         {
             int confirmedId = PickTeamConfirmedCard(gachaType);
+
+            //확정 카드를 실제로 받았을 때만 천장을 소모한다
             if (confirmedId != -1)
             {
-                cardId = confirmedId;
-                grade = CardGrade.Star5;
+                GetPityCounter(gachaType) = 0;
+                return BuildResult(confirmedId, CardGrade.Star5);
             }
+
+            Debug.LogWarning($"[GachaManager] : 천장 확정 카드를 찾지 못했습니다 ({gachaType}). 천장을 유지합니다");
         }
+
+        CardGrade grade = DecideGrade(gachaType);
+        int cardId = PickCardFromPool(gachaType, grade);
 
         if (cardId == -1)
             return null;
 
-        CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardId);
-        CardType cardType = masterData.CardType;
+        if (!IsPityReached(gachaType))
+            GetPityCounter(gachaType)++;
 
-        return new GachaResult(cardId, grade, cardType);
+        return BuildResult(cardId, grade);
     }
 
+    //10연 천장 - 4성 이상이 하나도 없으면 마지막 결과를 교체
+    private void ApplyTenRollPity(GachaType gachaType, List<GachaResult> gachaResults)
+    {
+        foreach (GachaResult result in gachaResults)
+        {
+            if (result.CardGrade >= CardGrade.Star4)
+                return;
+        }
+
+        bool isNormal = gachaType == GachaType.Normal;
+        float star4 = isNormal ? _grade4ProbabilityNor : _grade4ProbabilitySig;
+        float star5 = isNormal ? _grade5ProbabilityNor : _grade5ProbabilitySig;
+
+        float star4Ratio = star4 / (star4 + star5);
+        CardGrade forcedGrade = Random.value < star4Ratio ? CardGrade.Star4 : CardGrade.Star5;
+
+        int forcedId = PickCardFromPool(gachaType, forcedGrade);
+
+        if (forcedId == -1)
+            return;
+
+        gachaResults[gachaResults.Count - 1] = BuildResult(forcedId, forcedGrade);
+    }
+
+    //카드 id로 마스터 데이터를 찾아 뽑기 결과 생성
+    private GachaResult BuildResult(int cardId, CardGrade grade)
+    {
+        CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardId);
+        return new GachaResult(cardId, grade, masterData.CardType);
+    }
+
+    //뽑기 종류에 맞는 천장 카운터를 참조로 반환
+    private ref int GetPityCounter(GachaType gachaType)
+    {
+        if (gachaType == GachaType.Normal)
+            return ref _normalPityCount;
+
+        return ref _signaturePityCount;
+    }
+
+    //이번 뽑기가 천장 회차인지 확인 (카운터는 직전까지의 횟수)
+    private bool IsPityReached(GachaType gachaType)
+    {
+        return GetPityCounter(gachaType) + 1 >= _pityLimit;
+    }
+
+    //천장 시 자팀 5성 확정 카드 id를 반환
     private int PickTeamConfirmedCard(GachaType gachaType)
     {
         string teamName = PlayerDataManager.Instance.PlayerTeamName;
-        CardType targetType;
-        CardGrade targetGrade;
 
         if (string.IsNullOrEmpty(teamName))
         {
-            Debug.LogWarning("[GachaManager] 플레이어 팀 이름이 설정되지 않았습니다.");
+            Debug.LogWarning("[GachaManager] : 플레이어 팀 이름이 설정되지 않았습니다");
             return -1;
         }
 
-        //일반 뽑기인 경우 천장 시 자팀 노말 5성 확정
-        if (gachaType == GachaType.Normal)
-        {
-            targetGrade = CardGrade.Star5;
-            targetType = CardType.Normal;
-        }
-        else
-        {
-            targetGrade = CardGrade.Star5;
-            targetType = CardType.Signature;
-        }
+        CardType targetType = gachaType == GachaType.Normal ? CardType.Normal : CardType.Signature;
 
-        List<int> pool = new List<int>();
         CardDataManager dataManager = CardDataManager.Instance;
-        
-        foreach(HitterMasterData hitter in dataManager.GetAllHitters())
+        List<int> teamPool = new List<int>();
+
+        foreach (int cardId in GetCardPool(CardGrade.Star5, targetType))
         {
-            if (hitter.TeamName == teamName && hitter.CardGrade == targetGrade && hitter.CardType == targetType)
-            {
-                pool.Add(hitter.CardId);
-            }
-        }
-        foreach (PitcherMasterData pitcher in dataManager.GetAllPitchers())
-        {
-            if (pitcher.TeamName == teamName && pitcher.CardGrade == targetGrade && pitcher.CardType == targetType)
-            {
-                pool.Add(pitcher.CardId);
-            }
+            if (dataManager.GetCardMasterData(cardId).TeamName == teamName)
+                teamPool.Add(cardId);
         }
 
-        //리스트가 비었음을 방지
-        if (pool.Count == 0)
+        if (teamPool.Count == 0)
         {
-            Debug.LogWarning("[GachaManager] : 현재 가챠 리스트가 비어있습니다.");
+            Debug.LogWarning($"[GachaManager] : {teamName}의 {targetType} 5성 카드가 없습니다");
             return -1;
         }
 
-        //랜덤으로 리스트에서 하나 선택
-        return pool[Random.Range(0, pool.Count)];
+        return teamPool[Random.Range(0, teamPool.Count)];
     }
 
     //확률 기반으로 등급 결정
     private CardGrade DecideGrade(GachaType gachaType)
     {
-        //Random.value(0.0 ~ 1.0)로 뽑은 난수를 누적 확률 구간과 비교해서 등급 결정
         float roll = Random.value;
 
         if (gachaType == GachaType.Normal)
         {
-            //일반 뽑기 (3성 ~ 5성)
             if (roll < _grade3ProbabilityNor)
                 return CardGrade.Star3;
             else if (roll < _grade3ProbabilityNor + _grade4ProbabilityNor)
@@ -286,7 +268,6 @@ public class GachaManager : MonoBehaviour
         }
         else
         {
-            //시그니쳐 뽑기 (4성 ~ 5성)
             if (roll < _grade4ProbabilitySig)
                 return CardGrade.Star4;
             else
@@ -298,75 +279,53 @@ public class GachaManager : MonoBehaviour
     private int PickCardFromPool(GachaType gachaType, CardGrade grade)
     {
         CardType targetType = CardType.Normal;
-        //일반 뽑기인 경우
+
         if (gachaType == GachaType.Signature && grade == CardGrade.Star5)
-        {
-            targetType = Random.value < _gradeSigProbabilitySig ? CardType.Signature : CardType.Normal;
-        }
+            targetType = Random.value < _signatureChanceOnStar5 ? CardType.Signature : CardType.Normal;
 
-        CardDataManager dataManager = CardDataManager.Instance;
-        
-        //조건에 맞는 카드 ID 목록을 담을 리스트
-        List<int> pool = new List<int>();
+        List<int> pool = GetCardPool(grade, targetType);
 
-        //전체 타자 순회하며 조건에 맞는 카드만 리스트에 담기
-        foreach(HitterMasterData hitter in dataManager.GetAllHitters())
-        {
-            if (hitter.CardGrade == grade && hitter.CardType == targetType)
-                pool.Add(hitter.CardId);
-        }
-
-        //전체 투수 순회하며 조건에 맞는 카드만 리스트에 담기
-        foreach(PitcherMasterData pitcher in dataManager.GetAllPitchers())
-        {
-            if (pitcher.CardGrade == grade && pitcher.CardType == targetType)
-                pool.Add(pitcher.CardId);
-        }
-
-        //리스트가 비었음을 방지
         if (pool.Count == 0)
         {
-            Debug.LogWarning("[GachaManager] : 현재 가챠 리스트가 비어있습니다.");
+            Debug.LogWarning($"[GachaManager] : {grade} {targetType} 카드 풀이 비어 있습니다");
             return -1;
         }
 
-        //랜덤으로 리스트에서 하나 선택
         return pool[Random.Range(0, pool.Count)];
     }
 
-    //뽑기 카운터 관리
-    private bool IncrementAndCheckPity(GachaType gachaType)
+    //등급·카드종류 조합별 카드 id 풀 반환 (없으면 생성 후 캐시)
+    private List<int> GetCardPool(CardGrade grade, CardType cardType)
     {
-        //뽑기 천장 카운터를 1 올리기
-        if (gachaType == GachaType.Normal)
-        {
-            _normalPityCount++;
+        if (_cardPools.TryGetValue((grade, cardType), out List<int> cached))
+            return cached;
 
-            //천장에 도달하면 true반환, 카운터 리셋
-            if (_normalPityCount >= PityLimit)
-            {
-                _normalPityCount = 0;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-        else
-        {
-            _signaturePityCount++;
+        CardDataManager dataManager = CardDataManager.Instance;
+        List<int> pool = new List<int>();
 
-            //천장에 도달하면 true반환, 카운터 리셋
-            if (_signaturePityCount >= PityLimit)
-            {
-                _signaturePityCount = 0;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+        foreach (HitterMasterData hitter in dataManager.GetAllHitters())
+        {
+            if (hitter.CardGrade == grade && hitter.CardType == cardType)
+                pool.Add(hitter.CardId);
         }
+
+        foreach (PitcherMasterData pitcher in dataManager.GetAllPitchers())
+        {
+            if (pitcher.CardGrade == grade && pitcher.CardType == cardType)
+                pool.Add(pitcher.CardId);
+        }
+
+        //빈 풀은 캐시하지 않는다 (마스터 데이터 로드 전 호출 대비)
+        if (pool.Count > 0)
+            _cardPools[(grade, cardType)] = pool;
+
+        return pool;
+    }
+
+    //등급 확률 합이 1이 아니면 경고
+    private static void WarnIfProbabilitySumInvalid(string label, float sum)
+    {
+        if (Mathf.Abs(sum - 1f) > 0.0001f)
+            Debug.LogWarning($"[GachaManager] : {label} 뽑기 확률 합이 {sum:F3}입니다. 1이 되어야 인스펙터 값과 실제 확률이 일치합니다");
     }
 }

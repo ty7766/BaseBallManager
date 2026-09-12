@@ -4,7 +4,7 @@
 /// </summary>
 public class GachaResult
 {
-    public int          CardId  { get; }
+    public int          CardId      { get; }
     public CardGrade    CardGrade   { get; }
     public CardType     CardType    { get; }
 
