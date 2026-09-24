@@ -91,8 +91,6 @@ public class PlayerSaveService
             return false;
         }
 
-        //① 팀·해금 ② 재화 ③ 보유 카드 ④ 천장 ⑤ 라인업 순서.
-        //라인업 복원은 카드가 인벤토리에 있어야 검증을 통과하므로 반드시 ③ 뒤에 와야 한다
         PlayerDataManager.Instance.Restore(saveData.PlayerTeamName,
             (LeagueTier)saveData.HighestUnlockedTier, saveData.TutorialCompleted);
 
@@ -105,7 +103,6 @@ public class PlayerSaveService
             cards.Add(ToCardInstance(cardData));
         }
 
-        //복원 실패를 삼키면 인벤이 빈 채로 라인업까지 복원돼 "이어하기 성공"으로 보고된다
         if (!InventoryManager.Instance.Restore(cards, saveData.NextInstanceId, saveData.MaxCapacity))
             return false;
 
@@ -122,7 +119,7 @@ public class PlayerSaveService
         return _storage.Delete(SaveKey);
     }
 
-    //필요한 매니저가 전부 씬에 있는지
+    //필요한 매니저가 전부 씬에 있는지 확인
     private static bool AreManagersReady()
     {
         if (PlayerDataManager.Instance == null || InventoryManager.Instance == null
@@ -170,7 +167,6 @@ public class PlayerSaveService
             types[i] = (CurrencyType)saveData.CurrencyTypes[i];
         }
 
-        //길이 불일치는 CurrencyManager가 걸러낸다
         CurrencyManager.Instance.Restore(types, saveData.CurrencyAmounts);
     }
 
