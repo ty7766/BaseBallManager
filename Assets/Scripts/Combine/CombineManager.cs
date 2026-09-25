@@ -124,18 +124,13 @@ public class CombineManager : SingletonBehaviour<CombineManager>
 
         int resultCardId = _candidateBuffer[Random.Range(0, _candidateBuffer.Count)];
 
-        for (int i = 0; i < materialInstanceIds.Count; i++)
-        {
-            if (!InventoryManager.Instance.RemoveCard(materialInstanceIds[i]))
-            {
-                Debug.LogError($"[CombineManager] : 재료 소멸에 실패했습니다 (instanceId {materialInstanceIds[i]}). 재료 {i}장이 이미 사라진 상태입니다");
-                return null;
-            }
-        }
+        //전부 검사 후 전부 제거한다. 순차 제거는 중간 실패 시 재료가 일부만 사라진다
+        if (!InventoryManager.Instance.RemoveCards(materialInstanceIds))
+            return null;
 
         int resultInstanceId = InventoryManager.Instance.AddCard(resultCardId);
 
-        if (resultInstanceId == -1)
+        if (resultInstanceId == InventoryManager.InvalidInstanceId)
         {
             Debug.LogError($"[CombineManager] : 결과 카드 지급에 실패했습니다 (cardId {resultCardId}). 재료 {_materialCount}장이 소멸했습니다");
             return null;

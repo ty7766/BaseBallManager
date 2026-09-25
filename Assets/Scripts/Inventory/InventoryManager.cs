@@ -6,6 +6,11 @@ using System.Collections.Generic;
 public class InventoryManager : SingletonBehaviour<InventoryManager>
 {
     /// <summary>
+    /// 카드 추가에 실패했을 때 돌려주는 instanceId
+    /// </summary>
+    public const int InvalidInstanceId = -1;
+
+    /// <summary>
     /// 프로퍼티
     /// </summary>
     public int Count => _cards.Count;
@@ -36,7 +41,7 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         if (IsFull)
         {
             Debug.LogWarning($"[InventoryManager] : 보유 한도 {MaxCapacity} 칸이 가득 찼습니다");
-            return -1;
+            return InvalidInstanceId;
         }
 
         CardInstance cardInstance = new CardInstance(_nextInstanceId, cardId);
@@ -57,6 +62,41 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
             Debug.LogWarning($"[InventoryManager] : 제거하려는 카드가 존재하지 않습니다 : {instanceId}");
             return false;
         }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 여러 장을 한 번에 제거한다. 하나라도 없으면 아무것도 제거하지 않는다
+    /// </summary>
+    public bool RemoveCards(IReadOnlyList<int> instanceIds)
+    {
+        if (instanceIds == null || instanceIds.Count == 0)
+        {
+            Debug.LogWarning("[InventoryManager] : 제거할 카드 목록이 비어 있습니다");
+            return false;
+        }
+
+        for (int i = 0; i < instanceIds.Count; i++)
+        {
+            if (!_cards.ContainsKey(instanceIds[i]))
+            {
+                Debug.LogError($"[InventoryManager] : 제거하려는 카드가 존재하지 않습니다 : {instanceIds[i]}");
+                return false;
+            }
+
+            for (int j = i + 1; j < instanceIds.Count; j++)
+            {
+                if (instanceIds[i] == instanceIds[j])
+                {
+                    Debug.LogError($"[InventoryManager] : 제거 목록에 같은 카드가 두 번 들어 있습니다 : {instanceIds[i]}");
+                    return false;
+                }
+            }
+        }
+
+        foreach (int instanceId in instanceIds)
+            _cards.Remove(instanceId);
 
         return true;
     }

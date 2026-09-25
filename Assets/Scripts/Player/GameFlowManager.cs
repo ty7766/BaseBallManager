@@ -143,6 +143,7 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
             return;
         }
 
-        InventoryManager.Instance.AddCard(startingCardId);
+        if (InventoryManager.Instance.AddCard(startingCardId) == InventoryManager.InvalidInstanceId)
+            Debug.LogError($"[GameFlowManager]: '{teamName}' 팀의 시작 카드를 지급하지 못했습니다 (cardId {startingCardId})");
     }
 }

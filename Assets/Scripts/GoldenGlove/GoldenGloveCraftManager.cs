@@ -103,13 +103,20 @@ public class GoldenGloveCraftManager : SingletonBehaviour<GoldenGloveCraftManage
         int cardId = _candidateBuffer[Random.Range(0, _candidateBuffer.Count)];
         int instanceId = InventoryManager.Instance.AddCard(cardId);
 
-        if (instanceId == -1)
+        if (instanceId == InventoryManager.InvalidInstanceId)
         {
             Debug.LogError($"[GoldenGloveCraftManager] : 재화를 차감했으나 카드 지급에 실패했습니다 (cardId {cardId})");
             return null;
         }
 
         CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardId);
+
+        //후보는 마스터 풀에서 뽑았으므로 여기서 실패하면 카드 데이터가 도중에 바뀐 것이다
+        if (masterData == null)
+        {
+            Debug.LogError($"[GoldenGloveCraftManager] : 지급한 카드의 마스터 데이터를 찾지 못했습니다 (cardId {cardId})");
+            return null;
+        }
 
         return new GoldenGloveCraftResult(cardId, instanceId, masterData.Name, masterData.TeamName);
     }

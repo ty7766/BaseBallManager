@@ -40,13 +40,16 @@ public class DismantleManager : SingletonBehaviour<DismantleManager>
     /// </summary>
     public bool CanDismantle(int instanceId)
     {
-        CardInstance card = InventoryManager.Instance.GetCard(instanceId);
+        return CanDismantle(InventoryManager.Instance.GetCard(instanceId));
+    }
 
+    //조회를 이미 끝낸 호출부용
+    private static bool CanDismantle(CardInstance card)
+    {
         if (card == null)
-        {
-            Debug.LogWarning($"[DismantleManager] : 분해하려는 카드가 없습니다 (instanceId {instanceId})");
             return false;
-        }
+
+        int instanceId = card.InstanceId;
 
         if (card.IsLocked)
         {
@@ -76,7 +79,10 @@ public class DismantleManager : SingletonBehaviour<DismantleManager>
         CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(card.CardId);
 
         if (masterData == null)
+        {
+            Debug.LogError($"[DismantleManager] : 마스터 데이터를 찾지 못했습니다 (cardId {card.CardId})");
             return null;
+        }
 
         return new DismantleResult(CalculatePoint(masterData, card), 0, GetGoldenGlovePoint(masterData));
     }
@@ -86,7 +92,9 @@ public class DismantleManager : SingletonBehaviour<DismantleManager>
     /// </summary>
     public DismantleResult Dismantle(int instanceId)
     {
-        if (!CanDismantle(instanceId))
+        CardInstance card = InventoryManager.Instance.GetCard(instanceId);
+
+        if (!CanDismantle(card))
             return null;
 
         if (CurrencyManager.Instance == null)
@@ -95,7 +103,6 @@ public class DismantleManager : SingletonBehaviour<DismantleManager>
             return null;
         }
 
-        CardInstance card = InventoryManager.Instance.GetCard(instanceId);
         CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(card.CardId);
 
         if (masterData == null)
@@ -130,7 +137,7 @@ public class DismantleManager : SingletonBehaviour<DismantleManager>
             CardGrade.Star3 => _basePointStar3,
             CardGrade.Star4 => _basePointStar4,
             CardGrade.Star5 => _basePointStar5,
-            _ => _basePointStar3
+            _ => UnknownGradeBasePoint(masterData)
         };
 
         float typeMultiplier = masterData.CardType switch
@@ -143,6 +150,14 @@ public class DismantleManager : SingletonBehaviour<DismantleManager>
         int growthPoint = card.EnhanceLevel * _pointPerEnhanceLevel + (card.TrainLevel - 1) * _pointPerTrainLevel;
 
         return Mathf.RoundToInt(basePoint * typeMultiplier) + growthPoint;
+    }
+
+    //등급을 모르는 카드는 데이터 이상이다. 유저가 손해 보지 않도록 3성 기준으로 준다
+    private int UnknownGradeBasePoint(CardMasterData masterData)
+    {
+        Debug.LogError($"[DismantleManager] : 등급을 알 수 없는 카드입니다 (cardId {masterData.CardId} / {masterData.CardGrade})");
+
+        return _basePointStar3;
     }
 
     //골든글러브 카드만 골글 포인트를 준다 (기획서 9.1)
