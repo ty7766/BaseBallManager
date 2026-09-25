@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -202,7 +202,8 @@ public class LeagueManager : MonoBehaviour
         if (!AiRosterManager.Instance.BuildRosters(tier))
             return false;
 
-        PlayerDataManager.Instance.SetPlayerTeam(saveData.PlayerTeamName);
+        if (!PlayerDataManager.Instance.SetPlayerTeam(saveData.PlayerTeamName))
+            return false;
 
         LeagueGameContextFactory contextFactory =
             new LeagueGameContextFactory(AiRosterManager.Instance.Rosters, saveData.PlayerTeamName);
@@ -281,7 +282,8 @@ public class LeagueManager : MonoBehaviour
         if (!AiRosterManager.Instance.BuildRosters(season.Tier))
             return false;
 
-        PlayerDataManager.Instance.SetPlayerTeam(season.PlayerTeamName);
+        if (!PlayerDataManager.Instance.SetPlayerTeam(season.PlayerTeamName))
+            return false;
 
         _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold);
         _currentTier = season.Tier;
