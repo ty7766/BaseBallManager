@@ -45,7 +45,9 @@ public class GameSimulator
         return session.BuildResult();
     }
 
-    //타석 1회 처리 (도루 판정 -> 타석 결과 -> 진루 -> 투수 교체 -> 인터럽트)
+    /// <summary>
+    /// 타석 1회 처리 (도루 판정 -> 타석 결과 -> 진루 -> 투수 교체 -> 인터럽트)
+    /// </summary>
     internal void SimulateAtBat(GameState gameState, SimulationContext context,
         List<SimulationBatterLog> logs, List<SimulationStealLog> stealLogs)
     {

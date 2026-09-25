@@ -5,7 +5,9 @@
 /// </summary>
 public class BoxScore
 {
-    //이닝 순서대로. 연장전이면 9칸을 넘어간다
+    /// <summary>
+    /// 이닝 순서대로. 연장전이면 9칸을 넘어간다
+    /// </summary>
     public IReadOnlyList<InningScore> Innings { get; }
 
     public int AwayRuns { get; }        //R
@@ -15,11 +17,15 @@ public class BoxScore
     public int AwayErrors { get; }      //E - 그 팀이 수비 중 저지른 실책
     public int HomeErrors { get; }
 
-    //타순 등장 순서. 대타로 들어온 선수는 뒤에 붙는다
+    /// <summary>
+    /// 타순 등장 순서. 대타로 들어온 선수는 뒤에 붙는다
+    /// </summary>
     public IReadOnlyList<HitterGameStats> AwayHitters { get; }
     public IReadOnlyList<HitterGameStats> HomeHitters { get; }
 
-    //등판 순서
+    /// <summary>
+    /// 등판 순서
+    /// </summary>
     public IReadOnlyList<PitcherGameStats> AwayPitchers { get; }
     public IReadOnlyList<PitcherGameStats> HomePitchers { get; }
 

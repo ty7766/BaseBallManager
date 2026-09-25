@@ -37,7 +37,9 @@ public class LeagueStandings
         }
     }
 
-    //세이브 복원 전용 생성자 - 이미 값이 채워진 성적을 그대로 담는다
+    /// <summary>
+    /// 세이브 복원 전용 생성자 - 이미 값이 채워진 성적을 그대로 담는다
+    /// </summary>
     public LeagueStandings(IReadOnlyList<TeamRecord> records)
     {
         _recordLookup = new Dictionary<string, TeamRecord>(records.Count);
@@ -62,13 +64,14 @@ public class LeagueStandings
         }
     }
 
-    //경기 결과 1건을 양 팀 성적에 반영
+    /// <summary>
+    /// 경기 결과 1건을 양 팀 성적에 반영
+    /// </summary>
     public bool ApplyGameResult(LeagueGame game, int homeScore, int awayScore)
     {
         TeamRecord homeRecord = GetRecord(game.HomeTeamName);
         TeamRecord awayRecord = GetRecord(game.AwayTeamName);
 
-        //둘 중 하나라도 없으면 한쪽만 반영되어 순위표가 어긋나므로 아무것도 반영하지 않음
         if (homeRecord == null || awayRecord == null)
             return false;
 
@@ -78,7 +81,9 @@ public class LeagueStandings
         return true;
     }
 
-    //팀명으로 성적 조회
+    /// <summary>
+    /// 팀명으로 성적 조회
+    /// </summary>
     public TeamRecord GetRecord(string teamName)
     {
         if (_recordLookup.TryGetValue(teamName, out TeamRecord record))
@@ -88,7 +93,9 @@ public class LeagueStandings
         return null;
     }
 
-    //순위 계산 (기획서 7.7 - 승률 → 득실차 → 상대전적)
+    /// <summary>
+    /// 순위 계산 (기획서 7.7 - 승률 → 득실차 → 상대전적)
+    /// </summary>
     public LeagueStandingRow[] GetRanking()
     {
         List<TeamRecord> sorted = new List<TeamRecord>(_records);
@@ -136,7 +143,6 @@ public class LeagueStandings
                 end++;
             }
 
-            //동률이 2팀 이상일 때만 상대전적을 따짐
             if (end - start > 1)
             {
                 List<TeamRecord> tiedGroup = sorted.GetRange(start, end - start);

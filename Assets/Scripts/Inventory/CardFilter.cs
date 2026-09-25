@@ -9,7 +9,9 @@ public class CardFilter
     public CardType         Type        { get; set; }
     public string           TeamName    { get; set; }
 
-    //이 카드가 모든 조건을 통과하는지 판정. 비어 있는 조건(None / null)은 검사하지 않는다
+    /// <summary>
+    /// 이 카드가 모든 조건을 통과하는지 판정. 비어 있는 조건(None / null)은 검사하지 않는다
+    /// </summary>
     public bool Matches(CardMasterData cardMasterData)
     {
         if (!MatchesPlayerType(cardMasterData))

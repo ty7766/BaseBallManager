@@ -4,7 +4,6 @@ using UnityEngine;
 /// <summary>
 /// 리그 경기 1건을 시뮬 입력(SimulationContext)으로 변환
 /// </summary>
-/// <remarks>정규시즌과 포스트시즌이 같은 규칙으로 컨텍스트를 만들도록 한 곳에 모음</remarks>
 public class LeagueGameContextFactory
 {
     private readonly IReadOnlyDictionary<string, AiTeamRoster> _rosters;
@@ -16,13 +15,17 @@ public class LeagueGameContextFactory
         _playerTeamName = playerTeamName;
     }
 
-    //경기가 플레이어 팀 경기인지
+    /// <summary>
+    /// 경기가 플레이어 팀 경기인지
+    /// </summary>
     public bool IsPlayerGame(LeagueGame game)
     {
         return game.Contains(_playerTeamName);
     }
 
-    //경기 1건의 시뮬 입력 구성. 실패 시 null
+    /// <summary>
+    /// 경기 1건의 시뮬 입력 구성. 실패 시 null
+    /// </summary>
     public SimulationContext Create(LeagueGame game, int homeRotationIndex, int awayRotationIndex)
     {
         if (IsPlayerGame(game))

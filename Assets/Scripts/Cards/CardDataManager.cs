@@ -15,19 +15,25 @@ public class CardDataManager : SingletonBehaviour<CardDataManager>
         LoadCardMasterData();
     }
 
-    //전체 타자 목록 반환
+    /// <summary>
+    /// 전체 타자 목록 반환
+    /// </summary>
     public Dictionary<int, HitterMasterData>.ValueCollection GetAllHitters()
     {
         return _hitters.Values;
     }
 
-    //전체 투수 목록 반환
+    /// <summary>
+    /// 전체 투수 목록 반환
+    /// </summary>
     public Dictionary<int, PitcherMasterData>.ValueCollection GetAllPitchers()
     {
         return _pitchers.Values;
     }
 
-    //cardId로 타자 검색
+    /// <summary>
+    /// cardId로 타자 검색
+    /// </summary>
     public HitterMasterData GetHitter(int cardId)
     {
         if (_hitters.TryGetValue(cardId, out HitterMasterData data))
@@ -37,7 +43,9 @@ public class CardDataManager : SingletonBehaviour<CardDataManager>
         return null;
     }
 
-    //cardId로 투수 검색
+    /// <summary>
+    /// cardId로 투수 검색
+    /// </summary>
     public PitcherMasterData GetPitcher(int cardId)
     {
         if (_pitchers.TryGetValue(cardId, out PitcherMasterData data))
@@ -47,7 +55,9 @@ public class CardDataManager : SingletonBehaviour<CardDataManager>
         return null;
     }
 
-    //Card 데이터를 반환
+    /// <summary>
+    /// Card 데이터를 반환
+    /// </summary>
     public CardMasterData GetCardMasterData(int cardId)
     {
         if (_hitters.TryGetValue(cardId, out HitterMasterData hdata))

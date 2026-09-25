@@ -5,11 +5,6 @@ using UnityEngine;
 /// <summary>
 /// 플레이어 진행 데이터 저장·복원 (기획서 10장)
 /// </summary>
-/// <remarks>
-/// 리그 진행도는 LeagueSaveService가 따로 담당한다.
-/// 두 세이브를 나눈 이유는 수명이 다르기 때문이다 - 리그는 재도전 시 버려지지만(기획서 7.6)
-/// 카드·재화·해금은 리그를 넘어 계속 유지된다.
-/// </remarks>
 public class PlayerSaveService
 {
     public const string SaveKey = "player";
@@ -21,13 +16,17 @@ public class PlayerSaveService
         _storage = storage;
     }
 
-    //저장된 플레이어 데이터가 있는지 (이어하기 / 새 게임 분기 판단용)
+    /// <summary>
+    /// 저장된 플레이어 데이터가 있는지 (이어하기 / 새 게임 분기 판단용)
+    /// </summary>
     public bool HasSave()
     {
         return _storage.Exists(SaveKey);
     }
 
-    //현재 진행 상황 저장
+    /// <summary>
+    /// 현재 진행 상황 저장
+    /// </summary>
     public bool Save()
     {
         if (!AreManagersReady())
@@ -53,7 +52,6 @@ public class PlayerSaveService
 
         WriteCurrencies(saveData);
 
-        //ValueCollection은 인덱서가 없어 순회 중 직접 위치를 센다
         int cardIndex = 0;
 
         foreach (CardInstance card in cards)
@@ -65,7 +63,9 @@ public class PlayerSaveService
         return _storage.Save(SaveKey, JsonUtility.ToJson(saveData, true));
     }
 
-    //저장된 진행 상황을 각 매니저에 되살린다
+    /// <summary>
+    /// 저장된 진행 상황을 각 매니저에 되살린다
+    /// </summary>
     public bool Load()
     {
         if (!AreManagersReady())
@@ -73,7 +73,6 @@ public class PlayerSaveService
 
         string json = _storage.Load(SaveKey);
 
-        //세이브가 없는 것은 정상 상태(첫 실행)
         if (string.IsNullOrEmpty(json))
             return false;
 
@@ -114,7 +113,9 @@ public class PlayerSaveService
         return true;
     }
 
-    //세이브 삭제 (처음부터 다시 시작)
+    /// <summary>
+    /// 세이브 삭제 (처음부터 다시 시작)
+    /// </summary>
     public bool Delete()
     {
         return _storage.Delete(SaveKey);

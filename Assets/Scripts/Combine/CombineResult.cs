@@ -9,7 +9,9 @@ public class CombineResult
     public CardGrade BaseGrade { get; }   //승급 판정의 기준이 된 등급 (재료 3장 중 무작위 1장)
     public CardGrade Grade { get; }       //최종 결과 등급
 
-    //기준 등급보다 올라갔는지. 결과 연출(승급 이펙트)용
+    /// <summary>
+    /// 기준 등급보다 올라갔는지. 결과 연출(승급 이펙트)용
+    /// </summary>
     public bool IsUpgraded => Grade > BaseGrade;
 
     public CombineResult(int instanceId, int cardId, CardType cardType, CardGrade baseGrade, CardGrade grade)

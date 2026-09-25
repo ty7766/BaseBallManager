@@ -4,11 +4,6 @@ using UnityEngine;
 /// <summary>
 /// 리그 정규시즌 진행도 저장·복원 (기획서 7.6 · 10장)
 /// </summary>
-/// <remarks>
-/// 저장하는 것은 진행도(누적 성적 + 며칠째)뿐이다.
-/// 일정은 같은 입력으로 다시 생성하면 똑같이 나오므로 저장하지 않는다.
-/// 개별 경기는 기획서 7.6에 따라 저장하지 않는다(경기 도중 나가면 그 경기는 처음부터).
-/// </remarks>
 public class LeagueSaveService
 {
     public const string SaveKey = "league";
@@ -20,13 +15,17 @@ public class LeagueSaveService
         _storage = storage;
     }
 
-    //저장된 리그가 있는지
+    /// <summary>
+    /// 저장된 리그가 있는지
+    /// </summary>
     public bool HasSave()
     {
         return _storage.Exists(SaveKey);
     }
 
-    //정규시즌 진행도 저장
+    /// <summary>
+    /// 정규시즌 진행도 저장
+    /// </summary>
     public bool Save(LeagueSeason season)
     {
         if (season == null)
@@ -57,12 +56,13 @@ public class LeagueSaveService
         return _storage.Save(SaveKey, JsonUtility.ToJson(saveData, true));
     }
 
-    //저장된 정규시즌 복원. 없거나 깨졌으면 null
+    /// <summary>
+    /// 저장된 정규시즌 복원. 없거나 깨졌으면 null
+    /// </summary>
     public LeagueSeason Load()
     {
         string json = _storage.Load(SaveKey);
 
-        //세이브가 없는 것은 정상 상태(첫 실행)
         if (string.IsNullOrEmpty(json))
             return null;
 
@@ -80,8 +80,6 @@ public class LeagueSaveService
             return null;
         }
 
-        //일정 재생성 - 티어 테이블이 아니라 저장 당시 값을 쓴다.
-        //테이블을 도중에 수정해도 진행 중인 시즌의 일정이 바뀌지 않도록 하기 위함
         List<string> opponentNames = new List<string>(saveData.TeamNames.Length - 1);
 
         for (int i = 1; i < saveData.TeamNames.Length; i++)
@@ -93,7 +91,6 @@ public class LeagueSaveService
             (LeagueTier)saveData.Tier, saveData.PlayerTeamName, opponentNames,
             saveData.GameCount, saveData.SeriesLength);
 
-        //실패 원인은 생성기가 로그로 남김
         if (schedule == null)
             return null;
 
@@ -113,7 +110,9 @@ public class LeagueSaveService
         return new LeagueSeason(schedule, new LeagueStandings(records), saveData.CurrentDayIndex, saveData.RewardsGranted);
     }
 
-    //저장된 리그 삭제 (재도전 시작 시)
+    /// <summary>
+    /// 저장된 리그 삭제 (재도전 시작 시)
+    /// </summary>
     public bool Delete()
     {
         return _storage.Delete(SaveKey);

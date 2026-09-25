@@ -18,7 +18,9 @@ public class LocalFileStorage : ISaveStorage
         _rootPath = Path.Combine(Application.persistentDataPath, SaveFolderName);
     }
 
-    //테스트·도구에서 저장 위치를 바꿔야 할 때 사용
+    /// <summary>
+    /// 테스트·도구에서 저장 위치를 바꿔야 할 때 사용
+    /// </summary>
     public LocalFileStorage(string rootPath)
     {
         _rootPath = rootPath;
@@ -41,14 +43,12 @@ public class LocalFileStorage : ISaveStorage
         {
             Directory.CreateDirectory(_rootPath);
 
-            //한글이 깨지지 않도록 UTF-8로 명시해 저장
             File.WriteAllText(GetFilePath(key), json, Encoding.UTF8);
 
             return true;
         }
         catch (Exception e)
         {
-            //디스크 용량 부족·권한 문제 등은 게임을 멈출 사유가 아니라 알리고 넘어감
             Debug.LogError($"[LocalFileStorage]: '{key}' 저장 실패 - {e.Message}");
             return false;
         }
@@ -58,7 +58,6 @@ public class LocalFileStorage : ISaveStorage
     {
         string filePath = GetFilePath(key);
 
-        //세이브가 없는 것은 정상 상태(첫 실행)라 경고를 남기지 않음
         if (!File.Exists(filePath))
             return null;
 

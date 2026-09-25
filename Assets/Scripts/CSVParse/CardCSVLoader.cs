@@ -36,7 +36,6 @@ public class CardCSVLoader
         Dictionary<string, int> headers = new Dictionary<string, int>();
         string[] columns = headerLine.Split(',');
 
-        //파싱한 정보들을 딕셔너리에 저장
         for (int i = 0; i < columns.Length; i++)
             headers[columns[i].Trim()] = i;
 
@@ -79,7 +78,9 @@ public class CardCSVLoader
     }
 
     
-    //HitterCards.csv를 전체 읽고 파싱하여 리스트에 담아 반환하는 함수
+    /// <summary>
+    /// HitterCards.csv를 전체 읽고 파싱하여 리스트에 담아 반환하는 함수
+    /// </summary>
     public List<HitterMasterData> LoadHitters()
     {
         string[] lines = ReadAllLines("Data/HitterCards");
@@ -108,7 +109,9 @@ public class CardCSVLoader
         return result;
     }
 
-    //PitcherCards.csv를 전체 읽고 파싱하여 리스트에 담아 반환하는 함수
+    /// <summary>
+    /// PitcherCards.csv를 전체 읽고 파싱하여 리스트에 담아 반환하는 함수
+    /// </summary>
     public List<PitcherMasterData> LoadPitchers()
     {
         string[] lines = ReadAllLines("Data/PitcherCards");

@@ -61,7 +61,6 @@ public static class BoxScoreBuilder
                     homeHits++;
             }
 
-            //실책은 저지른 수비팀에 붙는다
             if (log.Outcome == BatterOutcome.Error)
             {
                 if (log.IsTopInning)
@@ -132,7 +131,9 @@ public static class BoxScoreBuilder
             return stats;
         }
 
-        //이미 타석에 선 적 있는 선수에게 득점을 붙인다. 모르는 주자면 false
+        /// <summary>
+        /// 이미 타석에 선 적 있는 선수에게 득점을 붙인다. 모르는 주자면 false
+        /// </summary>
         public bool TryAddRun(int instanceId)
         {
             if (!_hitterLookup.TryGetValue(instanceId, out HitterGameStats stats))
@@ -142,7 +143,9 @@ public static class BoxScoreBuilder
             return true;
         }
 
-        //이미 타석에 선 적 있는 선수에게 도루 기록을 붙인다. 모르는 주자면 false
+        /// <summary>
+        /// 이미 타석에 선 적 있는 선수에게 도루 기록을 붙인다. 모르는 주자면 false
+        /// </summary>
         public bool TryAddStealAttempt(int instanceId, bool isSuccess)
         {
             if (!_hitterLookup.TryGetValue(instanceId, out HitterGameStats stats))

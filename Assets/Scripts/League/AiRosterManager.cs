@@ -33,7 +33,9 @@ public class AiRosterManager : MonoBehaviour
         }
     }
 
-    //티어에 맞는 AI 로스터 전체 생성 (리그 시작 시 1회 호출)
+    /// <summary>
+    /// 티어에 맞는 AI 로스터 전체 생성 (리그 시작 시 1회 호출)
+    /// </summary>
     public bool BuildRosters(LeagueTier tier)
     {
         if (_tierTable == null)
@@ -53,7 +55,6 @@ public class AiRosterManager : MonoBehaviour
         int tierStatBonus = _tierTable.GetStatBonus(tier);
         IReadOnlyList<AiTeamRosterData> teams = rosterSet.Teams;
 
-        //티어를 바꿔 다시 부를 수 있으므로 이전 로스터를 먼저 버림
         _rosters.Clear();
 
         for (int i = 0; i < teams.Count; i++)
@@ -69,7 +70,6 @@ public class AiRosterManager : MonoBehaviour
 
             AiTeamRoster roster = AiRosterBuilder.BuildTeam(teamData, tierStatBonus);
 
-            //편성 실패 - BuildTeam이 이미 원인을 로그로 남겼음
             if (roster == null)
             {
                 _rosters.Clear();
@@ -93,7 +93,9 @@ public class AiRosterManager : MonoBehaviour
         return true;
     }
 
-    //플레이어 팀을 뺀 나머지 팀명 (기획서 7.8 - 나를 제외한 9팀)
+    /// <summary>
+    /// 플레이어 팀을 뺀 나머지 팀명 (기획서 7.8 - 나를 제외한 9팀)
+    /// </summary>
     public List<string> GetOpponentTeamNames(string playerTeamName)
     {
         List<string> opponentNames = new List<string>(_rosters.Count);
@@ -109,7 +111,9 @@ public class AiRosterManager : MonoBehaviour
         return opponentNames;
     }
 
-    //팀명으로 AI 로스터 조회
+    /// <summary>
+    /// 팀명으로 AI 로스터 조회
+    /// </summary>
     public AiTeamRoster GetRoster(string teamName)
     {
         if (_rosters.TryGetValue(teamName, out AiTeamRoster roster))
@@ -119,7 +123,9 @@ public class AiRosterManager : MonoBehaviour
         return null;
     }
 
-    //생성된 AI 팀명 전체 반환 (리그 일정 생성용)
+    /// <summary>
+    /// 생성된 AI 팀명 전체 반환 (리그 일정 생성용)
+    /// </summary>
     public IReadOnlyCollection<string> GetTeamNames()
     {
         return _rosters.Keys;

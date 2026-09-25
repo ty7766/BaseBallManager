@@ -19,7 +19,9 @@ public class HitterGameStats
     public int StolenBases { get; private set; }        //도루 성공 (기획서 8.3.1)
     public int CaughtStealing { get; private set; }     //도루 실패
 
-    //경기 타율. 타수가 0이면 0 (표기는 UI가 .000 형태로)
+    /// <summary>
+    /// 경기 타율. 타수가 0이면 0 (표기는 UI가 .000 형태로)
+    /// </summary>
     public float Average => AtBats == 0 ? 0f : (float)Hits / AtBats;
 
     public HitterGameStats(int instanceId, string name)

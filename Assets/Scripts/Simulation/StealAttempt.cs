@@ -11,7 +11,9 @@ public readonly struct StealAttempt
     public int RunnerInstanceId { get; }
     public string RunnerName { get; }
 
-    //출발 베이스 (1 = 1루에서 2루로 / 2 = 2루에서 3루로). 홈 스틸은 구현하지 않음
+    /// <summary>
+    /// 출발 베이스 (1 = 1루에서 2루로 / 2 = 2루에서 3루로). 홈 스틸은 구현하지 않음
+    /// </summary>
     public int FromBase { get; }
 
     public bool Exists => RunnerInstanceId != GameState.NoRunner;

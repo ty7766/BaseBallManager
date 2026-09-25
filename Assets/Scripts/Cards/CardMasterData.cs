@@ -12,7 +12,9 @@ public abstract class CardMasterData
     public string       Position    { get; private set; }
     public int          OVR         { get; private set; }
 
-    //생성자
+    /// <summary>
+    /// 생성자
+    /// </summary>
     public CardMasterData(int cardId, string name, string teamName, int year, CardType cardType, CardGrade cardGrade, string position, int ovr)
     {
         CardId = cardId;

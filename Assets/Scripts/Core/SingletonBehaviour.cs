@@ -19,6 +19,8 @@ public abstract class SingletonBehaviour<T> : MonoBehaviour where T : SingletonB
         OnSingletonAwake();
     }
 
-    //따로 초기화할 것이 있으면 이것을 override 하여 사용
+    /// <summary>
+    /// 따로 초기화할 것이 있으면 이것을 override 하여 사용
+    /// </summary>
     protected virtual void OnSingletonAwake() { }
 }

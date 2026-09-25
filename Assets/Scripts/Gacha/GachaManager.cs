@@ -8,7 +8,9 @@ using System.Collections.Generic;
 /// </summary>
 public class GachaManager : SingletonBehaviour<GachaManager>
 {
-    //세이브 저장용 (기획서 3장 - 천장 카운터는 세션을 넘어가도 유지)
+    /// <summary>
+    /// 세이브 저장용 (기획서 3장 - 천장 카운터는 세션을 넘어가도 유지)
+    /// </summary>
     public int NormalPityCount => _normalPityCount;
     public int SignaturePityCount => _signaturePityCount;
 
@@ -47,7 +49,9 @@ public class GachaManager : SingletonBehaviour<GachaManager>
             _grade4ProbabilitySig + _grade5ProbabilitySig);
     }
 
-    //1연차 뽑기 (카드 데이터 1개 반환)
+    /// <summary>
+    /// 1연차 뽑기 (카드 데이터 1개 반환)
+    /// </summary>
     public GachaResult Roll1(GachaType gachaType)
     {
         if (!CanRoll(gachaType, 1, out CurrencyType ticketType))
@@ -64,7 +68,9 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         return gachaResult;
     }
 
-    //10연차 뽑기
+    /// <summary>
+    /// 10연차 뽑기
+    /// </summary>
     public List<GachaResult> Roll10(GachaType gachaType)
     {
         if (!CanRoll(gachaType, 10, out CurrencyType ticketType))
@@ -85,7 +91,6 @@ public class GachaManager : SingletonBehaviour<GachaManager>
 
         ApplyTenRollPity(gachaType, gachaResults);
 
-        //실제로 나온 장수만큼만 차감한다 (카드 풀이 비어 결과가 모자란 경우 과금 방지)
         CurrencyManager.Instance.Spend(ticketType, gachaResults.Count);
 
         foreach (GachaResult result in gachaResults)
@@ -96,7 +101,9 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         return gachaResults;
     }
 
-    //세이브 복원용 천장 카운터 주입
+    /// <summary>
+    /// 세이브 복원용 천장 카운터 주입
+    /// </summary>
     public void RestorePityCounts(int normalPityCount, int signaturePityCount)
     {
         if (normalPityCount < 0 || signaturePityCount < 0)
@@ -153,7 +160,6 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         {
             int confirmedId = PickTeamConfirmedCard(gachaType);
 
-            //확정 카드를 실제로 받았을 때만 천장을 소모한다
             if (confirmedId != -1)
             {
                 GetPityCounter(gachaType) = 0;
@@ -315,7 +321,6 @@ public class GachaManager : SingletonBehaviour<GachaManager>
                 pool.Add(pitcher.CardId);
         }
 
-        //빈 풀은 캐시하지 않는다 (마스터 데이터 로드 전 호출 대비)
         if (pool.Count > 0)
             _cardPools[(grade, cardType)] = pool;
 

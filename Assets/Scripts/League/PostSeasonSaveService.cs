@@ -1,14 +1,9 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// 포스트시즌 진행도 저장·복원 (기획서 7.5 · 7.6 · 10장)
 /// </summary>
-/// <remarks>
-/// 정규시즌 세이브(<see cref="LeagueSaveService"/>)와 키를 분리한다.
-/// 수명이 다르기 때문이다 - 포스트시즌은 정규시즌이 끝난 뒤에야 생기고, 재도전 시 먼저 버려진다.
-/// 개별 경기는 저장하지 않는다(기획서 7.6). 경기 도중 나가면 그 경기는 처음부터 다시 한다.
-/// </remarks>
 public class PostSeasonSaveService
 {
     public const string SaveKey = "postseason";
@@ -20,13 +15,17 @@ public class PostSeasonSaveService
         _storage = storage;
     }
 
-    //저장된 포스트시즌이 있는지 (이어하기 버튼 노출 판단용)
+    /// <summary>
+    /// 저장된 포스트시즌이 있는지 (이어하기 버튼 노출 판단용)
+    /// </summary>
     public bool HasSave()
     {
         return _storage.Exists(SaveKey);
     }
 
-    //포스트시즌 진행도 저장
+    /// <summary>
+    /// 포스트시즌 진행도 저장
+    /// </summary>
     public bool Save(PostSeasonRunner postSeason, LeagueTier tier, string playerTeamName)
     {
         if (postSeason == null)
@@ -55,12 +54,13 @@ public class PostSeasonSaveService
         return _storage.Save(SaveKey, JsonUtility.ToJson(saveData, true));
     }
 
-    //저장된 포스트시즌 데이터 읽기. 없거나 깨졌으면 null
+    /// <summary>
+    /// 저장된 포스트시즌 데이터 읽기. 없거나 깨졌으면 null
+    /// </summary>
     public PostSeasonSaveData Load()
     {
         string json = _storage.Load(SaveKey);
 
-        //세이브가 없는 것은 정상 상태(포스트시즌에 아직 진출하지 않음)
         if (string.IsNullOrEmpty(json))
             return null;
 
@@ -75,7 +75,9 @@ public class PostSeasonSaveService
         return saveData;
     }
 
-    //저장된 포스트시즌 삭제 (재도전으로 새 리그를 시작할 때)
+    /// <summary>
+    /// 저장된 포스트시즌 삭제 (재도전으로 새 리그를 시작할 때)
+    /// </summary>
     public bool Delete()
     {
         return _storage.Delete(SaveKey);

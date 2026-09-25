@@ -5,7 +5,9 @@ using System.Collections.Generic;
 /// </summary>
 public class InventoryManager : SingletonBehaviour<InventoryManager>
 {
-    //프로퍼티
+    /// <summary>
+    /// 프로퍼티
+    /// </summary>
     public int Count => _cards.Count;
     public int NextInstanceId => _nextInstanceId;
     public int ExpandUnit => _expandUnit;
@@ -26,7 +28,9 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
     private int _nextInstanceId = 1;
     private readonly Dictionary<int, CardInstance> _cards = new Dictionary<int, CardInstance>();
 
-    //인벤토리에 카드 추가. 발급된 instanceId 반환 (실패 시 -1)
+    /// <summary>
+    /// 인벤토리에 카드 추가. 발급된 instanceId 반환 (실패 시 -1)
+    /// </summary>
     public int AddCard(int cardId)
     {
         if (IsFull)
@@ -37,14 +41,15 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
 
         CardInstance cardInstance = new CardInstance(_nextInstanceId, cardId);
 
-        //_nextInstanceId는 발급 후 증가하므로 키 중복이 생길 수 없다
         _cards.Add(cardInstance.InstanceId, cardInstance);
         _nextInstanceId++;
 
         return cardInstance.InstanceId;
     }
 
-    //인벤토리에서 카드 제거
+    /// <summary>
+    /// 인벤토리에서 카드 제거
+    /// </summary>
     public bool RemoveCard(int instanceId)
     {
         if (!_cards.Remove(instanceId))
@@ -56,7 +61,9 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         return true;
     }
 
-    //카드 잠금
+    /// <summary>
+    /// 카드 잠금
+    /// </summary>
     public bool SetLocked(int instanceId, bool locked)
     {
         CardInstance foundCard = GetCard(instanceId);
@@ -67,7 +74,9 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         return true;
     }
 
-    //인벤토리 확장
+    /// <summary>
+    /// 인벤토리 확장
+    /// </summary>
     public void ExpandCapacity(int amount)
     {
         if (amount <= 0)
@@ -78,7 +87,9 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         _maxCapacity += amount;
     }
 
-    //골드를 내고 한도 확장
+    /// <summary>
+    /// 골드를 내고 한도 확장
+    /// </summary>
     public bool TryExpandCapacityWithGold()
     {
         if (CurrencyManager.Instance == null)
@@ -87,7 +98,6 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
             return false;
         }
 
-        //부족 사유는 CurrencyManager가 로그로 남김
         if (!CurrencyManager.Instance.Spend(CurrencyType.Gold, _expandGoldCost))
             return false;
 
@@ -95,7 +105,9 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         return true;
     }
 
-    //세이브 복원용 일괄 주입
+    /// <summary>
+    /// 세이브 복원용 일괄 주입
+    /// </summary>
     public bool Restore(List<CardInstance> cards, int nextInstanceId, int maxCapacity)
     {
         if (cards == null)
@@ -104,7 +116,6 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
             return false;
         }
 
-        //발급 ID가 보유 카드보다 작으면 다음 뽑기가 기존 카드와 같은 ID를 받아 라인업 참조가 엉킨다
         foreach (CardInstance card in cards)
         {
             if (card.InstanceId >= nextInstanceId)
@@ -118,7 +129,6 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
 
         foreach (CardInstance card in cards)
         {
-            //Add는 중복 키에서 예외를 던진다. 손상 세이브는 인벤을 비우고 실패로 돌려 절반만 복원된 상태를 막는다
             if (!_cards.TryAdd(card.InstanceId, card))
             {
                 Debug.LogError($"[InventoryManager] : 세이브에 중복된 카드 ID가 있습니다 : {card.InstanceId}");
@@ -129,14 +139,15 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
 
         _nextInstanceId = nextInstanceId;
 
-        //세이브 당시 확장분을 되살린다. 기본값보다 작으면 확장 기록이 사라진 것이므로 기본값 유지
         if (maxCapacity > _maxCapacity)
             _maxCapacity = maxCapacity;
 
         return true;
     }
 
-    //인벤토리 필터링. 판정 규칙은 CardFilter가 가진다
+    /// <summary>
+    /// 인벤토리 필터링. 판정 규칙은 CardFilter가 가진다
+    /// </summary>
     public List<CardInstance> GetFiltered(CardFilter filter)
     {
         if (filter == null)
@@ -159,7 +170,6 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         {
             CardMasterData cardMasterData = cardDataManager.GetCardMasterData(card.CardId);
 
-            //마스터 데이터가 없으면 인벤 데이터가 손상된 것이다. 경고는 GetCardMasterData가 남긴다
             if (cardMasterData == null)
                 continue;
 
@@ -170,7 +180,9 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         return result;
     }
 
-    //인벤토리에서 카드 반환
+    /// <summary>
+    /// 인벤토리에서 카드 반환
+    /// </summary>
     public CardInstance GetCard(int instanceId)
     {
         if (!_cards.TryGetValue(instanceId, out CardInstance card))
@@ -182,7 +194,9 @@ public class InventoryManager : SingletonBehaviour<InventoryManager>
         return card;
     }
 
-    //인벤토리에서 전체 카드 반환
+    /// <summary>
+    /// 인벤토리에서 전체 카드 반환
+    /// </summary>
     public Dictionary<int, CardInstance>.ValueCollection GetAllCards()
     {
         return _cards.Values;

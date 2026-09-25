@@ -9,7 +9,9 @@ public class LeagueTierTable : ScriptableObject
 {
     public const int TierCount = 21;
 
-    //순위표에 오르는 팀 수 (기획서 7.8 - 나 + AI 9팀)
+    /// <summary>
+    /// 순위표에 오르는 팀 수 (기획서 7.8 - 나 + AI 9팀)
+    /// </summary>
     public const int TeamCount = 10;
 
     [Header("배열 인덱스 = LeagueTier (0 = Basic1)")]
@@ -74,7 +76,9 @@ public class LeagueTierTable : ScriptableObject
         return entry.SeriesLength;
     }
 
-    //리그 종료 보상 골드의 기준값 (기획서 7.9)
+    /// <summary>
+    /// 리그 종료 보상 골드의 기준값 (기획서 7.9)
+    /// </summary>
     public int GetGoldReward(LeagueTier tier)
     {
         if (!TryGetEntry(tier, out LeagueTierEntry entry))
@@ -85,7 +89,9 @@ public class LeagueTierTable : ScriptableObject
         return entry.GoldReward;
     }
 
-    //리그 종료 보상 골든글러브 포인트의 기준값 (기획서 7.9 · 9.1)
+    /// <summary>
+    /// 리그 종료 보상 골든글러브 포인트의 기준값 (기획서 7.9 · 9.1)
+    /// </summary>
     public int GetGoldenGlovePointReward(LeagueTier tier)
     {
         if (!TryGetEntry(tier, out LeagueTierEntry entry))
@@ -96,7 +102,9 @@ public class LeagueTierTable : ScriptableObject
         return entry.GoldenGlovePointReward;
     }
 
-    //리그 종료 보상 시그니쳐 뽑기권의 기준값 (기획서 9.1)
+    /// <summary>
+    /// 리그 종료 보상 시그니쳐 뽑기권의 기준값 (기획서 9.1)
+    /// </summary>
     public int GetSignatureTicketReward(LeagueTier tier)
     {
         if (!TryGetEntry(tier, out LeagueTierEntry entry))
@@ -107,7 +115,9 @@ public class LeagueTierTable : ScriptableObject
         return entry.SignatureTicketReward;
     }
 
-    //경기 1건당 훈련돌파 카드 획득 확률 (%)
+    /// <summary>
+    /// 경기 1건당 훈련돌파 카드 획득 확률 (%)
+    /// </summary>
     public int GetPerGameBreakthroughCardChance(LeagueTier tier)
     {
         if (!TryGetEntry(tier, out LeagueTierEntry entry))
@@ -118,7 +128,9 @@ public class LeagueTierTable : ScriptableObject
         return entry.PerGameBreakthroughCardChance;
     }
 
-    //경기 1건당 강화 전용 카드 획득 확률 (%)
+    /// <summary>
+    /// 경기 1건당 강화 전용 카드 획득 확률 (%)
+    /// </summary>
     public int GetPerGameEnhanceCardChance(LeagueTier tier)
     {
         if (!TryGetEntry(tier, out LeagueTierEntry entry))
@@ -129,7 +141,9 @@ public class LeagueTierTable : ScriptableObject
         return entry.PerGameEnhanceCardChance;
     }
 
-    //최종 순위별 골드 배수. 범위를 벗어난 순위는 0배 (보상 없음)
+    /// <summary>
+    /// 최종 순위별 골드 배수. 범위를 벗어난 순위는 0배 (보상 없음)
+    /// </summary>
     public float GetRankGoldMultiplier(int rank)
     {
         int index = rank - 1;

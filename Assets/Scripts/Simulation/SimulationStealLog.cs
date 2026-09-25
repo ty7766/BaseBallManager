@@ -10,7 +10,9 @@ public class SimulationStealLog
     public int RunnerInstanceId { get; }    //선수별 기록 집계 키
     public string RunnerName { get; }       //로그 출력용 주자 이름
 
-    //출발 베이스 (1 = 1루에서 2루로 / 2 = 2루에서 3루로)
+    /// <summary>
+    /// 출발 베이스 (1 = 1루에서 2루로 / 2 = 2루에서 3루로)
+    /// </summary>
     public int FromBase { get; }
 
     public bool IsSuccess { get; }
