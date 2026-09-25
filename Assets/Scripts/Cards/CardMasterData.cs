@@ -3,6 +3,11 @@
 /// </summary>
 public abstract class CardMasterData
 {
+    /// <summary>
+    /// 카드가 지정되지 않은 슬롯. cardId는 1부터라 int 기본값이 곧 빈 슬롯이다
+    /// </summary>
+    public const int NoCardId = 0;
+
     public int CardId { get; }
     public string Name { get; }
     public string TeamName { get; }

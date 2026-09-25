@@ -33,7 +33,7 @@ public static class AiRosterBuilder
         if (relievePitchers.Length != AiTeamRosterData.RelieverCount)
             return null;
 
-        if (rosterData.CloserCardId == AiTeamRosterData.EmptyCardSlot)
+        if (rosterData.CloserCardId == CardMasterData.NoCardId)
         {
             Debug.LogError($"[AiRosterBuilder]: {rosterData.TeamName} 마무리 슬롯이 비어 있습니다");
             return null;
@@ -69,7 +69,7 @@ public static class AiRosterBuilder
         {
             AiHitterSlot slot = slots[i];
 
-            if (slot.CardId == AiTeamRosterData.EmptyCardSlot)
+            if (slot.CardId == CardMasterData.NoCardId)
             {
                 Debug.LogError($"[AiRosterBuilder]: {rosterData.TeamName} {i + 1}번 타순({slot.Position}) 슬롯이 비어 있습니다");
                 return Array.Empty<HitterSnapshot>();
@@ -104,7 +104,7 @@ public static class AiRosterBuilder
         {
             int cardId = cardIds[i];
 
-            if (cardId == AiTeamRosterData.EmptyCardSlot)
+            if (cardId == CardMasterData.NoCardId)
             {
                 Debug.LogError($"[AiRosterBuilder]: {teamName} {roleLabel} {i + 1}번 슬롯이 비어 있습니다");
                 return Array.Empty<PitcherSnapshot>();

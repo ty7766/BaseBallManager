@@ -9,6 +9,11 @@ using System.Collections.Generic;
 public class GachaManager : SingletonBehaviour<GachaManager>
 {
     /// <summary>
+    /// 카드를 고르지 못했을 때 돌려주는 cardId
+    /// </summary>
+    public const int NoCardPicked = -1;
+
+    /// <summary>
     /// 세이브 저장용 (기획서 3장 - 천장 카운터는 세션을 넘어가도 유지)
     /// </summary>
     public int NormalPityCount => _normalPityCount;
@@ -160,10 +165,16 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         {
             int confirmedId = PickTeamConfirmedCard(gachaType);
 
-            if (confirmedId != -1)
+            if (confirmedId != NoCardPicked)
             {
-                GetPityCounter(gachaType) = 0;
-                return BuildResult(confirmedId, CardGrade.Star5);
+                GachaResult confirmed = BuildResult(confirmedId, CardGrade.Star5);
+
+                //카드를 실제로 만들어낸 뒤에 천장을 소모한다
+                if (confirmed != null)
+                {
+                    GetPityCounter(gachaType) = 0;
+                    return confirmed;
+                }
             }
 
             Debug.LogWarning($"[GachaManager] : 천장 확정 카드를 찾지 못했습니다 ({gachaType}). 천장을 유지합니다");
@@ -172,7 +183,7 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         CardGrade grade = DecideGrade(gachaType);
         int cardId = PickCardFromPool(gachaType, grade);
 
-        if (cardId == -1)
+        if (cardId == NoCardPicked)
             return null;
 
         if (!IsPityReached(gachaType))
@@ -194,21 +205,38 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         float star4 = isNormal ? _grade4ProbabilityNor : _grade4ProbabilitySig;
         float star5 = isNormal ? _grade5ProbabilityNor : _grade5ProbabilitySig;
 
-        float star4Ratio = star4 / (star4 + star5);
-        CardGrade forcedGrade = Random.value < star4Ratio ? CardGrade.Star4 : CardGrade.Star5;
+        float gradeSum = star4 + star5;
+
+        //둘 다 0이면 나눗셈이 NaN이 되어 비교가 조용히 5성으로 굳는다
+        CardGrade forcedGrade = gradeSum <= 0f || Random.value < star4 / gradeSum
+            ? CardGrade.Star4
+            : CardGrade.Star5;
 
         int forcedId = PickCardFromPool(gachaType, forcedGrade);
 
-        if (forcedId == -1)
+        if (forcedId == NoCardPicked)
             return;
 
-        gachaResults[gachaResults.Count - 1] = BuildResult(forcedId, forcedGrade);
+        GachaResult forced = BuildResult(forcedId, forcedGrade);
+
+        if (forced == null)
+            return;
+
+        gachaResults[gachaResults.Count - 1] = forced;
     }
 
     //카드 id로 마스터 데이터를 찾아 뽑기 결과 생성
     private GachaResult BuildResult(int cardId, CardGrade grade)
     {
         CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardId);
+
+        //풀은 마스터 데이터에서 만들었으므로 여기서 실패하면 카드 데이터가 도중에 바뀐 것이다
+        if (masterData == null)
+        {
+            Debug.LogError($"[GachaManager] : 뽑은 카드의 마스터 데이터를 찾지 못했습니다 (cardId {cardId})");
+            return null;
+        }
+
         return new GachaResult(cardId, grade, masterData.CardType);
     }
 
@@ -224,6 +252,9 @@ public class GachaManager : SingletonBehaviour<GachaManager>
     //이번 뽑기가 천장 회차인지 확인 (카운터는 직전까지의 횟수)
     private bool IsPityReached(GachaType gachaType)
     {
+        if (_pityLimit <= 0)
+            return false;
+
         return GetPityCounter(gachaType) + 1 >= _pityLimit;
     }
 
@@ -235,7 +266,7 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         if (string.IsNullOrEmpty(teamName))
         {
             Debug.LogWarning("[GachaManager] : 플레이어 팀 이름이 설정되지 않았습니다");
-            return -1;
+            return NoCardPicked;
         }
 
         CardType targetType = gachaType == GachaType.Normal ? CardType.Normal : CardType.Signature;
@@ -245,14 +276,16 @@ public class GachaManager : SingletonBehaviour<GachaManager>
 
         foreach (int cardId in GetCardPool(CardGrade.Star5, targetType))
         {
-            if (dataManager.GetCardMasterData(cardId).TeamName == teamName)
+            CardMasterData masterData = dataManager.GetCardMasterData(cardId);
+
+            if (masterData != null && masterData.TeamName == teamName)
                 teamPool.Add(cardId);
         }
 
         if (teamPool.Count == 0)
         {
             Debug.LogWarning($"[GachaManager] : {teamName}의 {targetType} 5성 카드가 없습니다");
-            return -1;
+            return NoCardPicked;
         }
 
         return teamPool[Random.Range(0, teamPool.Count)];
@@ -267,18 +300,17 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         {
             if (roll < _grade3ProbabilityNor)
                 return CardGrade.Star3;
-            else if (roll < _grade3ProbabilityNor + _grade4ProbabilityNor)
+
+            if (roll < _grade3ProbabilityNor + _grade4ProbabilityNor)
                 return CardGrade.Star4;
-            else
-                return CardGrade.Star5;
+
+            return CardGrade.Star5;
         }
-        else
-        {
-            if (roll < _grade4ProbabilitySig)
-                return CardGrade.Star4;
-            else
-                return CardGrade.Star5;
-        }
+
+        if (roll < _grade4ProbabilitySig)
+            return CardGrade.Star4;
+
+        return CardGrade.Star5;
     }
 
     //GachaType에 맞는 랜덤 카드 id를 반환
@@ -294,7 +326,7 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         if (pool.Count == 0)
         {
             Debug.LogWarning($"[GachaManager] : {grade} {targetType} 카드 풀이 비어 있습니다");
-            return -1;
+            return NoCardPicked;
         }
 
         return pool[Random.Range(0, pool.Count)];
@@ -321,8 +353,9 @@ public class GachaManager : SingletonBehaviour<GachaManager>
                 pool.Add(pitcher.CardId);
         }
 
-        if (pool.Count > 0)
-            _cardPools[(grade, cardType)] = pool;
+        //빈 풀도 캐시한다. 마스터 데이터는 앱 시작 시 1회만 로드되므로
+        //캐시하지 않으면 그 조합을 뽑을 때마다 카드 전체를 다시 훑는다
+        _cardPools[(grade, cardType)] = pool;
 
         return pool;
     }

@@ -16,7 +16,7 @@ public class StartingSignatureTable : ScriptableObject
     public int GetCardId(string teamName)
     {
         if (string.IsNullOrEmpty(teamName) || _entries == null)
-            return 0;
+            return CardMasterData.NoCardId;
 
         foreach (StartingSignatureEntry entry in _entries)
         {
@@ -24,6 +24,6 @@ public class StartingSignatureTable : ScriptableObject
                 return entry.CardId;
         }
 
-        return 0;
+        return CardMasterData.NoCardId;
     }
 }

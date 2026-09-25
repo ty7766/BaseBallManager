@@ -1,4 +1,5 @@
-﻿using System;
+﻿using UnityEngine;
+
 /// <summary>
 /// 인벤토리 필터 조건을 담는 데이터 클래스
 /// </summary>
@@ -37,8 +38,16 @@ public class CardFilter
             PlayerTypeFilter.All => true,
             PlayerTypeFilter.HitterOnly => cardMasterData is HitterMasterData,
             PlayerTypeFilter.PitcherOnly => cardMasterData is PitcherMasterData,
-            _ => throw new ArgumentException($"알 수 없는 선수 타입 필터: {PlayerType}")
+            _ => UnknownPlayerType()
         };
+    }
+
+    //필터 값이 enum 범위를 벗어났다. 필터링 도중 예외를 던지는 대신 걸러낸다
+    private bool UnknownPlayerType()
+    {
+        Debug.LogError($"[CardFilter] : 알 수 없는 선수 타입 필터입니다 ({PlayerType})");
+
+        return false;
     }
 }
 

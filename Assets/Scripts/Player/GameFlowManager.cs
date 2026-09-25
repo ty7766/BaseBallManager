@@ -131,7 +131,7 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
 
         int startingCardId = _startingSignatureTable.GetCardId(teamName);
 
-        if (startingCardId == 0)
+        if (startingCardId == CardMasterData.NoCardId)
         {
             Debug.LogWarning($"[GameFlowManager]: '{teamName}' 팀에 지정된 시작 시그니쳐 카드가 없습니다");
             return;
