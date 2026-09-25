@@ -19,6 +19,11 @@ public class TeamRecordSaveData
     public string[] OpponentNames;
     public int[] WinsAgainst;
     public int[] LossesAgainst;
+
+    /// <summary>
+    /// 치른 경기 수. 진행도와 어긋나면 순위표와 일정이 따로 논다
+    /// </summary>
+    public int GamePlayedCount => Wins + Losses + Draws;
 }
 
 /// <summary>

@@ -67,7 +67,7 @@ public class PlayerDataManager : SingletonBehaviour<PlayerDataManager>
         if (!SetPlayerTeam(teamName))
             return false;
 
-        if (highestUnlockedTier < LeagueTier.Basic1 || highestUnlockedTier > LeagueTier.Legend3)
+        if (!LeagueTierTable.IsValidTier(highestUnlockedTier))
         {
             Debug.LogError($"[PlayerDataManager] : 알 수 없는 리그 티어입니다 ({(int)highestUnlockedTier})");
             return false;

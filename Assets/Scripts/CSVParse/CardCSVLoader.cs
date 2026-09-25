@@ -61,7 +61,7 @@ public class CardCSVLoader
     };
 
     //선수 데이터의 공통 속성을 파싱하는 메소드
-    private (int cardId, string name, string teamName, int year, 
+    private (int cardId, string name, string teamName, int year,
         CardType cardType, CardGrade cardGrade, string position, int ovr)
         ParseBaseCardData(string[] cols, Dictionary<string, int> headers)
     {
@@ -77,7 +77,7 @@ public class CardCSVLoader
         return (cardId, name, teamName, year, cardType, cardGrade, position, ovr);
     }
 
-    
+
     /// <summary>
     /// HitterCards.csv를 전체 읽고 파싱하여 리스트에 담아 반환하는 함수
     /// </summary>

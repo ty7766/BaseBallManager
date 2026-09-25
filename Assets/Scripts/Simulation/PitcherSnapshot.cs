@@ -17,6 +17,6 @@ public readonly struct PitcherSnapshot
         Velo = velo;
         Stuff = stuff;
         Control = control;
-        Stamina = stamina;      
+        Stamina = stamina;
     }
 }

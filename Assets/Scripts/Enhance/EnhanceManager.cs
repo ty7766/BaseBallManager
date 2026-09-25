@@ -199,7 +199,7 @@ public class EnhanceManager : SingletonBehaviour<EnhanceManager>
             Debug.LogError($"[EnhanceManager] : 마스터 데이터를 찾지 못했습니다 (cardId {target.CardId} / {material.CardId})");
             return false;
         }
-        
+
         if (!IsIdenticalCard(targetData, materialData))
         {
             Debug.LogWarning($"[EnhanceManager] : 동일 카드가 아닙니다 (instanceId {material.InstanceId})");

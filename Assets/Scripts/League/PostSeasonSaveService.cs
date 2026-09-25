@@ -36,6 +36,18 @@ public class PostSeasonSaveService
 
         IReadOnlyList<PostSeasonSeries> series = postSeason.Series;
 
+        if (series.Count == 0)
+        {
+            Debug.LogError("[PostSeasonSaveService]: 시리즈가 없는 포스트시즌은 저장하지 않습니다 (복원할 수 없음)");
+            return false;
+        }
+
+        if (!LeagueTierTable.IsValidTier(tier))
+        {
+            Debug.LogError($"[PostSeasonSaveService]: 저장할 티어가 올바르지 않습니다 ({(int)tier})");
+            return false;
+        }
+
         PostSeasonSaveData saveData = new PostSeasonSaveData
         {
             Tier = (int)tier,
@@ -69,6 +81,18 @@ public class PostSeasonSaveService
         if (saveData == null || saveData.Series == null)
         {
             Debug.LogError("[PostSeasonSaveService]: 세이브 데이터를 읽지 못했습니다");
+            return null;
+        }
+
+        if (!LeagueTierTable.IsValidTier((LeagueTier)saveData.Tier))
+        {
+            Debug.LogError($"[PostSeasonSaveService]: 세이브의 티어 번호가 올바르지 않습니다 ({saveData.Tier})");
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(saveData.PlayerTeamName))
+        {
+            Debug.LogError("[PostSeasonSaveService]: 세이브에 플레이어 팀이 없습니다");
             return null;
         }
 

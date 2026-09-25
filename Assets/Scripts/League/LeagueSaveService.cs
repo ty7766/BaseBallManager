@@ -80,6 +80,19 @@ public class LeagueSaveService
             return null;
         }
 
+        if (!LeagueTierTable.IsValidTier((LeagueTier)saveData.Tier))
+        {
+            Debug.LogError($"[LeagueSaveService]: 세이브의 티어 번호가 올바르지 않습니다 ({saveData.Tier})");
+            return null;
+        }
+
+        //일정은 TeamNames로 재생성하고 순위표는 Records로 만든다. 둘이 어긋나면 매 경기 반영이 실패한다
+        if (saveData.Records.Length != saveData.TeamNames.Length)
+        {
+            Debug.LogError($"[LeagueSaveService]: 팀 수({saveData.TeamNames.Length})와 성적 수({saveData.Records.Length})가 어긋납니다");
+            return null;
+        }
+
         List<string> opponentNames = new List<string>(saveData.TeamNames.Length - 1);
 
         for (int i = 1; i < saveData.TeamNames.Length; i++)
@@ -104,6 +117,18 @@ public class LeagueSaveService
 
         foreach (TeamRecordSaveData recordData in saveData.Records)
         {
+            if (recordData == null)
+            {
+                Debug.LogError("[LeagueSaveService]: 성적 목록에 비어 있는 항목이 있습니다");
+                return null;
+            }
+
+            if (recordData.GamePlayedCount != saveData.CurrentDayIndex)
+            {
+                Debug.LogError($"[LeagueSaveService]: '{recordData.TeamName}'의 경기 수({recordData.GamePlayedCount})가 진행도({saveData.CurrentDayIndex})와 어긋납니다");
+                return null;
+            }
+
             records.Add(ToTeamRecord(recordData));
         }
 
