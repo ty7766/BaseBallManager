@@ -41,23 +41,37 @@
 | 73~77 | `Player/` · `Save/` 5개 | ✅ |
 | 78~82 | `Currency/` · `Dismantle` · `Combine` · `GoldenGlove` · `Core` | ✅ (싱글톤 전환 + 주석 규칙) |
 
-**전 파일 1회차 검수 완료.** 남은 것은 아래 2-1의 2회차 정밀 검수 대상뿐이다.
+**전 파일 정밀 검수 완료 (1·2회차).** 검증 하니스 91건 중 90건 통과, 1건은 아래 2-1의 🔴 미해결 항목.
 
 ---
 
 ## 2. 다음 할 일
 
-### 2-1. 2회차 정밀 검수 대상 (즉시)
+### 2-1. 🔴 `StatBaseline`이 현재 카드풀과 어긋남 (작성자 판단 필요)
 
-1회차에서 구조·주석 위주로 훑고 넘어간 파일들. 로직을 한 줄씩 다시 본다.
+검증 하니스가 실측한 **유일한 미해결 항목**. 코드 결함이 아니라 데이터·튜닝 문제라 Claude가 건드리지 않았다.
 
-| 파일 | 1회차에 못 본 것 |
-|---|---|
-| `League/LeagueSaveService` · `PostSeasonSaveService` | 직렬화 왕복(round-trip) 정합성 |
-| `League/LeagueTierTable` | 티어 인덱싱·범위 검사 |
-| `Dismantle/DismantleManager` · `GoldenGlove/GoldenGloveCraftManager` | 보상 계산식과 소모 순서 |
-| `Save/LocalFileStorage` | 파일 I/O 예외 처리 |
-| `CSVParse/CardCSVLoader` | 2-5의 미적용 후보(`asset == null` · `Trim`) 재판단
+`StatBaseline`은 "카드풀 평균"이어야 편차 정규화(`GetEdge`)가 의도대로 동작한다.
+지금은 상수가 실제 평균보다 높게 잡혀 있어, **평균 타자 대 평균 투수 대결조차 기준 확률에서 벗어난다.**
+
+| 상수 | 값 | 현재 CSV 실제 평균 | 차이 |
+|---|---|---|---|
+| `HitterPower` | 67 | 63.65 | **-3.35** |
+| `HitterContact` | 61 | 58.36 | **-2.64** |
+| `HitterRun` | 58 | 56.34 | -1.66 |
+| `HitterDefense` | 66 | 64.94 | -1.06 |
+| `PitcherStuff` | 68 | 66.08 | -1.92 |
+| `PitcherControl` | 66 | 64.69 | -1.31 |
+| `PitcherPower` | 72 | 70.24 | -1.76 |
+
+**영향** (1000경기 실측): 타율 .256(기준 .270) / 장타율 .363(.401) / 경기당 득점 7.37(8.53).
+타자 쪽 드리프트가 투수 쪽보다 커서 공격 지표가 일관되게 낮다.
+
+**지금 상수를 낮추면 안 되는 이유**: 현재 CSV는 타자 159 / 투수 166장으로
+**시그니쳐·골든글러브가 아직 미입력**(2-3의 5번)이다. 이들은 5성 고정이라 스탯이 높아,
+입력되면 풀 평균이 다시 올라간다. **시그·골글 CSV 입력 후 재측정하는 것이 맞다.**
+
+측정 방법은 3-3의 검증 하니스(`StatBaseline이 카드풀 평균과 일치` 항목)가 수치까지 찍어준다.
 
 ### 2-2. 미처리 호출부 대기표
 
@@ -85,6 +99,7 @@
 | 10 | `LeagueManager` 인스펙터 — 강화 전용 카드 등급 분배 확인 | `_star3RewardPercent` 60 / `_star4RewardPercent` 30. 씬에 직렬화된 적 없는 새 필드 |
 | 11 | `.meta` 생성 확인 | `ProbabilityModels/RunnerLookup` · `Simulation/HitterSubstitution`(파일명 대소문자 변경) |
 | 12 | 매니저 15종 스크립트 참조 확인 | 7개가 `SingletonBehaviour<T>` 상속으로 바뀜 — 씬 컴포넌트는 그대로지만 한 번 열어 확인 |
+| 13 | 🔒 시그니쳐·골글 CSV 입력 후 `StatBaseline` 재측정 | 2-1 참고. 하니스가 수치를 찍어준다 |
 
 ### 2-4. 코드 쪽 대기
 
@@ -134,6 +149,12 @@ CSV에서 cardId를 재배치하면 **모든 SO가 예외·로그·컴파일 에
 
 - 검증은 **스크래치패드 dotnet 하니스**(UnityEngine 최소 셰임 + `JsonUtility` 재현 + 실제 CSV 로드)에서만 한다
 - 프로젝트 테스트 파일 **0개 유지**. 하니스는 검증 후 삭제
+- **검증 하니스** (세션 46~47): 컴파일 + 런타임 검증 91건. `dotnet run -c Release`로 실행한다
+  - 세이브 왕복(리그·포스트시즌) · 손상 세이브 거부 · 일정 결정성/공정성
+  - 재화 규약(`SpendAll` 중복·음수 복원) · 인벤 일괄 제거 원자성 · 저장소 원자적 쓰기
+  - **실제 CSV 325장 파싱** (cardId 유일성 · 포지션 해석 · OVR = 4스탯 평균 · 팀 10개)
+  - **확률 실측**: 조합 승급(75/22.5/2.5%) · 뽑기 등급(70/25/5%) · 천장 50회 · 1000경기 시뮬 지표
+  - `JsonUtility`는 셰임에서 리플렉션 기반으로 재현했다 (공개 필드만 직렬화하는 Unity 규칙)
 - **컴파일 검증 하니스** (세션 46 신설): 스크래치패드에 `UnityShim.cs`(UnityEngine 최소 셰임) + `harness.csproj`를 두고
   `dotnet build -p:GameRoot=<프로젝트 경로>`로 `Assets/Scripts/**` 전체를 컴파일한다. Unity를 켜지 않고 오류를 잡는다.
   셰임이 덮는 범위: `MonoBehaviour` · `ScriptableObject` · `Debug` · `Mathf` · `Random` · `JsonUtility` · `Application` · `Resources` · `TextAsset` + 직렬화 속성 8종
@@ -348,3 +369,4 @@ Claude는 이 구간 수치를 건드리지 않는다. 근거만 남긴다.
 | 45 (09-25) | 검수 #16 `EnhanceManager` — `SingletonBehaviour` 전환 · 재료 `List<int>`→`int` 단일화 · **라인업 편성 카드 재료 사용 차단**(`CombineManager`·`DismantleManager`와 규칙 통일) · 실패 경로 로그 보강 · 동일 카드 판정 `IsIdenticalCard`로 통합 · `GetRequiredEnhanceCardType`의 `throw`를 `CurrencyType.None` 반환으로 교체 |
 | 46 (09-25) | **검수 방식 전환 — Claude가 직접 리팩토링·커밋.** 주석 규칙 확정(public `<summary>` 2줄 / private `//` 1줄 / 메서드 내부 금지). 검수 #17~18 `TrainManager`·`BreakthroughManager` — `SingletonBehaviour` 전환 · **`ApplyTrain` 반환값 미수신**(재화만 소모되는 경로) 수정 · `TrainStatCount` `public const` 승격으로 매직넘버 `4` 제거 · 돌파 비용 필드 개명 + 중첩 switch 분리 · 대기표의 `LeagueManager` `SetPlayerTeam` 2건 처리 |
 | 47 (09-25) | **전 파일 1회차 검수 완료** (45개 / 약 7,000줄). 🔴 수정: `GameSimulator` 자동 교체가 강판 슬롯을 기록하지 않던 문제 · `LineUpManager`가 `TryParse` 실패를 무시해 오타 카드를 LF/SP에 배치하던 문제 · `CurrencyManager.SpendAll`의 같은 재화 중복 차감(음수 가능) · 세이브 재화 복원 실패가 "이어하기 성공"으로 보고되던 문제. 구조: 시뮬 상수 `SimulationContext`/`GameState`로 통일 · 밀어내기 진루 로직 중복 제거 · `RunnerLookup` 신설 · 매니저 7종 `SingletonBehaviour` 전환 · 주석 규칙 일괄 적용(변환기 자동화) · **컴파일 검증 하니스 신설** |
+| 47 (09-25) | **전 파일 정밀 검수 완료 + 검증 하니스 91건 구축.** 🔴 수정: `LocalFileStorage` 비원자적 저장(앱이 죽으면 세이브가 잘림) · `CombineManager` 재료 부분 소멸 · `CardCSVLoader`가 null을 Split + 파싱 오류에 행 번호 없음 · 타자/투수 cardId 교차 중복 미검출 · `GachaManager` 빈 카드 풀 미캐시(매 뽑기마다 325장 재순회) · 세이브 복원 검증 4종(티어 범위·진행도 정합성·null 항목·배열 길이). 실측 검증: 조합 승급·뽑기 확률·천장·CSV 325장·1000경기 시뮬 전부 통과. **`StatBaseline` 드리프트 발견(2-1)** |
