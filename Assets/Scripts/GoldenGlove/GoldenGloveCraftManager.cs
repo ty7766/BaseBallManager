@@ -4,10 +4,8 @@ using UnityEngine;
 /// <summary>
 /// 골든글러브 제작 (기획서 4장)
 /// </summary>
-public class GoldenGloveCraftManager : MonoBehaviour
+public class GoldenGloveCraftManager : SingletonBehaviour<GoldenGloveCraftManager>
 {
-    public static GoldenGloveCraftManager Instance { get; private set; }
-
     [Header("일반 제작 - 전체 골글 풀에서 랜덤")]
     [SerializeField]
     private int _randomGoldenGlovePoint = 300;
@@ -26,19 +24,6 @@ public class GoldenGloveCraftManager : MonoBehaviour
 
     //제작 때마다 새 List를 만들지 않도록 재사용하는 후보 버퍼
     private readonly List<int> _candidateBuffer = new List<int>(64);
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
 
     /// <summary>
     /// 제작 1회 비용 (UI 표기용)

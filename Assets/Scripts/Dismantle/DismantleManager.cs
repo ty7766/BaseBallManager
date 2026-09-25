@@ -3,10 +3,8 @@
 /// <summary>
 /// 카드 분해 (기획서 9.2)
 /// </summary>
-public class DismantleManager : MonoBehaviour
+public class DismantleManager : SingletonBehaviour<DismantleManager>
 {
-    public static DismantleManager Instance { get; private set; }
-
     [Header("기본 포인트 보상 (카드 등급별)")]
     [SerializeField]
     private int _basePointStar3 = 100;
@@ -36,19 +34,6 @@ public class DismantleManager : MonoBehaviour
     [Header("골든글러브 포인트 (골글 카드 분해 시)")]
     [SerializeField]
     private int _goldenGlovePointReward = 50;
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
 
     /// <summary>
     /// 해당 카드를 분해할 수 있는지 (기획서 9.2 - 잠금·라인업 편성 카드는 불가)

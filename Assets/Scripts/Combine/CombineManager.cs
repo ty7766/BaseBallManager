@@ -4,10 +4,8 @@ using UnityEngine;
 /// <summary>
 /// 카드 조합 - 같은 종류 카드 3장을 소모해 랜덤 1장을 얻는다
 /// </summary>
-public class CombineManager : MonoBehaviour
+public class CombineManager : SingletonBehaviour<CombineManager>
 {
-    public static CombineManager Instance { get; private set; }
-
     [Header("노말 승급 확률 (시그·골글은 5성 고정이라 승급 없음)")]
     [SerializeField, Range(0f, 1f), Tooltip("기준 등급이 3성일 때 4성으로 오를 확률")]
     private float _upgradeChanceStar3 = 0.25f;
@@ -19,19 +17,6 @@ public class CombineManager : MonoBehaviour
 
     //조합 때마다 새 List를 만들지 않도록 재사용하는 후보 버퍼
     private readonly List<int> _candidateBuffer = new List<int>(128);
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
 
     /// <summary>
     /// 조합에 필요한 재료 카드 수 (UI 슬롯 구성용)

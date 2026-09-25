@@ -55,7 +55,11 @@ public class LeagueRunner
 
         foreach (LeagueGameScore score in scores)
         {
-            Season.Standings.ApplyGameResult(score.Game, score.HomeScore, score.AwayScore);
+            if (!Season.Standings.ApplyGameResult(score.Game, score.HomeScore, score.AwayScore))
+            {
+                Debug.LogError($"[LeagueRunner]: 순위표 반영에 실패했습니다 ({score.Game.HomeTeamName} vs {score.Game.AwayTeamName})");
+                return null;
+            }
         }
 
         LastDayResult = new LeagueDayResult(Season.CurrentDayIndex, scores, playerGameResult);

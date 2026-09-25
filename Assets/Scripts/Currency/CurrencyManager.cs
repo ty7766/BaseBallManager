@@ -4,29 +4,14 @@ using UnityEngine;
 /// <summary>
 /// 게임 내 모든 재화 보관 · 증감 (기획서 9.1)
 /// </summary>
-public class CurrencyManager : MonoBehaviour
+public class CurrencyManager : SingletonBehaviour<CurrencyManager>
 {
-    public static CurrencyManager Instance { get; private set; }
-
     /// <summary>
     /// 세이브 저장용 읽기 전용 뷰
     /// </summary>
     public IReadOnlyDictionary<CurrencyType, int> Amounts => _amounts;
 
     private readonly Dictionary<CurrencyType, int> _amounts = new Dictionary<CurrencyType, int>();
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
 
     /// <summary>
     /// 보유량 조회. 한 번도 획득한 적 없는 재화는 0 (정상 상태이므로 경고를 남기지 않음)

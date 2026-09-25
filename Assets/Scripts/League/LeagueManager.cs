@@ -4,10 +4,8 @@ using UnityEngine;
 /// <summary>
 /// 리그 시작·진행 진입점 (로스터 · 일정 · 순위표 · 진행기를 엮음)
 /// </summary>
-public class LeagueManager : MonoBehaviour
+public class LeagueManager : SingletonBehaviour<LeagueManager>
 {
-    public static LeagueManager Instance { get; private set; }
-
     public LeagueSeason CurrentSeason => _runner == null ? null : _runner.Season;
     public bool IsSeasonRunning => _runner != null && !_runner.Season.IsFinished;
     public PostSeasonRunner PostSeason { get; private set; }
@@ -26,6 +24,12 @@ public class LeagueManager : MonoBehaviour
     [SerializeField, Tooltip("우승 시 지급하는 골카 전용 카드 수")]
     private int _goldenGloveEnhanceCardReward = 1;
 
+    [Header("경기당 강화 전용 카드 등급 분배 (%). 남은 확률이 5성 몫")]
+    [SerializeField, Range(0, 100)]
+    private int _star3RewardPercent = 60;
+    [SerializeField, Range(0, 100)]
+    private int _star4RewardPercent = 30;
+
     private LeagueRunner _runner;
     private LeagueSaveService _saveService;
     private PostSeasonSaveService _postSeasonSaveService;
@@ -34,23 +38,14 @@ public class LeagueManager : MonoBehaviour
     //포스트시즌 복원 시 로스터를 다시 만들기 위해 보관 (정규시즌 없이 이어하기 가능하게)
     private LeagueTier _currentTier;
 
-    private void Awake()
+    protected override void OnSingletonAwake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+        ISaveStorage storage = new LocalFileStorage();
 
-            ISaveStorage storage = new LocalFileStorage();
-
-            _saveService = new LeagueSaveService(storage);
-            _postSeasonSaveService = new PostSeasonSaveService(storage);
-            _rewardService = new LeagueRewardService(_tierTable, _unlockRankThreshold, _goldenGloveEnhanceCardReward);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        _saveService = new LeagueSaveService(storage);
+        _postSeasonSaveService = new PostSeasonSaveService(storage);
+        _rewardService = new LeagueRewardService(_tierTable, _unlockRankThreshold,
+            _goldenGloveEnhanceCardReward, _star3RewardPercent, _star4RewardPercent);
     }
 
     /// <summary>

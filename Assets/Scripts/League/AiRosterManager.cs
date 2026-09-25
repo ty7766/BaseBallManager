@@ -4,10 +4,8 @@ using UnityEngine;
 /// <summary>
 /// 티어에 맞는 팀 로스터를 세트 단위로 생성해 보관 (플레이어 팀 포함 10팀)
 /// </summary>
-public class AiRosterManager : MonoBehaviour
+public class AiRosterManager : SingletonBehaviour<AiRosterManager>
 {
-    public static AiRosterManager Instance { get; private set; }
-
     public LeagueTier CurrentTier => _currentTier;
     public int TeamCount => _rosters.Count;
     public IReadOnlyDictionary<string, AiTeamRoster> Rosters => _rosters;
@@ -19,19 +17,6 @@ public class AiRosterManager : MonoBehaviour
     //팀명 -> 완성된 로스터. 리그 시작 시 1회 채우고 리그 내내 재사용
     private readonly Dictionary<string, AiTeamRoster> _rosters = new Dictionary<string, AiTeamRoster>(AiRosterSet.TeamCount);
     private LeagueTier _currentTier;
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
 
     /// <summary>
     /// 티어에 맞는 AI 로스터 전체 생성 (리그 시작 시 1회 호출)

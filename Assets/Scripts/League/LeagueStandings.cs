@@ -18,23 +18,7 @@ public class LeagueStandings
         _records = new List<TeamRecord>(teamNames.Count);
 
         foreach (string teamName in teamNames)
-        {
-            if (string.IsNullOrEmpty(teamName))
-            {
-                Debug.LogError("[LeagueStandings]: 팀명이 비어 있어 순위표에 넣지 않았습니다");
-                continue;
-            }
-
-            if (_recordLookup.ContainsKey(teamName))
-            {
-                Debug.LogError($"[LeagueStandings]: '{teamName}' 팀이 두 번 들어와 한 번만 넣었습니다");
-                continue;
-            }
-
-            TeamRecord record = new TeamRecord(teamName);
-            _recordLookup.Add(teamName, record);
-            _records.Add(record);
-        }
+            TryAddRecord(string.IsNullOrEmpty(teamName) ? null : new TeamRecord(teamName));
     }
 
     /// <summary>
@@ -46,22 +30,28 @@ public class LeagueStandings
         _records = new List<TeamRecord>(records.Count);
 
         foreach (TeamRecord record in records)
+            TryAddRecord(record);
+    }
+
+    //팀명이 비었거나 이미 들어 있으면 넣지 않는다. 한 팀이 두 줄이면 순위표가 어긋난다
+    private bool TryAddRecord(TeamRecord record)
+    {
+        if (record == null || string.IsNullOrEmpty(record.TeamName))
         {
-            if (record == null || string.IsNullOrEmpty(record.TeamName))
-            {
-                Debug.LogError("[LeagueStandings]: 복원 데이터에 빈 성적이 있어 건너뛰었습니다");
-                continue;
-            }
-
-            if (_recordLookup.ContainsKey(record.TeamName))
-            {
-                Debug.LogError($"[LeagueStandings]: 복원 데이터에 '{record.TeamName}' 팀이 두 번 들어 있습니다");
-                continue;
-            }
-
-            _recordLookup.Add(record.TeamName, record);
-            _records.Add(record);
+            Debug.LogError("[LeagueStandings]: 팀명이 비어 있어 순위표에 넣지 않았습니다");
+            return false;
         }
+
+        if (_recordLookup.ContainsKey(record.TeamName))
+        {
+            Debug.LogError($"[LeagueStandings]: '{record.TeamName}' 팀이 두 번 들어와 한 번만 넣었습니다");
+            return false;
+        }
+
+        _recordLookup.Add(record.TeamName, record);
+        _records.Add(record);
+
+        return true;
     }
 
     /// <summary>
@@ -139,9 +129,7 @@ public class LeagueStandings
             int end = start + 1;
 
             while (end < sorted.Count && IsTied(sorted[start], sorted[end]))
-            {
                 end++;
-            }
 
             if (end - start > 1)
             {

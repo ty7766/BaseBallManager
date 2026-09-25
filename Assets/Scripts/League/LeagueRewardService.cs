@@ -5,15 +5,22 @@
 /// </summary>
 public class LeagueRewardService
 {
+    private const int PercentMax = 100;
+
     private readonly LeagueTierTable _tierTable;
     private readonly int _unlockRankThreshold;
     private readonly int _goldenGloveEnhanceCardReward;
+    private readonly int _star3RewardPercent;
+    private readonly int _star4RewardPercent;
 
-    public LeagueRewardService(LeagueTierTable tierTable, int unlockRankThreshold, int goldenGloveEnhanceCardReward)
+    public LeagueRewardService(LeagueTierTable tierTable, int unlockRankThreshold,
+        int goldenGloveEnhanceCardReward, int star3RewardPercent, int star4RewardPercent)
     {
         _tierTable = tierTable;
         _unlockRankThreshold = unlockRankThreshold;
         _goldenGloveEnhanceCardReward = goldenGloveEnhanceCardReward;
+        _star3RewardPercent = star3RewardPercent;
+        _star4RewardPercent = star4RewardPercent;
     }
 
     /// <summary>
@@ -109,20 +116,18 @@ public class LeagueRewardService
         if (percent <= 0)
             return false;
 
-        return Random.Range(0, 100) < percent;
+        return Random.Range(0, PercentMax) < percent;
     }
 
-    /// <summary>
-    /// 경기 보상으로 줄 강화 전용 카드 등급을 고른다
-    /// </summary>
-    private static CurrencyType PickEnhanceCardType()
+    //경기 보상으로 줄 강화 전용 카드 등급. 남은 확률이 5성 몫이다
+    private CurrencyType PickEnhanceCardType()
     {
-        int roll = Random.Range(0, 100);
+        int roll = Random.Range(0, PercentMax);
 
-        if (roll < 60)
+        if (roll < _star3RewardPercent)
             return CurrencyType.EnhanceCardStar3;
 
-        if (roll < 90)
+        if (roll < _star3RewardPercent + _star4RewardPercent)
             return CurrencyType.EnhanceCardStar4;
 
         return CurrencyType.EnhanceCardStar5;

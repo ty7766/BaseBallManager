@@ -16,6 +16,17 @@ public class PostSeasonRunner
     /// </summary>
     public const int QualifiedTeamCount = 5;
 
+    private const int SeriesCount = 4;
+
+    //단계별 승리 조건 (기획서 7.5 - 와일드카드 2선승제지만 4위가 1승을 안고 시작)
+    private const int WildCardWinsToClinch = 2;
+    private const int WildCardHigherSeedAdvantage = 1;
+    private const int FiveGameWinsToClinch = 3;
+    private const int KoreanSeriesWinsToClinch = 4;
+
+    //무승부 재경기를 감안한 시리즈당 최대 경기 수 여유분
+    private const int DrawReplayAllowance = 5;
+
     public IReadOnlyList<PostSeasonSeries> Series => _series;
 
     /// <summary>
@@ -85,12 +96,17 @@ public class PostSeasonRunner
             return null;
         }
 
-        List<PostSeasonSeries> series = new List<PostSeasonSeries>(4)
+        List<PostSeasonSeries> series = new List<PostSeasonSeries>(SeriesCount)
         {
-            new PostSeasonSeries(PostSeasonRound.WildCard, ranking[3].Record.TeamName, ranking[4].Record.TeamName, 2, 1),
-            new PostSeasonSeries(PostSeasonRound.SemiPlayOff, ranking[2].Record.TeamName, null, 3, 0),
-            new PostSeasonSeries(PostSeasonRound.PlayOff, ranking[1].Record.TeamName, null, 3, 0),
-            new PostSeasonSeries(PostSeasonRound.KoreanSeries, ranking[0].Record.TeamName, null, 4, 0)
+            new PostSeasonSeries(PostSeasonRound.WildCard,
+                ranking[3].Record.TeamName, ranking[4].Record.TeamName,
+                WildCardWinsToClinch, WildCardHigherSeedAdvantage),
+            new PostSeasonSeries(PostSeasonRound.SemiPlayOff,
+                ranking[2].Record.TeamName, null, FiveGameWinsToClinch, 0),
+            new PostSeasonSeries(PostSeasonRound.PlayOff,
+                ranking[1].Record.TeamName, null, FiveGameWinsToClinch, 0),
+            new PostSeasonSeries(PostSeasonRound.KoreanSeries,
+                ranking[0].Record.TeamName, null, KoreanSeriesWinsToClinch, 0)
         };
 
         Dictionary<string, int> rotationIndices = new Dictionary<string, int>(ranking.Length);
@@ -160,7 +176,7 @@ public class PostSeasonRunner
             return null;
         }
 
-        int maxGameCount = series.WinsToClinch * 2 + 5;
+        int maxGameCount = series.WinsToClinch * 2 + DrawReplayAllowance;
 
         if (series.Scores.Count >= maxGameCount)
         {

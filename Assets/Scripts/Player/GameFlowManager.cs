@@ -4,10 +4,8 @@ using UnityEngine;
 /// <summary>
 /// 게임 시작 플로우와 플레이어 세이브의 수명 관리 (기획서 5장 · 10장)
 /// </summary>
-public class GameFlowManager : MonoBehaviour
+public class GameFlowManager : SingletonBehaviour<GameFlowManager>
 {
-    public static GameFlowManager Instance { get; private set; }
-
     /// <summary>
     /// 선택 가능한 10팀 (기획서 5장)
     /// </summary>
@@ -27,19 +25,9 @@ public class GameFlowManager : MonoBehaviour
 
     private PlayerSaveService _saveService;
 
-    private void Awake()
+    protected override void OnSingletonAwake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-
-            _saveService = new PlayerSaveService(new LocalFileStorage());
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        _saveService = new PlayerSaveService(new LocalFileStorage());
     }
 
     /// <summary>
