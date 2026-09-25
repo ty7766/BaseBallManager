@@ -32,22 +32,42 @@
 | 15 | `Player/PlayerDataManager` | ✅ |
 | 16 | `Enhance/EnhanceManager` | ✅ |
 | 17~18 | `Train/TrainManager` · `Train/BreakthroughManager` | ✅ |
-| 19 | `Line Up/LineUpManager` | ⏭️ **다음 시작 지점** |
+| 19~22 | `Line Up/` 4개 (포지션 enum·파서 · `LineUpManager` · `LineUpAutoFill`) | ✅ |
+| 23~37 | `Simulation/` 15개 | ✅ |
+| 38~43 | `ProbabilityModels/` 6개 (+ `RunnerLookup` 신규) | ✅ |
+| 44~46 | `Builders/` 2개 · `Cards/CardStatsCalculator` | ✅ |
+| 47~51 | `Record/` 5개 | ✅ |
+| 52~72 | `League/` 21개 | ✅ (구조 수정 + 주석 규칙) |
+| 73~77 | `Player/` · `Save/` 5개 | ✅ |
+| 78~82 | `Currency/` · `Dismantle` · `Combine` · `GoldenGlove` · `Core` | ✅ (싱글톤 전환 + 주석 규칙) |
+
+**전 파일 1회차 검수 완료.** 남은 것은 아래 2-1의 2회차 정밀 검수 대상뿐이다.
 
 ---
 
 ## 2. 다음 할 일
 
-### 2-1. 검수 #19 `Line Up/LineUpManager` (즉시)
+### 2-1. 2회차 정밀 검수 대상 (즉시)
 
-야수 9 + 벤치 5 + 투수 11 슬롯 관리. 같은 폴더의 `LineUpAutoFill`이 #20이다.
-`Hitters/` · `Pitchers/` 하위의 포지션 enum·파서도 함께 훑는다.
+1회차에서 구조·주석 위주로 훑고 넘어간 파일들. 로직을 한 줄씩 다시 본다.
+
+| 파일 | 1회차에 못 본 것 |
+|---|---|
+| `League/LeagueSaveService` · `PostSeasonSaveService` | 직렬화 왕복(round-trip) 정합성 |
+| `League/LeagueTierTable` | 티어 인덱싱·범위 검사 |
+| `Dismantle/DismantleManager` · `GoldenGlove/GoldenGloveCraftManager` | 보상 계산식과 소모 순서 |
+| `Save/LocalFileStorage` | 파일 I/O 예외 처리 |
+| `CSVParse/CardCSVLoader` | 2-5의 미적용 후보(`asset == null` · `Trim`) 재판단
 
 ### 2-2. 미처리 호출부 대기표
 
 검수로 public 시그니처가 바뀌어 아직 안 고친 곳. **그 파일 검수 차례에 함께 처리한다.**
 
 **현재 비어 있다.** 세션 46부터 파급 호출부를 즉시 고치므로 이 표는 원칙적으로 쌓이지 않는다.
+
+세션 46에서 바뀐 public 시그니처(호출부 모두 동반 수정 완료):
+`CurrencyManager.Restore` `void`→`bool` / `StealCalculator.IsSuccess`에서 `GameState` 매개변수 제거 /
+`TrainManager.GetMaxTrainLevel()`→`MaxTrainLevel` 프로퍼티 / `Hittersubstitution`→`HitterSubstitution`
 
 ### 2-3. Unity 에디터 작업 (코드 아님)
 
@@ -62,6 +82,9 @@
 | 7 | `Minor1~Legend3` `_statBonus` 밸런스 | 🔒 작성자. 현재 9티어 전부 `10`이라 티어가 올라도 AI가 안 강해짐 (근거는 5-3) |
 | 8 | `TrainManager` 인스펙터 — `_statPointPerTrain` **2** 확인 | 씬에 직렬화된 적 없는 새 필드 |
 | 9 | `BreakthroughManager` 인스펙터 — 비용 5개 확인 | 필드 개명(`_breakthroughCardCost_X` → `_xCost`)으로 씬 값이 풀린다. 코드 기본값은 기획서 확정치(50/20/10/5/3)와 동일 |
+| 10 | `LeagueManager` 인스펙터 — 강화 전용 카드 등급 분배 확인 | `_star3RewardPercent` 60 / `_star4RewardPercent` 30. 씬에 직렬화된 적 없는 새 필드 |
+| 11 | `.meta` 생성 확인 | `ProbabilityModels/RunnerLookup` · `Simulation/HitterSubstitution`(파일명 대소문자 변경) |
+| 12 | 매니저 15종 스크립트 참조 확인 | 7개가 `SingletonBehaviour<T>` 상속으로 바뀜 — 씬 컴포넌트는 그대로지만 한 번 열어 확인 |
 
 ### 2-4. 코드 쪽 대기
 
@@ -111,6 +134,9 @@ CSV에서 cardId를 재배치하면 **모든 SO가 예외·로그·컴파일 에
 
 - 검증은 **스크래치패드 dotnet 하니스**(UnityEngine 최소 셰임 + `JsonUtility` 재현 + 실제 CSV 로드)에서만 한다
 - 프로젝트 테스트 파일 **0개 유지**. 하니스는 검증 후 삭제
+- **컴파일 검증 하니스** (세션 46 신설): 스크래치패드에 `UnityShim.cs`(UnityEngine 최소 셰임) + `harness.csproj`를 두고
+  `dotnet build -p:GameRoot=<프로젝트 경로>`로 `Assets/Scripts/**` 전체를 컴파일한다. Unity를 켜지 않고 오류를 잡는다.
+  셰임이 덮는 범위: `MonoBehaviour` · `ScriptableObject` · `Debug` · `Mathf` · `Random` · `JsonUtility` · `Application` · `Resources` · `TextAsset` + 직렬화 속성 8종
 - 하니스 함정: `SingletonBehaviour.Awake`는 `Instance`가 있으면 조기 반환한다. 섹션마다 새 매니저를 만들려면
   `<Instance>k__BackingField`를 리플렉션으로 null로 밀어야 한다. 미전환 매니저는 백킹 필드가 자기 자신에 있으므로 `BaseType`을 따라 올라가며 찾는다
 
@@ -321,3 +347,4 @@ Claude는 이 구간 수치를 건드리지 않는다. 근거만 남긴다.
 | 44 (09-24) | 검수 #15 `PlayerDataManager` — `SingletonBehaviour` 전환 · `SetPlayerTeam`/`Restore` `bool`화 + 티어 범위 검증 · `PlayerSaveService` 호출부 동반 수정. **PROGRESS.md 2,812줄 → 축약 재구성**(세션별 나열 → 주제별. 완성 메서드 목록·중간 과정·튜닝 전 수치 제거, 살아있는 규칙·미결·수치만 보존. 원본은 git 히스토리) |
 | 45 (09-25) | 검수 #16 `EnhanceManager` — `SingletonBehaviour` 전환 · 재료 `List<int>`→`int` 단일화 · **라인업 편성 카드 재료 사용 차단**(`CombineManager`·`DismantleManager`와 규칙 통일) · 실패 경로 로그 보강 · 동일 카드 판정 `IsIdenticalCard`로 통합 · `GetRequiredEnhanceCardType`의 `throw`를 `CurrencyType.None` 반환으로 교체 |
 | 46 (09-25) | **검수 방식 전환 — Claude가 직접 리팩토링·커밋.** 주석 규칙 확정(public `<summary>` 2줄 / private `//` 1줄 / 메서드 내부 금지). 검수 #17~18 `TrainManager`·`BreakthroughManager` — `SingletonBehaviour` 전환 · **`ApplyTrain` 반환값 미수신**(재화만 소모되는 경로) 수정 · `TrainStatCount` `public const` 승격으로 매직넘버 `4` 제거 · 돌파 비용 필드 개명 + 중첩 switch 분리 · 대기표의 `LeagueManager` `SetPlayerTeam` 2건 처리 |
+| 47 (09-25) | **전 파일 1회차 검수 완료** (45개 / 약 7,000줄). 🔴 수정: `GameSimulator` 자동 교체가 강판 슬롯을 기록하지 않던 문제 · `LineUpManager`가 `TryParse` 실패를 무시해 오타 카드를 LF/SP에 배치하던 문제 · `CurrencyManager.SpendAll`의 같은 재화 중복 차감(음수 가능) · 세이브 재화 복원 실패가 "이어하기 성공"으로 보고되던 문제. 구조: 시뮬 상수 `SimulationContext`/`GameState`로 통일 · 밀어내기 진루 로직 중복 제거 · `RunnerLookup` 신설 · 매니저 7종 `SingletonBehaviour` 전환 · 주석 규칙 일괄 적용(변환기 자동화) · **컴파일 검증 하니스 신설** |
