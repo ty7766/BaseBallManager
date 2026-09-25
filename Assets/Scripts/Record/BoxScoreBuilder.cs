@@ -2,12 +2,8 @@
 using UnityEngine;
 
 /// <summary>
-/// 타석 로그를 박스스코어로 집계 (기획서 8.5)
+/// 타석·도루 로그를 박스스코어로 사후 집계한다. 필요한 경기에서만 호출한다
 /// </summary>
-/// <remarks>
-/// 시뮬 코어에 집계 책임을 두지 않고 사후 변환으로 분리했다.
-/// 일괄 시뮬은 경기마다 박스스코어가 필요하지 않으므로, 필요한 경기에서만 호출해 낭비를 없앤다.
-/// </remarks>
 public static class BoxScoreBuilder
 {
     /// <summary>
@@ -23,9 +19,8 @@ public static class BoxScoreBuilder
             return null;
         }
 
-        List<InningScore> innings = new List<InningScore>(9);
+        List<InningScore> innings = new List<InningScore>(GameState.RegulationInnings);
 
-        //Dictionary는 조회용, List는 표시 순서용 (등장 순서를 유지해야 타순·등판 순서가 보존됨)
         TeamAccumulator away = new TeamAccumulator();
         TeamAccumulator home = new TeamAccumulator();
 
@@ -34,11 +29,9 @@ public static class BoxScoreBuilder
 
         foreach (SimulationBatterLog log in logs)
         {
-            //초 = 원정 공격 / 홈 수비
             TeamAccumulator attack = log.IsTopInning ? away : home;
             TeamAccumulator defense = log.IsTopInning ? home : away;
 
-            //① 라인스코어
             InningScore inningScore = GetOrCreateInning(innings, log.Inning);
 
             if (log.IsTopInning)
@@ -46,40 +39,38 @@ public static class BoxScoreBuilder
             else
                 inningScore.AddHomeRuns(log.RunsScored);
 
-            //② 타자 기록. 실책으로 난 득점은 타점으로 인정하지 않는다 (야구 기록 규칙)
             int runsBattedIn = log.Outcome == BatterOutcome.Error ? 0 : log.RunsScored;
 
             attack.GetHitter(log.BatterInstanceId, log.BatterName)
                 .AddPlateAppearance(log.Outcome, runsBattedIn);
 
-            //③ 득점한 주자들 (타자 본인이 홈런으로 밟은 경우도 여기 포함됨).
-            //득점하려면 먼저 타석에 섰어야 하므로 이미 등록돼 있는 것이 정상이다
             foreach (int runnerId in log.ScoredRunnerIds)
             {
                 if (!attack.TryAddRun(runnerId))
                     Debug.LogError($"[BoxScoreBuilder]: 타석 기록이 없는 주자가 득점했습니다 (instanceId {runnerId})");
             }
 
-            //④ 투수 기록
             defense.GetPitcher(log.PitcherInstanceId, log.PitcherName)
                 .AddBatterFaced(log.Outcome, log.PitchCount, log.RunsScored);
 
-            //⑤ 팀 합계 (안타는 공격팀, 실책은 수비팀에 붙는다)
             if (IsHit(log.Outcome))
             {
-                if (log.IsTopInning) awayHits++;
-                else homeHits++;
+                if (log.IsTopInning)
+                    awayHits++;
+                else
+                    homeHits++;
             }
 
+            //실책은 저지른 수비팀에 붙는다
             if (log.Outcome == BatterOutcome.Error)
             {
-                if (log.IsTopInning) homeErrors++;
-                else awayErrors++;
+                if (log.IsTopInning)
+                    homeErrors++;
+                else
+                    awayErrors++;
             }
         }
 
-        //⑥ 도루 (기획서 8.3.1). 타석 로그를 다 돌린 뒤에 처리한다 - 주자는 반드시 그 전에 타석에 섰으므로
-        //이 시점이면 선수 항목이 이미 만들어져 있다
         if (stealLogs != null)
         {
             foreach (SimulationStealLog stealLog in stealLogs)
@@ -106,11 +97,8 @@ public static class BoxScoreBuilder
     //해당 이닝 칸을 찾거나, 없으면 그 이닝까지 칸을 만들어 채운다
     private static InningScore GetOrCreateInning(List<InningScore> innings, int inning)
     {
-        //경기는 1회부터 순서대로 진행되므로 대개 마지막 칸이 정답이다
         while (innings.Count < inning)
-        {
             innings.Add(new InningScore(innings.Count + 1));
-        }
 
         return innings[inning - 1];
     }
@@ -122,12 +110,10 @@ public static class BoxScoreBuilder
             || outcome == BatterOutcome.Triple || outcome == BatterOutcome.HomeRun;
     }
 
-    /// <summary>
-    /// 한 팀의 선수별 기록을 모으는 임시 그릇
-    /// </summary>
+    //한 팀의 선수별 기록을 모으는 임시 그릇. List는 등장 순서(타순·등판 순서) 보존용이다
     private class TeamAccumulator
     {
-        public List<HitterGameStats> Hitters { get; } = new List<HitterGameStats>(9);
+        public List<HitterGameStats> Hitters { get; } = new List<HitterGameStats>(SimulationContext.LineupSize);
         public List<PitcherGameStats> Pitchers { get; } = new List<PitcherGameStats>(4);
 
         private readonly Dictionary<int, HitterGameStats> _hitterLookup = new Dictionary<int, HitterGameStats>();

@@ -1,7 +1,6 @@
 ﻿/// <summary>
-/// 타자 1명의 경기 1건 기록 (기획서 8.5 박스스코어)
+/// 타자 1명의 경기 1건 기록. 집계 중에만 값이 변한다
 /// </summary>
-/// <remarks>집계 중에만 값이 변하고, 완성된 뒤에는 읽기 전용으로 쓴다.</remarks>
 public class HitterGameStats
 {
     public int InstanceId { get; }
@@ -20,7 +19,7 @@ public class HitterGameStats
     public int StolenBases { get; private set; }        //도루 성공 (기획서 8.3.1)
     public int CaughtStealing { get; private set; }     //도루 실패
 
-    //경기 타율. 타수가 0이면 0 (표기는 UI에서 .000 형태로)
+    //경기 타율. 타수가 0이면 0 (표기는 UI가 .000 형태로)
     public float Average => AtBats == 0 ? 0f : (float)Hits / AtBats;
 
     public HitterGameStats(int instanceId, string name)
@@ -29,12 +28,13 @@ public class HitterGameStats
         Name = name;
     }
 
-    //타석 1회 결과 반영
+    /// <summary>
+    /// 타석 1회 결과를 반영한다. 볼넷·희생플라이는 타수에서 빠진다
+    /// </summary>
     public void AddPlateAppearance(BatterOutcome outcome, int runsBattedIn)
     {
         PlateAppearances++;
 
-        //볼넷과 희생플라이는 타수에서 빠진다 (타율이 부당하게 깎이지 않도록 하는 야구 기록 규칙)
         if (outcome != BatterOutcome.Walk && outcome != BatterOutcome.SacrificeFly)
             AtBats++;
 
@@ -66,13 +66,17 @@ public class HitterGameStats
         }
     }
 
-    //홈을 밟았을 때 (타점과 달리 주자 본인에게 붙는 기록)
+    /// <summary>
+    /// 홈을 밟았을 때. 타점과 달리 주자 본인에게 붙는 기록이다
+    /// </summary>
     public void AddRun()
     {
         Runs++;
     }
 
-    //도루 시도 1건 반영 (기획서 8.3.1). 타석·타수와 무관한 별개 기록
+    /// <summary>
+    /// 도루 시도 1건을 반영한다. 타석·타수와 무관한 별개 기록이다
+    /// </summary>
     public void AddStealAttempt(bool isSuccess)
     {
         if (isSuccess)

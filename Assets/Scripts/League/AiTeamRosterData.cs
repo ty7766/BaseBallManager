@@ -3,10 +3,14 @@ using UnityEngine;
 /// <summary>
 /// AI 팀 1개의 편성 데이터 (에디터 편집용)
 /// </summary>
-
 [CreateAssetMenu(fileName = "AiTeamRoster", menuName = "BaseBallManager/AI Team Roster")]
 public class AiTeamRosterData : ScriptableObject
 {
+    /// <summary>
+    /// 빈 카드 슬롯 센티넬. cardId가 1부터라 int 기본값이 곧 빈 슬롯이다
+    /// </summary>
+    public const int EmptyCardSlot = 0;
+
     public const int LineupSize = 9;
     public const int StartingPitcherCount = 5;
     public const int RelieverCount = 5;

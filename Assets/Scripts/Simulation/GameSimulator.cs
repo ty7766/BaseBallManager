@@ -197,6 +197,12 @@ public class GameSimulator
                 continue;
             }
 
+            if (attackBench[sub.BenchIndex].InstanceId == 0)
+            {
+                Debug.LogWarning($"[GameSimulator]: 벤치 {sub.BenchIndex}번이 비어 있어 대타 교체를 건너뜁니다");
+                continue;
+            }
+
             int originHitterInstanceId = attackLineup[sub.BattingOrderIndex].InstanceId;
             state.MarkHitterUsed(isHomeAttacking, originHitterInstanceId);
             attackLineup[sub.BattingOrderIndex] = attackBench[sub.BenchIndex];
