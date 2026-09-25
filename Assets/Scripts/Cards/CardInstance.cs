@@ -7,7 +7,10 @@ using UnityEngine;
 /// </summary>
 public class CardInstance
 {
-    private const int TrainStatCount = 4;
+    /// <summary>
+    /// 훈련으로 오르는 세부 스탯 수. 훈련 분배 배열의 길이 계약이다
+    /// </summary>
+    public const int TrainStatCount = 4;
 
     public int InstanceId { get; private set; }              //인스턴스ID
     public int CardId { get; private set; }                  //카드 ID - CSV와 연결
@@ -19,7 +22,9 @@ public class CardInstance
 
     private readonly int[] _trainDelta;
 
-    //신규 카드 획득 시 초기 값 생성자
+    /// <summary>
+    /// 신규 카드 획득 시 초기 값 생성자
+    /// </summary>
     public CardInstance(int instanceId, int cardId)
     {
         InstanceId = instanceId;
@@ -31,7 +36,9 @@ public class CardInstance
         _trainDelta = new int[TrainStatCount];
     }
 
-    //세이브 복원 전용 생성자 - 저장된 상태를 그대로 되살린다
+    /// <summary>
+    /// 세이브 복원 전용 생성자 - 저장된 상태를 그대로 되살린다
+    /// </summary>
     public CardInstance(int instanceId, int cardId, int enhanceLevel, int trainLevel,
         bool breakthroughUsed, int[] trainDelta, bool isLocked)
         :this(instanceId, cardId)
@@ -50,19 +57,25 @@ public class CardInstance
         Array.Copy(trainDelta, _trainDelta, TrainStatCount);
     }
 
-    //카드 잠금 설정
+    /// <summary>
+    /// 카드 잠금 설정
+    /// </summary>
     public void SetLocked(bool locked)
     {
         IsLocked = locked;
     }
 
-    //강화 레벨 1 증가
+    /// <summary>
+    /// 강화 레벨 1 증가
+    /// </summary>
     public void ApplyEnhance()
     {
         EnhanceLevel++;
     }
 
-    //훈련 레벨 1 증가 + 스탯 분배 반영
+    /// <summary>
+    /// 훈련 레벨 1 증가 + 스탯 분배 반영
+    /// </summary>
     public bool ApplyTrain(int[] increasedStat)
     {
         if (increasedStat == null || increasedStat.Length != TrainStatCount)
@@ -78,7 +91,9 @@ public class CardInstance
         return true;
     }
 
-    //돌파 완료 표시
+    /// <summary>
+    /// 돌파 완료 표시
+    /// </summary>
     public void ApplyBreakthrough()
     {
         BreakthroughUsed = true;

@@ -3,9 +3,17 @@
 /// <summary>
 /// 훈련 전반 설정
 /// </summary>
-public class TrainManager : MonoBehaviour
+public class TrainManager : SingletonBehaviour<TrainManager>
 {
-    public static TrainManager Instance { get; private set; }
+    /// <summary>
+    /// 훈련돌파 전 최대 훈련 레벨. 돌파 해금 기준이기도 하다
+    /// </summary>
+    public int MaxTrainLevel => _maxTrainLevel;
+
+    /// <summary>
+    /// 훈련돌파 후 최대 훈련 레벨
+    /// </summary>
+    public int MaxTrainLevelAfterBreakthrough => _maxTrainLevelAfterBreakthrough;
 
     [Header("훈련 레벨 설정")]
     [SerializeField, Tooltip("훈련돌파 전 최대 훈련 레벨")]
@@ -18,58 +26,38 @@ public class TrainManager : MonoBehaviour
     private int _basePointCost = 100;
     [SerializeField, Tooltip("기본 훈련 카드 비용 (실제 비용 = 현재 훈련 레벨 x 이 값)")]
     private int _baseTrainCardCost = 1;
-    
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
+    [SerializeField, Tooltip("1레벨 상승당 4개 스탯에 랜덤 분배할 포인트 수")]
+    private int _statPointPerTrain = 2;
 
-    //훈련을 할 수 있는 상태인지를 반환
+    /// <summary>
+    /// 해당 카드를 더 훈련할 수 있는지 검사한다
+    /// </summary>
     public bool CanTrain(int instanceId)
     {
-        CardInstance card = InventoryManager.Instance.GetCard(instanceId);
-        if (card == null)
-        {
-            return false;
-        }
-
-        int maxLevel;
-        
-        if (!card.BreakthroughUsed)
-        {
-            maxLevel = _maxTrainLevel;
-        }
-        else
-        {
-            maxLevel = _maxTrainLevelAfterBreakthrough;
-        }
-
-        //훈련이 만렙이 아니면 true 반환
-        return card.TrainLevel < maxLevel;
-        
+        return CanTrain(InventoryManager.Instance.GetCard(instanceId));
     }
 
-    //현재 훈련 레벨 기준 포인트 비용과 훈련 카드 비용 반환
+    /// <summary>
+    /// 현재 훈련 레벨 기준 포인트 비용과 훈련 카드 비용을 반환한다
+    /// </summary>
     public (int pointCost, int trainCardCost) GetTrainCost(int trainLevel)
     {
-        int pointCost = trainLevel * _basePointCost;
-        int trainCardCost = trainLevel * _baseTrainCardCost;
-
-        return (pointCost, trainCardCost);
+        return (trainLevel * _basePointCost, trainLevel * _baseTrainCardCost);
     }
 
+    /// <summary>
+    /// 재화를 소모해 훈련 레벨을 1 올리고 4개 스탯에 랜덤 분배한다
+    /// </summary>
     public bool Train(int instanceId)
     {
-        if (!CanTrain(instanceId))
+        CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
+
+        if (cardInstance == null)
+            return false;
+
+        if (!CanTrain(cardInstance))
         {
+            Debug.LogWarning($"[TrainManager] : 더 훈련할 수 없는 카드입니다 (instanceId {instanceId})");
             return false;
         }
 
@@ -79,35 +67,46 @@ public class TrainManager : MonoBehaviour
             return false;
         }
 
-        CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
-
         (int pointCost, int trainCardCost) = GetTrainCost(cardInstance.TrainLevel);
 
-        //포인트와 훈련 카드를 한 번에 소모한다. 하나라도 모자라면 아무것도 차감되지 않음
         CurrencyCost[] costs =
         {
             new CurrencyCost(CurrencyType.Point, pointCost),
             new CurrencyCost(CurrencyType.TrainCard, trainCardCost)
         };
 
-        //부족 사유는 CurrencyManager가 로그로 남김
         if (!CurrencyManager.Instance.SpendAll(costs))
             return false;
 
-        int[] delta = new int[4];
-
-        for(int i = 0; i < 2; i++)
+        if (!cardInstance.ApplyTrain(RollTrainDelta()))
         {
-            delta[Random.Range(0, 4)]++;
+            Debug.LogError($"[TrainManager] : 훈련 분배 적용에 실패해 재화만 소모되었습니다 (instanceId {instanceId})");
+            return false;
         }
-
-        cardInstance.ApplyTrain(delta);
 
         return true;
     }
 
-    public int GetMaxTrainLevel()
+    //조회를 이미 끝낸 호출부용
+    private bool CanTrain(CardInstance cardInstance)
     {
-        return _maxTrainLevel;
+        return cardInstance != null && cardInstance.TrainLevel < GetMaxTrainLevel(cardInstance);
+    }
+
+    //돌파 여부에 따른 훈련 레벨 상한
+    private int GetMaxTrainLevel(CardInstance cardInstance)
+    {
+        return cardInstance.BreakthroughUsed ? _maxTrainLevelAfterBreakthrough : _maxTrainLevel;
+    }
+
+    //1레벨 상승분을 4개 스탯에 랜덤 분배
+    private int[] RollTrainDelta()
+    {
+        int[] delta = new int[CardInstance.TrainStatCount];
+
+        for (int i = 0; i < _statPointPerTrain; i++)
+            delta[Random.Range(0, CardInstance.TrainStatCount)]++;
+
+        return delta;
     }
 }
