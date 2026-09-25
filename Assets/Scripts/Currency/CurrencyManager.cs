@@ -91,19 +91,37 @@ public class CurrencyManager : SingletonBehaviour<CurrencyManager>
             return false;
         }
 
+        Dictionary<CurrencyType, int> required = new Dictionary<CurrencyType, int>(costs.Count);
+
         foreach (CurrencyCost cost in costs)
         {
-            if (!CanAfford(cost.Type, cost.Amount))
+            if (cost.Type == CurrencyType.None)
             {
-                Debug.LogWarning($"[CurrencyManager]: {cost.Type}이(가) 부족합니다 (보유 {GetAmount(cost.Type)} / 필요 {cost.Amount})");
+                Debug.LogError("[CurrencyManager]: 비용 목록에 None 재화가 들어 있습니다");
+                return false;
+            }
+
+            if (cost.Amount <= 0)
+            {
+                Debug.LogWarning($"[CurrencyManager]: 요구량이 {cost.Amount}입니다 ({cost.Type})");
+                return false;
+            }
+
+            required.TryGetValue(cost.Type, out int total);
+            required[cost.Type] = total + cost.Amount;
+        }
+
+        foreach (KeyValuePair<CurrencyType, int> pair in required)
+        {
+            if (GetAmount(pair.Key) < pair.Value)
+            {
+                Debug.LogWarning($"[CurrencyManager]: {pair.Key}이(가) 부족합니다 (보유 {GetAmount(pair.Key)} / 필요 {pair.Value})");
                 return false;
             }
         }
 
-        foreach (CurrencyCost cost in costs)
-        {
-            _amounts[cost.Type] = GetAmount(cost.Type) - cost.Amount;
-        }
+        foreach (KeyValuePair<CurrencyType, int> pair in required)
+            _amounts[pair.Key] = GetAmount(pair.Key) - pair.Value;
 
         return true;
     }
@@ -111,12 +129,21 @@ public class CurrencyManager : SingletonBehaviour<CurrencyManager>
     /// <summary>
     /// 세이브 복원용 일괄 주입 (두 배열은 인덱스가 서로 대응한다)
     /// </summary>
-    public void Restore(CurrencyType[] types, int[] amounts)
+    public bool Restore(CurrencyType[] types, int[] amounts)
     {
         if (types == null || amounts == null || types.Length != amounts.Length)
         {
             Debug.LogError("[CurrencyManager]: 복원할 재화 배열이 올바르지 않습니다");
-            return;
+            return false;
+        }
+
+        for (int i = 0; i < amounts.Length; i++)
+        {
+            if (amounts[i] < 0)
+            {
+                Debug.LogError($"[CurrencyManager]: 복원할 보유량이 음수입니다 ({(CurrencyType)types[i]} {amounts[i]})");
+                return false;
+            }
         }
 
         _amounts.Clear();
@@ -128,5 +155,7 @@ public class CurrencyManager : SingletonBehaviour<CurrencyManager>
 
             _amounts[types[i]] = amounts[i];
         }
+
+        return true;
     }
 }

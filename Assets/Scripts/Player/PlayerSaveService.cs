@@ -94,14 +94,13 @@ public class PlayerSaveService
             (LeagueTier)saveData.HighestUnlockedTier, saveData.TutorialCompleted))
             return false;
 
-        RestoreCurrencies(saveData);
+        if (!RestoreCurrencies(saveData))
+            return false;
 
         List<CardInstance> cards = new List<CardInstance>(saveData.Cards.Length);
 
         foreach (CardInstanceSaveData cardData in saveData.Cards)
-        {
             cards.Add(ToCardInstance(cardData));
-        }
 
         if (!InventoryManager.Instance.Restore(cards, saveData.NextInstanceId, saveData.MaxCapacity))
             return false;
@@ -154,22 +153,20 @@ public class PlayerSaveService
     }
 
     //나란한 배열 2개 -> 재화
-    private static void RestoreCurrencies(PlayerSaveData saveData)
+    private static bool RestoreCurrencies(PlayerSaveData saveData)
     {
         if (saveData.CurrencyTypes == null || saveData.CurrencyAmounts == null)
         {
             Debug.LogError("[PlayerSaveService]: 세이브에 재화 정보가 없습니다");
-            return;
+            return false;
         }
 
         CurrencyType[] types = new CurrencyType[saveData.CurrencyTypes.Length];
 
         for (int i = 0; i < types.Length; i++)
-        {
             types[i] = (CurrencyType)saveData.CurrencyTypes[i];
-        }
 
-        CurrencyManager.Instance.Restore(types, saveData.CurrencyAmounts);
+        return CurrencyManager.Instance.Restore(types, saveData.CurrencyAmounts);
     }
 
     //카드 -> 저장 형태
@@ -178,9 +175,7 @@ public class PlayerSaveService
         int[] trainDelta = new int[card.TrainDelta.Count];
 
         for (int i = 0; i < trainDelta.Length; i++)
-        {
             trainDelta[i] = card.TrainDelta[i];
-        }
 
         return new CardInstanceSaveData
         {
@@ -253,7 +248,7 @@ public class PlayerSaveService
         {
             for (int i = 0; i < lineUpData.HitterPositions.Length; i++)
             {
-                if (lineUpData.HitterInstanceIds[i] == -1)
+                if (lineUpData.HitterInstanceIds[i] == LineUpManager.EmptySlot)
                     continue;
 
                 LineUpManager.Instance.AssignHitter((HitterPosition)lineUpData.HitterPositions[i],
@@ -280,7 +275,7 @@ public class PlayerSaveService
 
         for (int i = 0; i < benchInstanceIds.Length; i++)
         {
-            if (benchInstanceIds[i] == -1)
+            if (benchInstanceIds[i] == LineUpManager.EmptySlot)
                 continue;
 
             LineUpManager.Instance.AssignBench(i, benchInstanceIds[i]);
@@ -295,7 +290,7 @@ public class PlayerSaveService
 
         for (int i = 0; i < instanceIds.Length; i++)
         {
-            if (instanceIds[i] == -1)
+            if (instanceIds[i] == LineUpManager.EmptySlot)
                 continue;
 
             LineUpManager.Instance.AssignPitcher(position, i, instanceIds[i]);

@@ -72,7 +72,8 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
             return false;
         }
 
-        PlayerDataManager.Instance.SetPlayerTeam(teamName);
+        if (!PlayerDataManager.Instance.SetPlayerTeam(teamName))
+            return false;
 
         GrantStartingSignatureCard(teamName);
 
