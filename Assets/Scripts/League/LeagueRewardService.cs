@@ -7,6 +7,9 @@ public class LeagueRewardService
 {
     private const int PercentMax = 100;
 
+    //순위표에서 플레이어 팀을 찾지 못했다는 표시
+    private const int RankNotFound = -1;
+
     private readonly LeagueTierTable _tierTable;
     private readonly int _unlockRankThreshold;
     private readonly int _goldenGloveEnhanceCardReward;
@@ -54,7 +57,7 @@ public class LeagueRewardService
 
         int rank = FindPlayerRank(season);
 
-        if (rank == -1)
+        if (rank == RankNotFound)
         {
             Debug.LogError($"[LeagueRewardService]: 순위표에서 '{season.PlayerTeamName}'을(를) 찾지 못했습니다");
             return null;
@@ -144,7 +147,7 @@ public class LeagueRewardService
                 return row.Rank;
         }
 
-        return -1;
+        return RankNotFound;
     }
 
     //다음 티어. 마지막 티어(Legend3)면 false

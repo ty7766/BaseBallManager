@@ -5,6 +5,11 @@
 /// </summary>
 public class BreakthroughManager : SingletonBehaviour<BreakthroughManager>
 {
+    /// <summary>
+    /// 비용을 구하지 못했을 때 돌려주는 값
+    /// </summary>
+    public const int InvalidCost = -1;
+
     [Header("카드 종류·등급별 훈련돌파 카드 소모량")]
     [SerializeField, Tooltip("골든글러브")]
     private int _goldenGloveCost = 50;
@@ -93,14 +98,14 @@ public class BreakthroughManager : SingletonBehaviour<BreakthroughManager>
     private int GetBreakthroughCost(CardInstance cardInstance)
     {
         if (cardInstance == null)
-            return -1;
+            return InvalidCost;
 
         CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardInstance.CardId);
 
         if (masterData == null)
         {
             Debug.LogError($"[BreakthroughManager] : 마스터 데이터를 찾지 못했습니다 (cardId {cardInstance.CardId})");
-            return -1;
+            return InvalidCost;
         }
 
         return masterData.CardType switch
@@ -108,7 +113,7 @@ public class BreakthroughManager : SingletonBehaviour<BreakthroughManager>
             CardType.GoldenGlove => _goldenGloveCost,
             CardType.Signature => _signatureCost,
             CardType.Normal => GetNormalBreakthroughCost(masterData.CardGrade),
-            _ => -1
+            _ => InvalidCost
         };
     }
 
@@ -120,7 +125,7 @@ public class BreakthroughManager : SingletonBehaviour<BreakthroughManager>
             CardGrade.Star5 => _normalStar5Cost,
             CardGrade.Star4 => _normalStar4Cost,
             CardGrade.Star3 => _normalStar3Cost,
-            _ => -1
+            _ => InvalidCost
         };
     }
 }

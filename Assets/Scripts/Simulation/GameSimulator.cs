@@ -7,8 +7,6 @@ using UnityEngine;
 /// </summary>
 public class GameSimulator
 {
-    private const int NoNextPitcher = -1;
-
     private readonly BatterOutcomeCalculator _batterOutcomeCalc;
     private readonly BaseRunningCalculator _baseRunningCalc;
     private readonly PitchCountCalculator _pitchCountCalc;
@@ -114,7 +112,7 @@ public class GameSimulator
 
         int nextSlot = _pitcherChangeEval.GetNextPitcherSlot(defPitcherState, gameState);
 
-        if (nextSlot == NoNextPitcher)
+        if (nextSlot == PitcherChangeEvaluator.NoNextPitcher)
             return;
 
         gameState.MarkPitcherUsed(isTopInning, defPitcherState.PitcherSlotIndex);

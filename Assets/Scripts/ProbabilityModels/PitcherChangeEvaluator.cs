@@ -3,6 +3,11 @@
 /// </summary>
 public class PitcherChangeEvaluator
 {
+    /// <summary>
+    /// 올릴 수 있는 투수가 남지 않았을 때 돌려주는 슬롯 번호
+    /// </summary>
+    public const int NoNextPitcher = -1;
+
     private const float ExhaustedStaminaRatio = 0.30f;
     private const float TiredStaminaRatio = 0.50f;
     private const int SaveSituationMaxLead = 3;
@@ -64,7 +69,7 @@ public class PitcherChangeEvaluator
                 return nextSlot;
         }
 
-        return -1;
+        return NoNextPitcher;
     }
 
     //베이스에 나가 있는 주자 수

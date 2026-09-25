@@ -10,6 +10,9 @@ public static class LineUpAutoFill
     //FindFirstUnused에서 포지션을 따지지 않는다는 표시
     private const int AnyPosition = -1;
 
+    //쓸 수 있는 후보가 남지 않았다는 표시
+    private const int NotFound = -1;
+
     private static readonly HitterPosition[] DefensePositions =
     {
         HitterPosition.C, HitterPosition.FB, HitterPosition.SB, HitterPosition.TB,
@@ -84,7 +87,7 @@ public static class LineUpAutoFill
         {
             int index = FindFirstUnused(hitters, usedInstanceIds, (int)position);
 
-            if (index == -1)
+            if (index == NotFound)
             {
                 Debug.LogWarning($"[LineUpAutoFill]: {position} 포지션 카드가 없습니다");
                 continue;
@@ -96,7 +99,7 @@ public static class LineUpAutoFill
 
         int dhIndex = FindFirstUnused(hitters, usedInstanceIds, AnyPosition);
 
-        if (dhIndex != -1)
+        if (dhIndex != NotFound)
         {
             usedInstanceIds.Add(hitters[dhIndex].InstanceId);
             selected.Add((HitterPosition.DH, hitters[dhIndex]));
@@ -124,7 +127,7 @@ public static class LineUpAutoFill
         {
             int index = FindFirstUnused(pitchers, usedInstanceIds, (int)position);
 
-            if (index == -1)
+            if (index == NotFound)
             {
                 Debug.LogWarning($"[LineUpAutoFill]: {position} 카드가 부족합니다 ({slotIndex}/{slotCount}칸 채움)");
                 return;
@@ -142,7 +145,7 @@ public static class LineUpAutoFill
         {
             int index = FindFirstUnused(hitters, usedInstanceIds, AnyPosition);
 
-            if (index == -1)
+            if (index == NotFound)
                 return;
 
             usedInstanceIds.Add(hitters[index].InstanceId);
@@ -191,7 +194,7 @@ public static class LineUpAutoFill
             return i;
         }
 
-        return -1;
+        return NotFound;
     }
 
     //편성 점수 내림차순
