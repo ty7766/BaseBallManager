@@ -30,7 +30,7 @@ public class PlayerDataManager : SingletonBehaviour<PlayerDataManager>
     //티어 해금. 이미 더 높은 티어가 열려 있으면 되돌리지 않는다
     public bool UnlockTier(LeagueTier tier)
     {
-        if ((int)tier <= (int)HighestUnlockedTier)
+        if (tier <= HighestUnlockedTier)
             return false;
 
         HighestUnlockedTier = tier;
@@ -57,7 +57,7 @@ public class PlayerDataManager : SingletonBehaviour<PlayerDataManager>
 
         if (highestUnlockedTier < LeagueTier.Basic1 || highestUnlockedTier > LeagueTier.Legend3)
         {
-            Debug.LogError($"[PlayerDataManager] : 알 수 없는 리그 티어입니다 ({(int)highestUnlockedTier}");
+            Debug.LogError($"[PlayerDataManager] : 알 수 없는 리그 티어입니다 ({(int)highestUnlockedTier})");
             return false;
         }
 

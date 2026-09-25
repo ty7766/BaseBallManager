@@ -91,8 +91,9 @@ public class PlayerSaveService
             return false;
         }
 
-        PlayerDataManager.Instance.Restore(saveData.PlayerTeamName,
-            (LeagueTier)saveData.HighestUnlockedTier, saveData.TutorialCompleted);
+        if (!PlayerDataManager.Instance.Restore(saveData.PlayerTeamName,
+            (LeagueTier)saveData.HighestUnlockedTier, saveData.TutorialCompleted))
+            return false;
 
         RestoreCurrencies(saveData);
 
