@@ -1,21 +1,35 @@
 ﻿using System;
+
 /// <summary>
-/// 경기 1건의 시뮬 입력 데이터 (양 팀 타자·투수 스냅샷 + 홈/원정 여부)
+/// 경기 1건의 시뮬 입력 데이터. 라인업 배열 요소는 교체로 바뀌므로 반드시 사본을 넘긴다
 /// </summary>
-/// <remarks>
-/// ⚠️ <b>이름과 달리 완전한 불변 객체가 아니다.</b>
-/// 프로퍼티에 <c>set</c>이 없어 배열 <i>참조</i>만 고정될 뿐, <b>배열 요소는 밖에서 덮어쓸 수 있다.</b>
-/// 실제로 <see cref="GameSimulator"/>의 대타 교체가 <see cref="HomeLineup"/> / <see cref="AwayLineup"/>의
-/// 요소를 직접 갈아끼운다.
-/// <para>
-/// 따라서 <b>재사용되는 원본 배열(예: AI 고정 로스터)을 그대로 넘기면 안 된다.</b>
-/// 경기 1회의 대타 교체가 로스터를 영구히 오염시켜 다음 경기부터 다른 선수가 출전하게 되고,
-/// 이 오염은 예외도 로그도 없이 시즌 내내 누적된다.
-/// 반드시 사본을 넘길 것 (<c>SimulationContextBuilder.CopyLineup</c>).
-/// </para>
-/// </remarks>
 public class SimulationContext
 {
+    /// <summary>
+    /// 타순 수 (= 선발 야수 수)
+    /// </summary>
+    public const int LineupSize = 9;
+
+    /// <summary>
+    /// 투수진 배열 길이. [0]=SP / [1~5]=RP / [6]=CP
+    /// </summary>
+    public const int PitcherSlotCount = 7;
+
+    /// <summary>
+    /// 선발 투수 슬롯 번호
+    /// </summary>
+    public const int StartingPitcherSlot = 0;
+
+    /// <summary>
+    /// 마무리 투수 슬롯 번호
+    /// </summary>
+    public const int CloserSlot = 6;
+
+    /// <summary>
+    /// 벤치 최대 인원. AI 팀은 벤치가 없어 0칸이다
+    /// </summary>
+    public const int MaxBenchSize = 5;
+
     public bool IsPlayerHome { get; }
 
     public HitterSnapshot[] HomeLineup { get; }     //홈팀 타자 라인업 (타순 순서. 요소는 교체로 바뀔 수 있음)
@@ -32,20 +46,23 @@ public class SimulationContext
         HitterSnapshot[] homeBench, HitterSnapshot[] awayBench,
         PitcherSnapshot[] homePitchers, PitcherSnapshot[] awayPitchers)
     {
-        if (homeLineup == null || homeLineup.Length != 9)
-            throw new ArgumentException("홈 타자 라인업 중 비어있는 슬롯이 있습니다!");
-        if (awayLineup == null || awayLineup.Length != 9)
-            throw new ArgumentException("원정 타자 라인업 중 비어있는 슬롯이 있습니다!");
-        if (homePitchers == null || homePitchers.Length != 7)
-            throw new ArgumentException("홈 투수 라인업 중 비어있는 슬롯이 있습니다!");
-        if (awayPitchers == null || awayPitchers.Length != 7)
-            throw new ArgumentException("원정 투수 라인업 중 비어있는 슬롯이 있습니다!");
+        if (homeLineup == null || homeLineup.Length != LineupSize)
+            throw new ArgumentException($"홈 타자 라인업이 {LineupSize}칸이 아닙니다");
+
+        if (awayLineup == null || awayLineup.Length != LineupSize)
+            throw new ArgumentException($"원정 타자 라인업이 {LineupSize}칸이 아닙니다");
+
+        if (homePitchers == null || homePitchers.Length != PitcherSlotCount)
+            throw new ArgumentException($"홈 투수진이 {PitcherSlotCount}칸이 아닙니다");
+
+        if (awayPitchers == null || awayPitchers.Length != PitcherSlotCount)
+            throw new ArgumentException($"원정 투수진이 {PitcherSlotCount}칸이 아닙니다");
 
         IsPlayerHome = isPlayerHome;
         HomeLineup = homeLineup;
         AwayLineup = awayLineup;
-        HomeBench = homeBench;
-        AwayBench = awayBench;
+        HomeBench = homeBench ?? Array.Empty<HitterSnapshot>();
+        AwayBench = awayBench ?? Array.Empty<HitterSnapshot>();
         HomePitchers = homePitchers;
         AwayPitchers = awayPitchers;
     }
