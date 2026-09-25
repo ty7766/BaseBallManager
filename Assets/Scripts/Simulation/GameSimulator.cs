@@ -131,7 +131,7 @@ public class GameSimulator
         int inning = gameState.Inning;
         int outCountBefore = gameState.OutCount;
 
-        bool isSuccess = _stealCalc.IsSuccess(attempt, gameState, context, isTopInning);
+        bool isSuccess = _stealCalc.IsSuccess(attempt, context, isTopInning);
 
         if (isSuccess)
         {
