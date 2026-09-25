@@ -20,7 +20,8 @@
 **현재 트랙: 전체 코드 검수·리팩토링** (세션 41 착수, 브랜치 `refactoring/Code-Structure-Refactoring`)
 
 작성 순서(git 커밋 기준)대로 `.cs` 한 개씩 검수한다.
-작성자가 파일명을 부르면 Claude가 전문을 읽고 인라인 해설 + `diff` 수정안을 제시하고, 실제 수정은 작성자가 한다.
+**세션 46부터 Claude가 검수 → 수정 적용 → 커밋까지 직접 수행한다.** (세션 45까지는 diff 제시만 하고 작성자가 반영)
+시그니처 변경으로 깨지는 호출부도 **미루지 않고 그 자리에서 함께 고친다.**
 
 | # | 파일 | 상태 |
 |---|---|---|
@@ -30,28 +31,23 @@
 | 12~14 | `GachaType` · `GachaResult` · `GachaManager` | ✅ |
 | 15 | `Player/PlayerDataManager` | ✅ |
 | 16 | `Enhance/EnhanceManager` | ✅ |
-| 17 | `Train/TrainManager` | ⏭️ **다음 시작 지점** |
+| 17~18 | `Train/TrainManager` · `Train/BreakthroughManager` | ✅ |
+| 19 | `Line Up/LineUpManager` | ⏭️ **다음 시작 지점** |
 
 ---
 
 ## 2. 다음 할 일
 
-### 2-1. 검수 #17 `Train/TrainManager` (즉시)
+### 2-1. 검수 #19 `Line Up/LineUpManager` (즉시)
 
-2-2 대기표의 `ApplyTrain` 반환값·`TrainStatCount` 항목을 여기서 함께 처리한다.
-같은 폴더의 `BreakthroughManager`가 #18이다.
+야수 9 + 벤치 5 + 투수 11 슬롯 관리. 같은 폴더의 `LineUpAutoFill`이 #20이다.
+`Hitters/` · `Pitchers/` 하위의 포지션 enum·파서도 함께 훑는다.
 
 ### 2-2. 미처리 호출부 대기표
 
 검수로 public 시그니처가 바뀌어 아직 안 고친 곳. **그 파일 검수 차례에 함께 처리한다.**
 
-| 발생 | 고칠 곳 | 내용 |
-|---|---|---|
-| `CardInstance.ApplyTrain` `void`→`bool` | `Train/TrainManager.cs:104` | 반환값 버리고 무조건 `true` |
-| 〃 | `Train/TrainManager.cs:97,101` | `new int[4]` / `Random.Range(0,4)`의 `4`가 `CardInstance.TrainStatCount`와 따로 놈 |
-| `PlayerDataManager.SetPlayerTeam` `void`→`bool` | `League/LeagueManager.cs:205,284` | 반환값 미수신 |
-
-`EnhanceManager.EnhanceWithIdenticalCard`가 `List<int>`→`int`로 바뀌었으나 호출부 0건이라 대기표에 올리지 않는다.
+**현재 비어 있다.** 세션 46부터 파급 호출부를 즉시 고치므로 이 표는 원칙적으로 쌓이지 않는다.
 
 ### 2-3. Unity 에디터 작업 (코드 아님)
 
@@ -64,6 +60,8 @@
 | 5 | 시그니쳐 · 골든글러브 마스터 CSV 입력 | 🔒 작성자. cardId **append-only** — 타자 `160~` / 투수 `50167~` |
 | 6 | `StartingSignatureTable._entries` 채우기 | **5번이 끝나야 가능.** 현재 비어 있어 전 팀이 시작 카드 없이 출발 |
 | 7 | `Minor1~Legend3` `_statBonus` 밸런스 | 🔒 작성자. 현재 9티어 전부 `10`이라 티어가 올라도 AI가 안 강해짐 (근거는 5-3) |
+| 8 | `TrainManager` 인스펙터 — `_statPointPerTrain` **2** 확인 | 씬에 직렬화된 적 없는 새 필드 |
+| 9 | `BreakthroughManager` 인스펙터 — 비용 5개 확인 | 필드 개명(`_breakthroughCardCost_X` → `_xCost`)으로 씬 값이 풀린다. 코드 기본값은 기획서 확정치(50/20/10/5/3)와 동일 |
 
 ### 2-4. 코드 쪽 대기
 
@@ -119,7 +117,8 @@ CSV에서 cardId를 재배치하면 **모든 SO가 예외·로그·컴파일 에
 ### 3-4. 코딩 컨벤션 (CLAUDE.md 보충)
 
 - `if` 중괄호: 본문 **한 줄이면 생략, 두 줄 이상이면 사용**
-- 주석은 **메서드당 한 줄 요약만.** 근거·부가 설명은 PROGRESS/응답에 쓰고 코드에 넣지 않는다
+- 주석: **public은 `<summary>` 2줄 이내 / private는 `//` 1줄 이내 / 메서드 내부 주석 금지** (세션 46 확정)
+  - 근거·트레이드오프는 PROGRESS와 응답에 쓴다. 설명하고 싶은 블록은 주석 대신 **메서드로 추출해 이름으로 드러낸다**
 - 검수 응답은 지적과 수정안을 **코드 단에서 함께**, `diff` 블록으로 기존/수정 구분
 - 검수에서 발견한 결함의 수정안은 **빈 뼈대가 아니라 완성 코드**로 제시
 - 작성자가 지적을 안 고치고 넘어가면 **재량 판단**으로 보고 다시 꺼내지 않는다
@@ -156,6 +155,7 @@ Core                  SingletonBehaviour
 | 투수 배열 | `[0]=SP / [1~5]=RP / [6]=CP` 7칸 |
 | 실패 시 전부 롤백 | `Restore` · `BuildRosters` · 임포터 — **부분 성공 상태를 남기지 않는다** |
 | 재화 소모 | `SpendAll`은 "전부 검사 → 전부 차감" 2패스. 강화·훈련·돌파는 되돌릴 수 없어 부분 차감이 곧 영구 손실 |
+| 강화 전용 카드 | 인벤토리 카드가 아니라 **재화**(`CurrencyType`). 카드로 만들면 마스터 CSV에 스탯·포지션이 없는 유령 카드가 200장 한도를 먹고 라인업·분해·필터가 전부 예외 분기를 갖는다 |
 | 소모 순서 | **재료 소멸보다 결과 확보를 먼저 확인** — 후보 풀이 비면 재료만 먹고 카드를 못 준다 (골글 제작·카드 조합에서 실제로 밟은 교훈) |
 
 ### 4-3. 표현할 수 없는 상태는 만들지 않는다
@@ -320,3 +320,4 @@ Claude는 이 구간 수치를 건드리지 않는다. 근거만 남긴다.
 | 43 (09-12) | 검수 #11~14. `InventoryManager` **List → Dictionary**(경로 18곳 O(n)→O(1)) · `CardFilter.Matches` 이관 · `GachaManager` 천장 카운터 버그 2건 + 풀 캐싱 |
 | 44 (09-24) | 검수 #15 `PlayerDataManager` — `SingletonBehaviour` 전환 · `SetPlayerTeam`/`Restore` `bool`화 + 티어 범위 검증 · `PlayerSaveService` 호출부 동반 수정. **PROGRESS.md 2,812줄 → 축약 재구성**(세션별 나열 → 주제별. 완성 메서드 목록·중간 과정·튜닝 전 수치 제거, 살아있는 규칙·미결·수치만 보존. 원본은 git 히스토리) |
 | 45 (09-25) | 검수 #16 `EnhanceManager` — `SingletonBehaviour` 전환 · 재료 `List<int>`→`int` 단일화 · **라인업 편성 카드 재료 사용 차단**(`CombineManager`·`DismantleManager`와 규칙 통일) · 실패 경로 로그 보강 · 동일 카드 판정 `IsIdenticalCard`로 통합 · `GetRequiredEnhanceCardType`의 `throw`를 `CurrencyType.None` 반환으로 교체 |
+| 46 (09-25) | **검수 방식 전환 — Claude가 직접 리팩토링·커밋.** 주석 규칙 확정(public `<summary>` 2줄 / private `//` 1줄 / 메서드 내부 금지). 검수 #17~18 `TrainManager`·`BreakthroughManager` — `SingletonBehaviour` 전환 · **`ApplyTrain` 반환값 미수신**(재화만 소모되는 경로) 수정 · `TrainStatCount` `public const` 승격으로 매직넘버 `4` 제거 · 돌파 비용 필드 개명 + 중첩 switch 분리 · 대기표의 `LeagueManager` `SetPlayerTeam` 2건 처리 |
