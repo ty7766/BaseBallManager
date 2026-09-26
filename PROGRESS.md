@@ -161,6 +161,23 @@
 
 ### 2-4. 코드 쪽 대기
 
+**로드맵 9번 착수 — `경기_UI_명세.md` 작성 완료 (세션 50).** 디자인은 Claude Desktop에서 진행한다.
+아래는 명세대로 화면을 채우려면 **UI 코드보다 먼저** 뚫어야 하는 것들이다 (하니스로 확인한 실제 공백).
+
+| # | 없는 것 | 필요한 화면 | 해결 방향 |
+|---|---|---|---|
+| U1 | `HitterSnapshot`·`PitcherSnapshot`에 **년도** | 전 화면의 선수 표기 | 스냅샷에 `Year` 추가. AI는 `AiRosterBuilder`, 플레이어는 `SimulationContextBuilder`가 마스터에서 채운다 |
+| U2 | 스냅샷에 **OVR** | 전 화면 | 4스탯 평균이라 UI가 계산해도 되지만, 내림 규칙이 `CardStatsCalculator`에 있으므로 스냅샷에 담는 편이 안전 |
+| U3 | 스냅샷에 **포지션** | 라인업 행의 포지션 표기 | U1과 같은 경로 |
+| U4 | `SimulationContext`에 **팀명** | 경기 전·중 스코어보드 | 시뮬 코어는 팀을 몰라도 되므로 UI가 `LeagueGame`에서 받는 쪽이 맞다. 결정 필요 |
+| U5 | **팀 로고 애셋 10종** | 경기 전 대진 | 실제 구단 로고는 저작권 문제. 팀 컬러 + 이니셜 자체 심볼 |
+| U6 | **교체 모드(자동/수동) 설정** | 경기 중 일시정지 버튼 노출 | `PlayerSaveData`에 필드 추가 + `LeagueManager.SetInterruptHandler` 연동 |
+| U7 | **타석 진행 코루틴 드라이버** | 경기 중 자동 흐름 | `GameSession.StepAtBat()`을 일정 간격으로 돌리는 MonoBehaviour. `LiveGameController`도 아직 씬에 없다 |
+
+- U1~U3은 한 번에 처리한다. 스냅샷은 `readonly struct`라 필드 추가가 곧 생성자 변경이고, 호출부는 `AiRosterBuilder`·`SimulationContextBuilder` 두 곳뿐이다
+- **U4는 판단이 필요하다.** 4-1의 "`Simulation/`은 `Cards/`를 모른다" 원칙과 "팀명을 컨텍스트에 넣는 편의" 중 선택
+
+
 | 항목 | 상태 |
 |---|---|
 | 로드맵 9번 경기 UI | ⏸️ UI 디자인 대기. 화면 4개 구성은 확정(4-6), `GameSession` 준비 완료 |
