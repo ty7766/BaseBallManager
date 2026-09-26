@@ -8,19 +8,19 @@ public class GoldenGloveCraftManager : SingletonBehaviour<GoldenGloveCraftManage
 {
     [Header("일반 제작 - 전체 골글 풀에서 랜덤")]
     [SerializeField]
-    private int _randomGoldenGlovePoint = 300;
+    private int _randomGoldenGlovePoint = 50000;
     [SerializeField]
-    private int _randomPoint = 15000;
+    private int _randomPoint = 2000000;
     [SerializeField]
-    private int _randomTrainCard = 20;
+    private int _randomTrainCard = 100;
 
     [Header("팀 선택 제작 - 팀만 지정 (기획서 4장 - 더 비쌈)")]
     [SerializeField]
-    private int _teamSelectGoldenGlovePoint = 750;
+    private int _teamSelectGoldenGlovePoint = 100000;
     [SerializeField]
-    private int _teamSelectPoint = 40000;
+    private int _teamSelectPoint = 5000000;
     [SerializeField]
-    private int _teamSelectTrainCard = 50;
+    private int _teamSelectTrainCard = 300;
 
     //제작 때마다 새 List를 만들지 않도록 재사용하는 후보 버퍼
     private readonly List<int> _candidateBuffer = new List<int>(64);

@@ -195,7 +195,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GoldenGloveCraftManager
   _randomGoldenGlovePoint: 50000
-  _randomPoint: 1000000
+  _randomPoint: 2000000
   _randomTrainCard: 100
   _teamSelectGoldenGlovePoint: 100000
   _teamSelectPoint: 5000000
@@ -248,6 +248,33 @@ MonoBehaviour:
   _pullThreshold: 3
   _unlockRankThreshold: 2
   _goldenGloveEnhanceCardReward: 1
+  _star3RewardPercent: 60
+  _star4RewardPercent: 30
+  _wildCardReward:
+    _gold: 50000
+    _goldenGlovePoint: 100
+    _signatureTicket: 0
+    _goldenGloveEnhanceCard: 0
+  _semiPlayOffReward:
+    _gold: 150000
+    _goldenGlovePoint: 150
+    _signatureTicket: 0
+    _goldenGloveEnhanceCard: 0
+  _playOffReward:
+    _gold: 300000
+    _goldenGlovePoint: 200
+    _signatureTicket: 1
+    _goldenGloveEnhanceCard: 0
+  _koreanSeriesReward:
+    _gold: 500000
+    _goldenGlovePoint: 300
+    _signatureTicket: 1
+    _goldenGloveEnhanceCard: 1
+  _championReward:
+    _gold: 1000000
+    _goldenGlovePoint: 500
+    _signatureTicket: 2
+    _goldenGloveEnhanceCard: 1
 --- !u!4 &394023471
 Transform:
   m_ObjectHideFlags: 0
@@ -713,7 +740,8 @@ MonoBehaviour:
   _grade5ProbabilityNor: 0.05
   _grade4ProbabilitySig: 0.8
   _grade5ProbabilitySig: 0.2
-  _gradeSigProbabilitySig: 0.15
+  _signatureChanceOnStar5: 0.15
+  _pityLimit: 50
 --- !u!1 &1300100400
 GameObject:
   m_ObjectHideFlags: 0
@@ -852,6 +880,7 @@ MonoBehaviour:
   _maxTrainLevelAfterBreakthrough: 50
   _basePointCost: 100
   _baseTrainCardCost: 1
+  _statPointPerTrain: 2
 --- !u!1 &1300100700
 GameObject:
   m_ObjectHideFlags: 0
@@ -896,11 +925,58 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b32dedca8b0e414da548eebf019ac01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BreakthroughManager
-  _breakthroughCardCost_GoldenGlove: 50
-  _breakthroughCardCost_Signature: 20
-  _breakthroughCardCost_Normal5: 10
-  _breakthroughCardCost_Normal4: 5
-  _breakthroughCardCost_Normal3: 3
+  _goldenGloveCost: 50
+  _signatureCost: 20
+  _normalStar5Cost: 10
+  _normalStar4Cost: 5
+  _normalStar3Cost: 3
+--- !u!1 &1300100800
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1300100801}
+  - component: {fileID: 1300100802}
+  m_Layer: 0
+  m_Name: CombineManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1300100801
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1300100800}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1300100802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1300100800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1cdbfe514d3e5f498ae8a0dd6e99f4a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombineManager
+  _upgradeChanceStar3: 0.25
+  _upgradeChanceStar4: 0.1
+  _materialCount: 3
 --- !u!1 &1766373622
 GameObject:
   m_ObjectHideFlags: 0
@@ -999,53 +1075,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1300100800
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1300100801}
-  - component: {fileID: 1300100802}
-  m_Layer: 0
-  m_Name: CombineManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1300100801
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1300100800}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1300100802
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1300100800}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f1cdbfe514d3e5f498ae8a0dd6e99f4a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CombineManager
-  _upgradeChanceStar3: 0.25
-  _upgradeChanceStar4: 0.1
-  _materialCount: 3
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
