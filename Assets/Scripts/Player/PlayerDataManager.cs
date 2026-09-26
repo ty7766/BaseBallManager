@@ -5,12 +5,12 @@ public class PlayerDataManager : SingletonBehaviour<PlayerDataManager>
     public string PlayerTeamName { get; private set; }
 
     /// <summary>
-    /// 해금된 가장 높은 리그 티어 (기획서 7.1 - 직전 리그 정규시즌 2등 이상이면 다음 티어 해금)
+    /// 해금된 가장 높은 리그 티어 (직전 리그 정규시즌 2등 이상이면 다음 티어 해금)
     /// </summary>
     public LeagueTier HighestUnlockedTier { get; private set; } = LeagueTier.Basic1;
 
     /// <summary>
-    /// 튜토리얼 완료 여부 (기획서 5장 - 완료 보상인 뽑기권 50개가 중복 지급되지 않도록 저장한다)
+    /// 튜토리얼 완료 여부 (완료 보상인 뽑기권 50개가 중복 지급되지 않도록 저장한다)
     /// </summary>
     public bool TutorialCompleted { get; private set; }
 
@@ -26,7 +26,7 @@ public class PlayerDataManager : SingletonBehaviour<PlayerDataManager>
     }
 
     /// <summary>
-    /// 해당 티어에 입장할 수 있는지 (기획서 7.1)
+    /// 해당 티어에 입장할 수 있는지
     /// </summary>
     public bool IsTierUnlocked(LeagueTier tier)
     {

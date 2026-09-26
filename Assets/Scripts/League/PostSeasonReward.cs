@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 포스트시즌 단계 1개의 보상 수량 (기획서 7.5 - 보너스 콘텐츠)
+/// 포스트시즌 단계 1개의 보상 수량 (보너스 콘텐츠)
 /// </summary>
 [Serializable]
 public struct PostSeasonReward

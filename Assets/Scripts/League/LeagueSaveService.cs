@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 리그 정규시즌 진행도 저장·복원 (기획서 7.6 · 10장)
+/// 리그 정규시즌 진행도 저장·복원
 /// </summary>
 public class LeagueSaveService
 {

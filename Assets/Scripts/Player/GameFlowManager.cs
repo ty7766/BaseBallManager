@@ -2,16 +2,16 @@
 using UnityEngine;
 
 /// <summary>
-/// 게임 시작 플로우와 플레이어 세이브의 수명 관리 (기획서 5장 · 10장)
+/// 게임 시작 플로우와 플레이어 세이브의 수명 관리
 /// </summary>
 public class GameFlowManager : SingletonBehaviour<GameFlowManager>
 {
     /// <summary>
-    /// 선택 가능한 10팀 (기획서 5장)
+    /// 선택 가능한 10팀
     /// </summary>
     public IReadOnlyList<string> SelectableTeamNames => TeamNames;
 
-    [Header("게임 시작 지급 (기획서 5장)")]
+    [Header("게임 시작 지급")]
     [SerializeField, Tooltip("튜토리얼 완료 보상 일반 뽑기권")]
     private int _tutorialTicketReward = 150;
 
@@ -55,7 +55,7 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
     }
 
     /// <summary>
-    /// 새 게임 시작 - 팀 선택 + 기본 시그니쳐 카드 1장 지급 (기획서 5장의 1·2단계)
+    /// 새 게임 시작 - 팀 선택 + 기본 시그니쳐 카드 1장 지급
     /// </summary>
     public bool StartNewGame(string teamName)
     {
@@ -81,7 +81,7 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
     }
 
     /// <summary>
-    /// 튜토리얼 완료 보상 - 일반 뽑기권 지급 (기획서 5장의 4단계)
+    /// 튜토리얼 완료 보상 - 일반 뽑기권 지급
     /// </summary>
     public bool CompleteTutorial()
     {
@@ -119,7 +119,7 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
     }
 
     /// <summary>
-    /// 팀 선택 시 기본 시그니쳐 카드 1장 지급 (기획서 5장의 2단계)
+    /// 팀 선택 시 기본 시그니쳐 카드 1장 지급
     /// </summary>
     private void GrantStartingSignatureCard(string teamName)
     {

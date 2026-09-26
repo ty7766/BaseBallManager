@@ -128,7 +128,7 @@ public class BaseRunningCalculator
         state.SetFirstBase(batterInstanceId);
     }
 
-    //실책 - 추가 진루 판정 없이 전원 한 베이스씩 (기획서 8.3). 밀어내기와 달리 강제되지 않은 주자도 움직인다
+    //실책 - 추가 진루 판정 없이 전원 한 베이스씩. 밀어내기와 달리 강제되지 않은 주자도 움직인다
     private static void PushAllRunners(int batterInstanceId, GameState state, List<int> scoredRunnerIds)
     {
         if (state.ThirdBase != GameState.NoRunner)

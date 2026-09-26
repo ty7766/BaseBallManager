@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// 게임 내 재화 종류 (기획서 9.1)
+/// 게임 내 재화 종류
 /// </summary>
 public enum CurrencyType
 {

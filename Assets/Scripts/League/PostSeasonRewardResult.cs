@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// 포스트시즌 종료 보상 수령 결과 (기획서 7.5)
+/// 포스트시즌 종료 보상 수령 결과
 /// </summary>
 public class PostSeasonRewardResult
 {

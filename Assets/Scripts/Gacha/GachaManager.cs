@@ -14,7 +14,7 @@ public class GachaManager : SingletonBehaviour<GachaManager>
     public const int NoCardPicked = -1;
 
     /// <summary>
-    /// 세이브 저장용 (기획서 3장 - 천장 카운터는 세션을 넘어가도 유지)
+    /// 세이브 저장용 (천장 카운터는 세션을 넘어가도 유지)
     /// </summary>
     public int NormalPityCount => _normalPityCount;
     public int SignaturePityCount => _signaturePityCount;
@@ -121,7 +121,7 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         _signaturePityCount = signaturePityCount;
     }
 
-    //뽑기 종류 -> 소모 뽑기권 (기획서 3장)
+    //뽑기 종류 -> 소모 뽑기권
     private static CurrencyType GetTicketType(GachaType gachaType)
     {
         return gachaType switch

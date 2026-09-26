@@ -13,7 +13,7 @@ public class LeagueDayResult
     public IReadOnlyList<LeagueGameScore> Scores => _scores;
 
     /// <summary>
-    /// 타석 로그 포함. 실시간 로그 관전·박스스코어에 사용 (기획서 8.5)
+    /// 타석 로그 포함. 실시간 로그 관전·박스스코어에 사용
     /// </summary>
     public GameResult PlayerGameResult { get; }
 

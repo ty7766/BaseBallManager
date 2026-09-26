@@ -215,7 +215,7 @@ public class GameSimulator
 
             if (state.IsHitterUsed(isHomeAttacking, benchHitter.InstanceId))
             {
-                Debug.LogWarning($"[GameSimulator]: {benchHitter.Name} 선수는 이미 교체로 빠졌습니다 (기획서 8.6 재투입 불가)");
+                Debug.LogWarning($"[GameSimulator]: {benchHitter.Name} 선수는 이미 교체로 빠졌습니다");
                 continue;
             }
 
@@ -249,7 +249,7 @@ public class GameSimulator
 
         if (state.IsPitcherUsed(isHomeDefending, newSlotIndex))
         {
-            Debug.LogWarning($"[GameSimulator]: {newSlotIndex}번 투수는 이미 강판됐습니다 (기획서 8.6 재투입 불가)");
+            Debug.LogWarning($"[GameSimulator]: {newSlotIndex}번 투수는 이미 강판됐습니다");
             return;
         }
 

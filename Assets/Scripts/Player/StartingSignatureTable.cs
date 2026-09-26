@@ -1,12 +1,12 @@
 ﻿using UnityEngine;
 
 /// <summary>
-/// 팀별 시작 지급 시그니쳐 카드 표 (기획서 5장의 2단계 · 12장 TBD)
+/// 팀별 시작 지급 시그니쳐 카드 표
 /// </summary>
 [CreateAssetMenu(fileName = "StartingSignatureTable", menuName = "BaseBallManager/Starting Signature Table")]
 public class StartingSignatureTable : ScriptableObject
 {
-    [Header("팀별 지급 카드 - 팀명은 기획서 5장의 10팀과 정확히 같아야 함")]
+    [Header("팀별 지급 카드 - 팀명은 선택 가능한 10팀과 정확히 같아야 함")]
     [SerializeField]
     private StartingSignatureEntry[] _entries = new StartingSignatureEntry[0];
 

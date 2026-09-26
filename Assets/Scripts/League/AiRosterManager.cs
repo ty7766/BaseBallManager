@@ -84,7 +84,7 @@ public class AiRosterManager : SingletonBehaviour<AiRosterManager>
     }
 
     /// <summary>
-    /// 플레이어 팀을 뺀 나머지 팀명 (기획서 7.8 - 나를 제외한 9팀)
+    /// 플레이어 팀을 뺀 나머지 팀명 (나를 제외한 9팀)
     /// </summary>
     public List<string> GetOpponentTeamNames(string playerTeamName)
     {

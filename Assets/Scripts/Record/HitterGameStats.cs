@@ -16,7 +16,7 @@ public class HitterGameStats
     public int Runs { get; private set; }               //득점
     public int Walks { get; private set; }              //볼넷
     public int StrikeOuts { get; private set; }         //삼진
-    public int StolenBases { get; private set; }        //도루 성공 (기획서 8.3.1)
+    public int StolenBases { get; private set; }        //도루 성공
     public int CaughtStealing { get; private set; }     //도루 실패
 
     /// <summary>

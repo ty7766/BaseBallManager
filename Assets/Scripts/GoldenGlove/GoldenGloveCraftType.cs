@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// 골든글러브 제작 종류 (기획서 4장)
+/// 골든글러브 제작 종류
 /// </summary>
 public enum GoldenGloveCraftType
 {

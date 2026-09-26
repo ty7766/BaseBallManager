@@ -1,7 +1,7 @@
 ﻿using System;
 
 /// <summary>
-/// 보유 카드 1장의 저장 형태 (기획서 1.4 - B 인스턴스)
+/// 보유 카드 1장의 저장 형태 (B 인스턴스)
 /// </summary>
 [Serializable]
 public class CardInstanceSaveData
@@ -13,7 +13,7 @@ public class CardInstanceSaveData
     public bool BreakthroughUsed;
 
     /// <summary>
-    /// 훈련 랜덤 분배값 4칸. 레벨만으로는 복원할 수 없다 (기획서 1.4 경고)
+    /// 훈련 랜덤 분배값 4칸. 레벨만으로는 복원할 수 없다
     /// </summary>
     public int[] TrainDelta;
 
@@ -21,7 +21,7 @@ public class CardInstanceSaveData
 }
 
 /// <summary>
-/// 라인업 편성의 저장 형태 (기획서 6장)
+/// 라인업 편성의 저장 형태
 /// </summary>
 [Serializable]
 public class LineUpSaveData
@@ -40,7 +40,7 @@ public class LineUpSaveData
 }
 
 /// <summary>
-/// 플레이어 진행 데이터의 저장 형태 (기획서 10장)
+/// 플레이어 진행 데이터의 저장 형태
 /// </summary>
 [Serializable]
 public class PlayerSaveData
@@ -60,7 +60,7 @@ public class PlayerSaveData
     public int MaxCapacity;
 
     /// <summary>
-    /// 천장 카운터는 세션을 넘어가도 유지 (기획서 3장)
+    /// 천장 카운터는 세션을 넘어가도 유지
     /// </summary>
     public int NormalPityCount;
     public int SignaturePityCount;

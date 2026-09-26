@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 게임 내 모든 재화 보관 · 증감 (기획서 9.1)
+/// 게임 내 모든 재화 보관 · 증감
 /// </summary>
 public class CurrencyManager : SingletonBehaviour<CurrencyManager>
 {

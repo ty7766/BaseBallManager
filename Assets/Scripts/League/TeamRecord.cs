@@ -19,7 +19,7 @@ public class TeamRecord
     public int RunDifference => RunsScored - RunsAllowed;
 
     /// <summary>
-    /// KBO 방식 - 무승부는 승률 계산에서 제외 (기획서 7.7)
+    /// KBO 방식 - 무승부는 승률 계산에서 제외
     /// </summary>
     public float WinRate => Wins + Losses == 0 ? 0f : (float)Wins / (Wins + Losses);
 

@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 티어 테이블의 경기 수 · 연전 수를 기획서 기본값으로 채움
+/// 티어 테이블의 경기 수 · 연전 수를 기본값으로 채움
 /// </summary>
 public static class LeagueTierDefaultsFiller
 {
@@ -11,7 +11,7 @@ public static class LeagueTierDefaultsFiller
     private const string FieldGameCount = "_gameCount";
     private const string FieldSeriesLength = "_seriesLength";
 
-    //기획서 7.2 - 티어별 정규시즌 경기 수 (배열 인덱스 = LeagueTier)
+    //티어별 정규시즌 경기 수 (배열 인덱스 = LeagueTier)
     private static readonly int[] GameCounts =
     {
         9,  36, 36,         //베이직 1·2·3
@@ -23,7 +23,7 @@ public static class LeagueTierDefaultsFiller
         144, 144, 144       //레전드 1·2·3
     };
 
-    //기획서 7.3 - 프로 리그부터 같은 팀과 3연전
+    //프로 리그부터 같은 팀과 3연전
     private const int FirstSeriesTierIndex = (int)LeagueTier.Pro1;
     private const int SeriesLength = 3;
 

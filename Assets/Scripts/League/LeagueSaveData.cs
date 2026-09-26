@@ -27,7 +27,7 @@ public class TeamRecordSaveData
 }
 
 /// <summary>
-/// 리그 정규시즌 진행도의 저장 형태 (기획서 7.6 - 리그 진행도만 저장, 개별 경기는 저장하지 않음)
+/// 리그 정규시즌 진행도의 저장 형태 (리그 진행도만 저장, 개별 경기는 저장하지 않음)
 /// </summary>
 [Serializable]
 public class LeagueSaveData
@@ -49,7 +49,7 @@ public class LeagueSaveData
     public int CurrentDayIndex;
 
     /// <summary>
-    /// 종료 보상 수령 여부 (기획서 7.9 - 저장 후 재실행으로 중복 수령하는 것을 막음)
+    /// 종료 보상 수령 여부 (저장 후 재실행으로 중복 수령하는 것을 막음)
     /// </summary>
     public bool RewardsGranted;
 

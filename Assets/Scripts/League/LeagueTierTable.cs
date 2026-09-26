@@ -13,7 +13,7 @@ public class LeagueTierTable : ScriptableObject
     [SerializeField]
     private LeagueTierEntry[] _entries = new LeagueTierEntry[TierCount];
 
-    [Header("배열 인덱스 = 최종 순위 - 1 (0 = 1위). 티어 기준 골드에 곱한다 (기획서 7.9)")]
+    [Header("배열 인덱스 = 최종 순위 - 1 (0 = 1위). 티어 기준 골드에 곱한다")]
     [SerializeField]
     private float[] _rankGoldMultipliers = new float[AiRosterSet.TeamCount]
     { 1.0f, 0.8f, 0.6f, 0.5f, 0.4f, 0.35f, 0.3f, 0.25f, 0.2f, 0.15f };
@@ -52,31 +52,31 @@ public class LeagueTierTable : ScriptableObject
         => TryGetEntry(tier, out LeagueTierEntry entry) ? entry.StatBonus : 0;
 
     /// <summary>
-    /// 정규시즌 경기 수 (기획서 7.2)
+    /// 정규시즌 경기 수
     /// </summary>
     public int GetGameCount(LeagueTier tier)
         => TryGetEntry(tier, out LeagueTierEntry entry) ? entry.GameCount : 0;
 
     /// <summary>
-    /// 같은 팀과 연속으로 치르는 경기 수 (기획서 7.3)
+    /// 같은 팀과 연속으로 치르는 경기 수
     /// </summary>
     public int GetSeriesLength(LeagueTier tier)
         => TryGetEntry(tier, out LeagueTierEntry entry) ? entry.SeriesLength : 0;
 
     /// <summary>
-    /// 리그 종료 보상 골드의 기준값 (기획서 7.9)
+    /// 리그 종료 보상 골드의 기준값
     /// </summary>
     public int GetGoldReward(LeagueTier tier)
         => TryGetEntry(tier, out LeagueTierEntry entry) ? entry.GoldReward : 0;
 
     /// <summary>
-    /// 리그 종료 보상 골든글러브 포인트의 기준값 (기획서 7.9 · 9.1)
+    /// 리그 종료 보상 골든글러브 포인트의 기준값
     /// </summary>
     public int GetGoldenGlovePointReward(LeagueTier tier)
         => TryGetEntry(tier, out LeagueTierEntry entry) ? entry.GoldenGlovePointReward : 0;
 
     /// <summary>
-    /// 리그 종료 보상 시그니쳐 뽑기권의 기준값 (기획서 9.1)
+    /// 리그 종료 보상 시그니쳐 뽑기권의 기준값
     /// </summary>
     public int GetSignatureTicketReward(LeagueTier tier)
         => TryGetEntry(tier, out LeagueTierEntry entry) ? entry.SignatureTicketReward : 0;

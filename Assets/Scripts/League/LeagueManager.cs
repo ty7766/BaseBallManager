@@ -14,11 +14,11 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     [SerializeField]
     private LeagueTierTable _tierTable;
 
-    [Header("투수 교체 점수 기준 (기획서 8.4)")]
+    [Header("투수 교체 점수 기준")]
     [SerializeField]
     private int _pullThreshold = 3;
 
-    [Header("리그 종료 보상 (기획서 7.1 · 7.9)")]
+    [Header("리그 종료 보상")]
     [SerializeField, Tooltip("이 순위 이내면 다음 티어 해금")]
     private int _unlockRankThreshold = 2;
     [SerializeField, Tooltip("우승 시 지급하는 골카 전용 카드 수")]
@@ -30,7 +30,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     [SerializeField, Range(0, 100)]
     private int _star4RewardPercent = 30;
 
-    [Header("포스트시즌 보상 (기획서 7.5). 오른 가장 높은 단계 하나만 지급한다")]
+    [Header("포스트시즌 보상. 오른 가장 높은 단계 하나만 지급한다")]
     [SerializeField, Tooltip("와일드카드 결정전 진출")]
     private PostSeasonReward _wildCardReward;
     [SerializeField, Tooltip("준플레이오프 진출")]
@@ -50,7 +50,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     //포스트시즌 복원 시 로스터를 다시 만들기 위해 보관 (정규시즌 없이 이어하기 가능하게)
     private LeagueTier _currentTier;
 
-    //수동 교체 모드의 인터럽트 창구 (기획서 8.6). UI가 없으면 null이라 자동 진행만 한다
+    //수동 교체 모드의 인터럽트 창구. UI가 없으면 null이라 자동 진행만 한다
     private IGameInterruptHandler _interruptHandler;
 
     protected override void OnSingletonAwake()
@@ -64,7 +64,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// 경기 중 수동 교체 창구를 연결한다 (기획서 8.6). 다음 리그·포스트시즌부터 적용된다
+    /// 경기 중 수동 교체 창구를 연결한다. 다음 리그·포스트시즌부터 적용된다
     /// </summary>
     public void SetInterruptHandler(IGameInterruptHandler interruptHandler)
     {
@@ -143,7 +143,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// 정규시즌 종료 후 포스트시즌 대진표 구성 (기획서 7.5 - 144경기 리그만)
+    /// 정규시즌 종료 후 포스트시즌 대진표 구성 (144경기 리그만)
     /// </summary>
     public bool StartPostSeason()
     {
@@ -159,7 +159,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// [게임 시작] 1회 = 포스트시즌 경기 1개 진행 (기획서 7.4). 더 진행할 경기가 없거나 실패하면 null
+    /// [게임 시작] 1회 = 포스트시즌 경기 1개 진행. 더 진행할 경기가 없거나 실패하면 null
     /// </summary>
     public LeagueGameScore? SimulateNextPostSeasonGame()
     {
@@ -181,7 +181,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// 포스트시즌 진행도 저장 (기획서 7.6). 경기 1건이 끝날 때마다 호출하면 된다
+    /// 포스트시즌 진행도 저장. 경기 1건이 끝날 때마다 호출하면 된다
     /// </summary>
     public bool SavePostSeason()
     {
@@ -197,7 +197,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// 저장된 포스트시즌 이어하기 (기획서 7.6)
+    /// 저장된 포스트시즌 이어하기
     /// </summary>
     public bool LoadPostSeason()
     {
@@ -244,7 +244,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// [게임 시작] 1회 = 경기 1개 진행 (기획서 7.4).
+    /// [게임 시작] 1회 = 경기 1개 진행.
     /// 내 경기 1건 + 같은 날 AI끼리 4경기가 함께 시뮬되어 순위표에 반영된다
     /// </summary>
     public LeagueDayResult SimulateNextGame()
@@ -272,7 +272,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// 정규시즌 진행도 저장 (기획서 7.6)
+    /// 정규시즌 진행도 저장
     /// </summary>
     public bool SaveLeague()
     {
@@ -317,7 +317,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// 저장된 리그 삭제 (재도전으로 새로 시작할 때. 기획서 7.6 - 재도전 무제한).
+    /// 저장된 리그 삭제 (재도전으로 새로 시작할 때. 재도전 무제한).
     /// 포스트시즌은 정규시즌에 딸린 것이라 함께 지운다. 남겨두면 다음 시즌의 진출 여부와 무관하게 이어하기가 뜬다
     /// </summary>
     public bool DeleteSavedLeague()
@@ -329,7 +329,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// 정규시즌 종료 보상 수령 + 다음 티어 해금 (기획서 7.1 · 7.9). 실패하거나 이미 받았으면 null
+    /// 정규시즌 종료 보상 수령 + 다음 티어 해금. 실패하거나 이미 받았으면 null
     /// </summary>
     public LeagueRewardResult ClaimSeasonRewards()
     {
@@ -343,7 +343,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// 포스트시즌 종료 보상 수령 (기획서 7.5). 실패하거나 이미 받았으면 null
+    /// 포스트시즌 종료 보상 수령. 실패하거나 이미 받았으면 null
     /// </summary>
     public PostSeasonRewardResult ClaimPostSeasonRewards()
     {
@@ -373,7 +373,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
-    /// 현재 순위표 (기획서 7.7)
+    /// 현재 순위표
     /// </summary>
     public LeagueStandingRow[] GetRanking()
     {

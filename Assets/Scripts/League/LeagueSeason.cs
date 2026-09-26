@@ -14,7 +14,7 @@ public class LeagueSeason
     public bool IsFinished => CurrentDayIndex >= TotalDayCount;
 
     /// <summary>
-    /// 종료 보상을 이미 수령했는지 (기획서 7.9). 저장 후 재실행으로 중복 수령하는 것을 막는다
+    /// 종료 보상을 이미 수령했는지. 저장 후 재실행으로 중복 수령하는 것을 막는다
     /// </summary>
     public bool RewardsGranted { get; private set; }
 

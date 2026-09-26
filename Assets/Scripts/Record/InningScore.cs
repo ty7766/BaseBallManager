@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// 라인스코어 한 칸 - 특정 이닝의 양 팀 득점 (기획서 8.5 이닝별 득점)
+/// 라인스코어 한 칸 - 특정 이닝의 양 팀 득점
 /// </summary>
 public class InningScore
 {

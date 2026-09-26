@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 플레이어 진행 데이터 저장·복원 (기획서 10장)
+/// 플레이어 진행 데이터 저장·복원
 /// </summary>
 public class PlayerSaveService
 {

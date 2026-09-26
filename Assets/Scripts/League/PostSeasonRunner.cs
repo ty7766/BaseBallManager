@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 포스트시즌 진행 (기획서 7.5 - 144경기 리그 한정, 상위 5팀 KBO 사다리)
+/// 포스트시즌 진행 (144경기 리그 한정, 상위 5팀 KBO 사다리)
 /// </summary>
 public class PostSeasonRunner
 {
@@ -18,7 +18,7 @@ public class PostSeasonRunner
 
     private const int SeriesCount = 4;
 
-    //단계별 승리 조건 (기획서 7.5 - 와일드카드 2선승제지만 4위가 1승을 안고 시작)
+    //단계별 승리 조건 (와일드카드 2선승제지만 4위가 1승을 안고 시작)
     private const int WildCardWinsToClinch = 2;
     private const int WildCardHigherSeedAdvantage = 1;
     private const int FiveGameWinsToClinch = 3;
@@ -37,13 +37,13 @@ public class PostSeasonRunner
     public bool IsFinished => _currentSeriesIndex >= _series.Count;
 
     /// <summary>
-    /// 세이브 기록용 (기획서 7.6)
+    /// 세이브 기록용
     /// </summary>
     public int CurrentSeriesIndex => _currentSeriesIndex;
     public IReadOnlyDictionary<string, int> RotationIndices => _rotationIndices;
 
     /// <summary>
-    /// 종료 보상을 이미 수령했는지 (기획서 7.5). 저장 후 재실행으로 중복 수령하는 것을 막는다
+    /// 종료 보상을 이미 수령했는지. 저장 후 재실행으로 중복 수령하는 것을 막는다
     /// </summary>
     public bool RewardsGranted { get; private set; }
 
@@ -61,7 +61,7 @@ public class PostSeasonRunner
     private readonly LeagueGameContextFactory _contextFactory;
     private readonly GameSimulator _simulator;
 
-    //팀별 누적 등판 경기 수 - 선발 로테이션을 정규시즌에서 이어감 (기획서 6.2)
+    //팀별 누적 등판 경기 수 - 선발 로테이션을 정규시즌에서 이어감
     private readonly Dictionary<string, int> _rotationIndices;
 
     private int _currentSeriesIndex;
@@ -128,7 +128,7 @@ public class PostSeasonRunner
     }
 
     /// <summary>
-    /// 저장된 진행도로 복원 (기획서 7.6). 데이터가 깨졌으면 null
+    /// 저장된 진행도로 복원. 데이터가 깨졌으면 null
     /// </summary>
     public static PostSeasonRunner Restore(PostSeasonSaveData saveData, LeagueGameContextFactory contextFactory,
         int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)

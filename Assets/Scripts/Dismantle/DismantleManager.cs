@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 /// <summary>
-/// 카드 분해 (기획서 9.2)
+/// 카드 분해
 /// </summary>
 public class DismantleManager : SingletonBehaviour<DismantleManager>
 {
@@ -13,13 +13,13 @@ public class DismantleManager : SingletonBehaviour<DismantleManager>
     [SerializeField]
     private int _basePointStar5 = 800;
 
-    [Header("카드 종류 배수 (기획서 9.2 - 시그·골글은 고보상)")]
+    [Header("카드 종류 배수 (시그·골글은 고보상)")]
     [SerializeField]
     private float _signatureMultiplier = 3f;
     [SerializeField]
     private float _goldenGloveMultiplier = 5f;
 
-    [Header("투자분 회수 (기획서 9.2 - 강화·훈련 레벨이 높을수록 증가)")]
+    [Header("투자분 회수 (강화·훈련 레벨이 높을수록 증가)")]
     [SerializeField, Tooltip("강화 1레벨당 추가 포인트")]
     private int _pointPerEnhanceLevel = 100;
     [SerializeField, Tooltip("훈련 1레벨당 추가 포인트")]
@@ -36,7 +36,7 @@ public class DismantleManager : SingletonBehaviour<DismantleManager>
     private int _goldenGlovePointReward = 50;
 
     /// <summary>
-    /// 해당 카드를 분해할 수 있는지 (기획서 9.2 - 잠금·라인업 편성 카드는 불가)
+    /// 해당 카드를 분해할 수 있는지 (잠금·라인업 편성 카드는 불가)
     /// </summary>
     public bool CanDismantle(int instanceId)
     {
@@ -160,7 +160,7 @@ public class DismantleManager : SingletonBehaviour<DismantleManager>
         return _basePointStar3;
     }
 
-    //골든글러브 카드만 골글 포인트를 준다 (기획서 9.1)
+    //골든글러브 카드만 골글 포인트를 준다
     private int GetGoldenGlovePoint(CardMasterData masterData)
     {
         return masterData.CardType == CardType.GoldenGlove ? _goldenGlovePointReward : 0;

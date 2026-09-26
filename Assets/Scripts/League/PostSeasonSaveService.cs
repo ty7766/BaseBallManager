@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 포스트시즌 진행도 저장·복원 (기획서 7.5 · 7.6 · 10장)
+/// 포스트시즌 진행도 저장·복원
 /// </summary>
 public class PostSeasonSaveService
 {

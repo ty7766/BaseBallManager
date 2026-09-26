@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// 투수 1명의 경기 1건 기록 (기획서 8.5 박스스코어)
+/// 투수 1명의 경기 1건 기록
 /// </summary>
 public class PitcherGameStats
 {
@@ -66,7 +66,7 @@ public class PitcherGameStats
     }
 
     /// <summary>
-    /// 도루자 아웃 1개. SB·CS 스탯은 타자 쪽에만 남기고 이닝 계산에만 반영한다 (기획서 8.3.1)
+    /// 도루자 아웃 1개. SB·CS 스탯은 타자 쪽에만 남기고 이닝 계산에만 반영한다
     /// </summary>
     public void AddCaughtStealingOut()
     {

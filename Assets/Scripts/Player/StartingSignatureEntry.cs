@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 팀 1개의 시작 지급 시그니쳐 카드 (기획서 5장의 2단계)
+/// 팀 1개의 시작 지급 시그니쳐 카드
 /// </summary>
 [Serializable]
 public struct StartingSignatureEntry
@@ -10,7 +10,7 @@ public struct StartingSignatureEntry
     public string TeamName => _teamName;
     public int CardId => _cardId;
 
-    [SerializeField, Tooltip("선택 가능한 10팀 중 하나 (기획서 5장)")]
+    [SerializeField, Tooltip("선택 가능한 10팀 중 하나")]
     private string _teamName;
 
     //타자·투수 어느 쪽이든 지급할 수 있으므로 포지션 필터를 걸지 않는다.

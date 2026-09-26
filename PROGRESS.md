@@ -236,6 +236,8 @@ CSV에서 cardId를 재배치하면 **모든 SO가 예외·로그·컴파일 에
 
 - `if` 중괄호: 본문 **한 줄이면 생략, 두 줄 이상이면 사용**
 - 주석: **public은 `<summary>` 2줄 이내 / private는 `//` 1줄 이내 / 메서드 내부 주석 금지** (세션 46 확정)
+  - **기획서 참조를 달지 않는다.** `(기획서 9.1)` 같은 인용은 주석·`[Header]`·`[Tooltip]`·`Debug` 로그 어디에도 쓰지 않는다.
+    작성자가 기획서를 다 알고 있어 장·절 번호가 정보가 되지 않고, 개정되면 번호만 어긋난 채 남는다 (세션 49에 102건 일괄 제거)
   - 근거·트레이드오프는 PROGRESS와 응답에 쓴다. 설명하고 싶은 블록은 주석 대신 **메서드로 추출해 이름으로 드러낸다**
 - 검수 응답은 지적과 수정안을 **코드 단에서 함께**, `diff` 블록으로 기존/수정 구분
 - 검수에서 발견한 결함의 수정안은 **빈 뼈대가 아니라 완성 코드**로 제시
@@ -259,6 +261,23 @@ League                일정 · 순위표 · 진행 · 포스트시즌
 Player / Save         세이브 · 시작 플로우
 Core                  SingletonBehaviour
 ```
+**씬 하이어라키** (세션 49) — 매니저 15종을 한글 그룹 7개 아래로 묶었다. 루트 17 → 9개
+
+```
+데이터        CardDataManager · PlayerDataManager
+보유 관리     InventoryManager · CurrencyManager
+카드 수급     GachaManager · GoldenGloveCraftManager · CombineManager · DismantleManager
+카드 육성     EnhanceManager · TrainManager · BreakthroughManager
+라인업        LineUpManager
+리그          LeagueManager · AiRosterManager
+게임 흐름     GameFlowManager
+```
+
+- `DontDestroyOnLoad`는 **루트에만 걸린다.** 자식이 된 매니저를 살리려고
+  `SingletonBehaviour`가 `transform.root.gameObject`에 건다 — 그룹째로 넘어간다
+- 중복 인스턴스는 `Destroy(gameObject)`로 **자기 자신만** 지운다. 부모를 지우면 형제 매니저까지 사라진다
+- 매니저를 추가할 때는 **반드시 그룹 중 하나의 자식**으로 넣는다. 루트에 두면 그룹 규칙이 무너진다
+
 
 - **시뮬 코어는 MonoBehaviour 배제** — 리그 일괄 시뮬을 UI 없이 고속 반복하기 위함 (기획서 원칙)
 - `Simulation/`은 `Cards/`를 모른다. 강화·훈련이 반영된 **최종값 스냅샷(struct)만** 주입받는다

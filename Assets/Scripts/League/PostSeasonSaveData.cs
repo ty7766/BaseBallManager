@@ -27,7 +27,7 @@ public class PostSeasonSeriesSaveData
 
     /// <summary>
     /// 경기 기록으로 다시 셀 수도 있으나 그대로 저장한다.
-    /// 와일드카드는 4위가 1승을 안고 시작하므로(기획서 7.5) 승수가 경기 결과만으로 결정되지 않는다
+    /// 와일드카드는 4위가 1승을 안고 시작하므로 승수가 경기 결과만으로 결정되지 않는다
     /// </summary>
     public int HigherSeedWins;
     public int LowerSeedWins;
@@ -36,7 +36,7 @@ public class PostSeasonSeriesSaveData
 }
 
 /// <summary>
-/// 포스트시즌 진행도의 저장 형태 (기획서 7.5 · 7.6)
+/// 포스트시즌 진행도의 저장 형태
 /// </summary>
 [Serializable]
 public class PostSeasonSaveData
@@ -53,14 +53,14 @@ public class PostSeasonSaveData
     public int CurrentSeriesIndex;
 
     /// <summary>
-    /// 종료 보상 수령 여부 (기획서 7.5 - 재실행으로 중복 수령하는 것을 막음)
+    /// 종료 보상 수령 여부 (재실행으로 중복 수령하는 것을 막음)
     /// </summary>
     public bool RewardsGranted;
 
     public PostSeasonSeriesSaveData[] Series;
 
     /// <summary>
-    /// 선발 로테이션을 정규시즌에서 이어가기 위한 팀별 누적 경기 수 (기획서 6.2).
+    /// 선발 로테이션을 정규시즌에서 이어가기 위한 팀별 누적 경기 수.
     /// 아래 2개 배열은 같은 길이이며 인덱스가 서로 대응한다 (JsonUtility가 Dictionary를 못 다룸)
     /// </summary>
     public string[] RotationTeamNames;

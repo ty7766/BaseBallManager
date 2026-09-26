@@ -84,7 +84,7 @@ public class LeagueStandings
     }
 
     /// <summary>
-    /// 순위 계산 (기획서 7.7 - 승률 → 득실차 → 상대전적)
+    /// 순위 계산 (승률 → 득실차 → 상대전적)
     /// </summary>
     public LeagueStandingRow[] GetRanking()
     {

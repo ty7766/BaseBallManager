@@ -56,7 +56,7 @@ public class PostSeasonSeries
     }
 
     /// <summary>
-    /// 세이브 복원 전용 생성자 (기획서 7.6)
+    /// 세이브 복원 전용 생성자
     /// </summary>
     public PostSeasonSeries(PostSeasonRound round, string higherSeedTeamName, string lowerSeedTeamName,
         int winsToClinch, int higherSeedWins, int lowerSeedWins, IReadOnlyList<LeagueGameScore> scores)

@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 골든글러브 제작 (기획서 4장)
+/// 골든글러브 제작
 /// </summary>
 public class GoldenGloveCraftManager : SingletonBehaviour<GoldenGloveCraftManager>
 {
@@ -14,7 +14,7 @@ public class GoldenGloveCraftManager : SingletonBehaviour<GoldenGloveCraftManage
     [SerializeField]
     private int _randomTrainCard = 100;
 
-    [Header("팀 선택 제작 - 팀만 지정 (기획서 4장 - 더 비쌈)")]
+    [Header("팀 선택 제작 - 팀만 지정 (더 비쌈)")]
     [SerializeField]
     private int _teamSelectGoldenGlovePoint = 100000;
     [SerializeField]
@@ -49,7 +49,7 @@ public class GoldenGloveCraftManager : SingletonBehaviour<GoldenGloveCraftManage
     }
 
     /// <summary>
-    /// 일반 제작 - 전체 골글 풀에서 랜덤 1장 (기획서 4장). 실패 시 null
+    /// 일반 제작 - 전체 골글 풀에서 랜덤 1장. 실패 시 null
     /// </summary>
     public GoldenGloveCraftResult CraftRandom()
     {

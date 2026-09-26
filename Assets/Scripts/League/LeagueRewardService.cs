@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 /// <summary>
-/// 리그 종료 보상 지급과 다음 티어 해금 (기획서 7.1 · 7.9)
+/// 리그 종료 보상 지급과 다음 티어 해금
 /// </summary>
 public class LeagueRewardService
 {
@@ -147,7 +147,7 @@ public class LeagueRewardService
     }
 
     /// <summary>
-    /// 경기 1건 종료 시 보상 (기획서 9.1 - 훈련돌파 카드 · 강화 전용 카드의 획득 경로)
+    /// 경기 1건 종료 시 보상 (훈련돌파 카드 · 강화 전용 카드의 획득 경로)
     /// </summary>
     public void GrantPerGameRewards(LeagueTier tier)
     {

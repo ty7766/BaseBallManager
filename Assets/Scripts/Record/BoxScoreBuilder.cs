@@ -9,7 +9,7 @@ public static class BoxScoreBuilder
     /// <summary>
     /// 타석·도루 로그 -> 박스스코어. 로그가 없으면 null
     /// </summary>
-    /// <param name="stealLogs">도루 기록 (기획서 8.3.1). 없으면 SB/CS가 0으로 남는다</param>
+    /// <param name="stealLogs">도루 기록. 없으면 SB/CS가 0으로 남는다</param>
     public static BoxScore Build(IReadOnlyList<SimulationBatterLog> logs,
         IReadOnlyList<SimulationStealLog> stealLogs = null)
     {
