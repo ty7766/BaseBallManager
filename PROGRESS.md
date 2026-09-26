@@ -87,11 +87,13 @@
 
 2-5 목록. 다시 꺼내지 않으며 필요해지는 시점에 판단한다.
 
-#### E. 도구 (제안, 미착수)
+#### E. 도구 — ✅ 완료 (세션 48)
 
-`Tools/BaseBallManager/StatBaseline 드리프트 측정` 에디터 메뉴 — 상수 vs 현재 CSV 평균과
-확률별 어긋남을 콘솔에 표로 찍는다. `AiRosterValidator`와 같은 패턴 · 약 40줄 · 게임 동작 무변경.
-CSV를 고칠 때마다 하니스 없이 A3를 확인할 수 있다.
+`Tools/BaseBallManager/StatBaseline 드리프트 측정` — `Assets/Editor/StatBaselineValidator.cs`.
+상수 vs 현재 CSV 평균 · 확률 영향 실측 · 상수 도달에 필요한 5성급 장수를 콘솔에 찍는다.
+**확률은 튜닝 상수를 복제하지 않고 실제 `BatterOutcomeCalculator`를 20만 타석 돌려 잰다** —
+현재 카드풀 카드와 "편차가 정확히 0인 가상 카드"를 같은 조건으로 붙여 차이만 보여준다.
+허용 오차 ±0.5점을 넘으면 `LogWarning`, 아니면 `Log`.
 
 ---
 
@@ -220,6 +222,8 @@ CSV에서 cardId를 재배치하면 **모든 SO가 예외·로그·컴파일 에
     **투수 이닝 = 타석 아웃 + 도루자 아웃** · **세이브 부분 실패 롤백** · **포스트시즌 보상 15건**(도달 단계·중복 수령·세이브 왕복)
 - **컴파일 검증 하니스** (세션 46 신설): 스크래치패드에 `UnityShim.cs`(UnityEngine 최소 셰임) + `harness.csproj`를 두고
   `dotnet build -p:GameRoot=<프로젝트 경로>`로 `Assets/Scripts/**` 전체를 컴파일한다. Unity를 켜지 않고 오류를 잡는다.
+- **`StatBaseline` 드리프트는 에디터 메뉴로도 본다** — `Tools/BaseBallManager/StatBaseline 드리프트 측정`.
+  하니스를 켜지 않고 Unity 안에서 2-1을 확인할 수 있다 (세션 48 신설)
   셰임이 덮는 범위: `MonoBehaviour` · `ScriptableObject` · `Debug` · `Mathf` · `Random` · `JsonUtility` · `Application` · `Resources` · `TextAsset` + 직렬화 속성 8종
 - **API 표면 검사 하니스** (세션 48 신설): 같은 스크립트를 `netstandard2.1` + `LangVersion 9.0` **라이브러리로 한 번 더 컴파일**한다.
   실행용 하니스는 `net9.0`이라 **Unity에 없는 BCL 오버로드를 통과시킨다** — `File.Move(string, string, bool)`을 그렇게 놓쳐
