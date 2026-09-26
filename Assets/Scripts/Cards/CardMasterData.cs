@@ -17,8 +17,13 @@ public abstract class CardMasterData
     public string Position { get; }
     public int OVR { get; }
 
+    /// <summary>
+    /// 선수 사진 파일 이름(확장자 제외). 같은 인물의 다른 카드는 같은 값을 쓴다. 비어 있으면 사진 없음
+    /// </summary>
+    public string PhotoKey { get; }
+
     protected CardMasterData(int cardId, string name, string teamName, int year,
-        CardType cardType, CardGrade cardGrade, string position, int ovr)
+        CardType cardType, CardGrade cardGrade, string position, int ovr, string photoKey)
     {
         CardId = cardId;
         Name = name;
@@ -28,5 +33,6 @@ public abstract class CardMasterData
         CardGrade = cardGrade;
         Position = position;
         OVR = ovr;
+        PhotoKey = photoKey;
     }
 }

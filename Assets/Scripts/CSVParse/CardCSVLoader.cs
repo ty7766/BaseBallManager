@@ -11,6 +11,9 @@ public class CardCSVLoader
     private const string HitterResourcePath = "Data/HitterCards";
     private const string PitcherResourcePath = "Data/PitcherCards";
 
+    //선수 사진 파일 이름. 아직 시트에 없을 수 있어 없으면 빈 값으로 둔다
+    private const string PhotoColumn = "photo";
+
     /// <summary>
     /// 타자 카드 전체. 파일을 못 읽으면 빈 목록
     /// </summary>
@@ -94,7 +97,7 @@ public class CardCSVLoader
             ParseCardType(row.GetString("cardType"), row), ParseCardGrade(row.GetString("grade"), row),
             row.GetString("position"),
             row.GetInt("power"), row.GetInt("contact"), row.GetInt("run"), row.GetInt("defense"),
-            row.GetInt("OVR"));
+            row.GetInt("OVR"), row.GetOptionalString(PhotoColumn));
     }
 
     //투수 1행 파싱
@@ -105,7 +108,7 @@ public class CardCSVLoader
             ParseCardType(row.GetString("cardType"), row), ParseCardGrade(row.GetString("grade"), row),
             row.GetString("position"),
             row.GetInt("velo"), row.GetInt("stuff"), row.GetInt("control"), row.GetInt("stamina"),
-            row.GetInt("OVR"));
+            row.GetInt("OVR"), row.GetOptionalString(PhotoColumn));
     }
 
     //카드 종류 분류
@@ -154,6 +157,17 @@ public class CardCSVLoader
 
             if (index >= _columns.Length)
                 throw new ArgumentException(Describe($"'{column}' 열이 비어 있습니다 (칸 {_columns.Length}개)"));
+
+            return _columns[index].Trim();
+        }
+
+        /// <summary>
+        /// 열이 없거나 비어 있어도 예외를 내지 않는다. 나중에 추가되는 선택 열에 쓴다
+        /// </summary>
+        public string GetOptionalString(string column)
+        {
+            if (!_headers.TryGetValue(column, out int index) || index >= _columns.Length)
+                return string.Empty;
 
             return _columns[index].Trim();
         }

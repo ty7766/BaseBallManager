@@ -10,8 +10,8 @@ public class PitcherMasterData : CardMasterData
 
     public PitcherMasterData(int cardId, string name, string teamName, int year,
         CardType cardType, CardGrade cardGrade, string position,
-        int velocity, int stuff, int control, int stamina, int ovr)
-        : base(cardId, name, teamName, year, cardType, cardGrade, position, ovr)
+        int velocity, int stuff, int control, int stamina, int ovr, string photoKey)
+        : base(cardId, name, teamName, year, cardType, cardGrade, position, ovr, photoKey)
     {
         Velocity = velocity;
         Stuff = stuff;
