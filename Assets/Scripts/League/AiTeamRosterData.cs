@@ -3,7 +3,6 @@ using UnityEngine;
 /// <summary>
 /// AI 팀 1개의 편성 데이터 (에디터 편집용)
 /// </summary>
-
 [CreateAssetMenu(fileName = "AiTeamRoster", menuName = "BaseBallManager/AI Team Roster")]
 public class AiTeamRosterData : ScriptableObject
 {

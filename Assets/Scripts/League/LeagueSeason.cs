@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// 리그 1회분의 진행 상태 (일정 + 순위표 + 진행도)
 /// </summary>
 public class LeagueSeason
@@ -13,10 +13,14 @@ public class LeagueSeason
     public int TotalDayCount => Schedule.PlayerGameCount;
     public bool IsFinished => CurrentDayIndex >= TotalDayCount;
 
-    //종료 보상을 이미 수령했는지 (기획서 7.9). 저장 후 재실행으로 중복 수령하는 것을 막는다
+    /// <summary>
+    /// 종료 보상을 이미 수령했는지. 저장 후 재실행으로 중복 수령하는 것을 막는다
+    /// </summary>
     public bool RewardsGranted { get; private set; }
 
-    //시즌이 끝났으면 null
+    /// <summary>
+    /// 시즌이 끝났으면 null
+    /// </summary>
     public LeagueGameDay CurrentDay => IsFinished ? null : Schedule.Days[CurrentDayIndex];
 
     public LeagueSeason(LeagueSchedule schedule, LeagueStandings standings)
@@ -24,7 +28,9 @@ public class LeagueSeason
     {
     }
 
-    //세이브 복원 전용 생성자 - 진행도와 보상 수령 여부까지 함께 되살린다
+    /// <summary>
+    /// 세이브 복원 전용 생성자 - 진행도와 보상 수령 여부까지 함께 되살린다
+    /// </summary>
     public LeagueSeason(LeagueSchedule schedule, LeagueStandings standings, int currentDayIndex, bool rewardsGranted)
     {
         Schedule = schedule;
@@ -33,13 +39,17 @@ public class LeagueSeason
         RewardsGranted = rewardsGranted;
     }
 
-    //하루 진행 완료 처리
+    /// <summary>
+    /// 하루 진행 완료 처리
+    /// </summary>
     public void AdvanceDay()
     {
         CurrentDayIndex++;
     }
 
-    //종료 보상 수령 표시
+    /// <summary>
+    /// 종료 보상 수령 표시
+    /// </summary>
     public void MarkRewardsGranted()
     {
         RewardsGranted = true;

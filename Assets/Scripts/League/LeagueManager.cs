@@ -1,13 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// 리그 시작·진행 진입점 (로스터 · 일정 · 순위표 · 진행기를 엮음)
 /// </summary>
-public class LeagueManager : MonoBehaviour
+public class LeagueManager : SingletonBehaviour<LeagueManager>
 {
-    public static LeagueManager Instance { get; private set; }
-
     public LeagueSeason CurrentSeason => _runner == null ? null : _runner.Season;
     public bool IsSeasonRunning => _runner != null && !_runner.Season.IsFinished;
     public PostSeasonRunner PostSeason { get; private set; }
@@ -16,15 +14,33 @@ public class LeagueManager : MonoBehaviour
     [SerializeField]
     private LeagueTierTable _tierTable;
 
-    [Header("투수 교체 점수 기준 (기획서 8.4)")]
+    [Header("투수 교체 점수 기준")]
     [SerializeField]
     private int _pullThreshold = 3;
 
-    [Header("리그 종료 보상 (기획서 7.1 · 7.9)")]
+    [Header("리그 종료 보상")]
     [SerializeField, Tooltip("이 순위 이내면 다음 티어 해금")]
     private int _unlockRankThreshold = 2;
     [SerializeField, Tooltip("우승 시 지급하는 골카 전용 카드 수")]
     private int _goldenGloveEnhanceCardReward = 1;
+
+    [Header("경기당 강화 전용 카드 등급 분배 (%). 남은 확률이 5성 몫")]
+    [SerializeField, Range(0, 100)]
+    private int _star3RewardPercent = 60;
+    [SerializeField, Range(0, 100)]
+    private int _star4RewardPercent = 30;
+
+    [Header("포스트시즌 보상. 오른 가장 높은 단계 하나만 지급한다")]
+    [SerializeField, Tooltip("와일드카드 결정전 진출")]
+    private PostSeasonReward _wildCardReward;
+    [SerializeField, Tooltip("준플레이오프 진출")]
+    private PostSeasonReward _semiPlayOffReward;
+    [SerializeField, Tooltip("플레이오프 진출")]
+    private PostSeasonReward _playOffReward;
+    [SerializeField, Tooltip("한국시리즈 진출")]
+    private PostSeasonReward _koreanSeriesReward;
+    [SerializeField, Tooltip("한국시리즈 우승 (진출 보상 대신 이것을 지급)")]
+    private PostSeasonReward _championReward;
 
     private LeagueRunner _runner;
     private LeagueSaveService _saveService;
@@ -34,27 +50,30 @@ public class LeagueManager : MonoBehaviour
     //포스트시즌 복원 시 로스터를 다시 만들기 위해 보관 (정규시즌 없이 이어하기 가능하게)
     private LeagueTier _currentTier;
 
-    private void Awake()
+    //수동 교체 모드의 인터럽트 창구. UI가 없으면 null이라 자동 진행만 한다
+    private IGameInterruptHandler _interruptHandler;
+
+    protected override void OnSingletonAwake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+        ISaveStorage storage = new LocalFileStorage();
 
-            //저장소 교체 지점 - 서버 저장으로 바꿀 땐 여기만 바뀐다 (기획서 10장)
-            ISaveStorage storage = new LocalFileStorage();
-
-            _saveService = new LeagueSaveService(storage);
-            _postSeasonSaveService = new PostSeasonSaveService(storage);
-            _rewardService = new LeagueRewardService(_tierTable, _unlockRankThreshold, _goldenGloveEnhanceCardReward);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        _saveService = new LeagueSaveService(storage);
+        _postSeasonSaveService = new PostSeasonSaveService(storage);
+        _rewardService = new LeagueRewardService(_tierTable, _unlockRankThreshold,
+            _goldenGloveEnhanceCardReward, _star3RewardPercent, _star4RewardPercent);
     }
 
-    //리그 1회분 시작 (일정 생성 + 순위표 초기화)
+    /// <summary>
+    /// 경기 중 수동 교체 창구를 연결한다. 다음 리그·포스트시즌부터 적용된다
+    /// </summary>
+    public void SetInterruptHandler(IGameInterruptHandler interruptHandler)
+    {
+        _interruptHandler = interruptHandler;
+    }
+
+    /// <summary>
+    /// 리그 1회분 시작 (일정 생성 + 순위표 초기화)
+    /// </summary>
     public bool StartLeague(LeagueTier tier)
     {
         if (_tierTable == null)
@@ -77,14 +96,12 @@ public class LeagueManager : MonoBehaviour
             return false;
         }
 
-        //해금 조건 (기획서 7.1 - 직전 리그 정규시즌 2등 이상)
         if (!PlayerDataManager.Instance.IsTierUnlocked(tier))
         {
             Debug.LogWarning($"[LeagueManager]: {tier} 리그가 아직 해금되지 않았습니다 (현재 해금 {PlayerDataManager.Instance.HighestUnlockedTier})");
             return false;
         }
 
-        //라인업 20칸을 모두 채워야 입장 가능 (기획서 6.3)
         if (LineUpManager.Instance == null)
         {
             Debug.LogError("[LeagueManager]: LineUpManager가 씬에 없습니다");
@@ -97,7 +114,6 @@ public class LeagueManager : MonoBehaviour
             return false;
         }
 
-        //로스터 실패 원인은 AiRosterManager가 로그로 남김
         if (!AiRosterManager.Instance.BuildRosters(tier))
             return false;
 
@@ -110,17 +126,15 @@ public class LeagueManager : MonoBehaviour
         if (schedule == null)
             return false;
 
-        //순위표에 들어가는 팀 순서를 고정 (플레이어 먼저, 그다음 상대팀 순)
         List<string> allTeamNames = new List<string>(opponentNames.Count + 1) { playerTeamName };
         allTeamNames.AddRange(opponentNames);
 
         LeagueSeason season = new LeagueSeason(schedule, new LeagueStandings(allTeamNames));
 
-        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold);
+        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold, _interruptHandler);
         _currentTier = tier;
         PostSeason = null;
 
-        //이전 시즌의 포스트시즌 세이브가 남아 있으면 새 리그와 뒤섞인다 (기획서 7.6 - 재도전 무제한)
         _postSeasonSaveService.Delete();
 
         Debug.Log($"[LeagueManager]: {tier} 리그 시작 - {schedule.PlayerGameCount}경기 / 참가 {allTeamNames.Count}팀");
@@ -128,7 +142,9 @@ public class LeagueManager : MonoBehaviour
         return true;
     }
 
-    //정규시즌 종료 후 포스트시즌 대진표 구성 (기획서 7.5 - 144경기 리그만)
+    /// <summary>
+    /// 정규시즌 종료 후 포스트시즌 대진표 구성 (144경기 리그만)
+    /// </summary>
     public bool StartPostSeason()
     {
         if (_runner == null)
@@ -137,13 +153,14 @@ public class LeagueManager : MonoBehaviour
             return false;
         }
 
-        //실패 원인은 PostSeasonRunner가 로그로 남김
-        PostSeason = PostSeasonRunner.Create(_runner.Season, _runner.ContextFactory, _pullThreshold);
+        PostSeason = PostSeasonRunner.Create(_runner.Season, _runner.ContextFactory, _pullThreshold, _interruptHandler);
 
         return PostSeason != null;
     }
 
-    //[게임 시작] 1회 = 포스트시즌 경기 1개 진행 (기획서 7.4). 더 진행할 경기가 없거나 실패하면 null
+    /// <summary>
+    /// [게임 시작] 1회 = 포스트시즌 경기 1개 진행. 더 진행할 경기가 없거나 실패하면 null
+    /// </summary>
     public LeagueGameScore? SimulateNextPostSeasonGame()
     {
         if (PostSeason == null)
@@ -155,13 +172,17 @@ public class LeagueManager : MonoBehaviour
         return PostSeason.SimulateNextGame();
     }
 
-    //저장된 포스트시즌이 있는지 (이어하기 버튼 노출 판단용)
+    /// <summary>
+    /// 저장된 포스트시즌이 있는지 (이어하기 버튼 노출 판단용)
+    /// </summary>
     public bool HasSavedPostSeason()
     {
         return _postSeasonSaveService.HasSave();
     }
 
-    //포스트시즌 진행도 저장 (기획서 7.6). 경기 1건이 끝날 때마다 호출하면 된다
+    /// <summary>
+    /// 포스트시즌 진행도 저장. 경기 1건이 끝날 때마다 호출하면 된다
+    /// </summary>
     public bool SavePostSeason()
     {
         if (PostSeason == null)
@@ -176,12 +197,8 @@ public class LeagueManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 저장된 포스트시즌 이어하기 (기획서 7.6)
+    /// 저장된 포스트시즌 이어하기
     /// </summary>
-    /// <remarks>
-    /// 정규시즌을 먼저 불러올 필요가 없다. 포스트시즌 세이브가 티어·플레이어 팀을 함께 들고 있어
-    /// 로스터를 스스로 다시 만들 수 있다.
-    /// </remarks>
     public bool LoadPostSeason()
     {
         if (AiRosterManager.Instance == null || PlayerDataManager.Instance == null)
@@ -190,7 +207,6 @@ public class LeagueManager : MonoBehaviour
             return false;
         }
 
-        //실패 원인은 세이브 서비스가 로그로 남김
         PostSeasonSaveData saveData = _postSeasonSaveService.Load();
 
         if (saveData == null)
@@ -198,17 +214,16 @@ public class LeagueManager : MonoBehaviour
 
         LeagueTier tier = (LeagueTier)saveData.Tier;
 
-        //로스터 실패 원인은 AiRosterManager가 로그로 남김
         if (!AiRosterManager.Instance.BuildRosters(tier))
             return false;
 
-        PlayerDataManager.Instance.SetPlayerTeam(saveData.PlayerTeamName);
+        if (!PlayerDataManager.Instance.SetPlayerTeam(saveData.PlayerTeamName))
+            return false;
 
         LeagueGameContextFactory contextFactory =
             new LeagueGameContextFactory(AiRosterManager.Instance.Rosters, saveData.PlayerTeamName);
 
-        //실패 원인은 PostSeasonRunner가 로그로 남김
-        PostSeason = PostSeasonRunner.Restore(saveData, contextFactory, _pullThreshold);
+        PostSeason = PostSeasonRunner.Restore(saveData, contextFactory, _pullThreshold, _interruptHandler);
 
         if (PostSeason == null)
             return false;
@@ -220,14 +235,18 @@ public class LeagueManager : MonoBehaviour
         return true;
     }
 
-    //저장된 포스트시즌 삭제
+    /// <summary>
+    /// 저장된 포스트시즌 삭제
+    /// </summary>
     public bool DeleteSavedPostSeason()
     {
         return _postSeasonSaveService.Delete();
     }
 
-    //[게임 시작] 1회 = 경기 1개 진행 (기획서 7.4).
-    //내 경기 1건 + 같은 날 AI끼리 4경기가 함께 시뮬되어 순위표에 반영된다
+    /// <summary>
+    /// [게임 시작] 1회 = 경기 1개 진행.
+    /// 내 경기 1건 + 같은 날 AI끼리 4경기가 함께 시뮬되어 순위표에 반영된다
+    /// </summary>
     public LeagueDayResult SimulateNextGame()
     {
         if (_runner == null)
@@ -238,20 +257,23 @@ public class LeagueManager : MonoBehaviour
 
         LeagueDayResult result = _runner.SimulateNextGame();
 
-        //경기당 보상은 실제로 경기가 진행됐을 때만 (기획서 9.1)
         if (result != null)
             _rewardService.GrantPerGameRewards(_currentTier);
 
         return result;
     }
 
-    //저장된 리그가 있는지 (이어하기 버튼 노출 판단용)
+    /// <summary>
+    /// 저장된 리그가 있는지 (이어하기 버튼 노출 판단용)
+    /// </summary>
     public bool HasSavedLeague()
     {
         return _saveService.HasSave();
     }
 
-    //정규시즌 진행도 저장 (기획서 7.6)
+    /// <summary>
+    /// 정규시즌 진행도 저장
+    /// </summary>
     public bool SaveLeague()
     {
         if (_runner == null)
@@ -263,7 +285,9 @@ public class LeagueManager : MonoBehaviour
         return _saveService.Save(_runner.Season);
     }
 
-    //저장된 리그 이어하기. 로스터는 저장하지 않고 티어 기준으로 다시 만든다
+    /// <summary>
+    /// 저장된 리그 이어하기. 로스터는 저장하지 않고 티어 기준으로 다시 만든다
+    /// </summary>
     public bool LoadLeague()
     {
         if (AiRosterManager.Instance == null || PlayerDataManager.Instance == null)
@@ -272,7 +296,6 @@ public class LeagueManager : MonoBehaviour
             return false;
         }
 
-        //실패 원인은 세이브 서비스가 로그로 남김
         LeagueSeason season = _saveService.Load();
 
         if (season == null)
@@ -281,9 +304,10 @@ public class LeagueManager : MonoBehaviour
         if (!AiRosterManager.Instance.BuildRosters(season.Tier))
             return false;
 
-        PlayerDataManager.Instance.SetPlayerTeam(season.PlayerTeamName);
+        if (!PlayerDataManager.Instance.SetPlayerTeam(season.PlayerTeamName))
+            return false;
 
-        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold);
+        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold, _interruptHandler);
         _currentTier = season.Tier;
         PostSeason = null;
 
@@ -292,8 +316,10 @@ public class LeagueManager : MonoBehaviour
         return true;
     }
 
-    //저장된 리그 삭제 (재도전으로 새로 시작할 때. 기획서 7.6 - 재도전 무제한).
-    //포스트시즌은 정규시즌에 딸린 것이라 함께 지운다. 남겨두면 다음 시즌의 진출 여부와 무관하게 이어하기가 뜬다
+    /// <summary>
+    /// 저장된 리그 삭제 (재도전으로 새로 시작할 때. 재도전 무제한).
+    /// 포스트시즌은 정규시즌에 딸린 것이라 함께 지운다. 남겨두면 다음 시즌의 진출 여부와 무관하게 이어하기가 뜬다
+    /// </summary>
     public bool DeleteSavedLeague()
     {
         bool postSeasonDeleted = _postSeasonSaveService.Delete();
@@ -302,7 +328,9 @@ public class LeagueManager : MonoBehaviour
         return leagueDeleted && postSeasonDeleted;
     }
 
-    //정규시즌 종료 보상 수령 + 다음 티어 해금 (기획서 7.1 · 7.9). 실패하거나 이미 받았으면 null
+    /// <summary>
+    /// 정규시즌 종료 보상 수령 + 다음 티어 해금. 실패하거나 이미 받았으면 null
+    /// </summary>
     public LeagueRewardResult ClaimSeasonRewards()
     {
         if (_runner == null)
@@ -311,11 +339,42 @@ public class LeagueManager : MonoBehaviour
             return null;
         }
 
-        //실패 원인은 보상 서비스가 로그로 남김
         return _rewardService.Grant(_runner.Season);
     }
 
-    //현재 순위표 (기획서 7.7)
+    /// <summary>
+    /// 포스트시즌 종료 보상 수령. 실패하거나 이미 받았으면 null
+    /// </summary>
+    public PostSeasonRewardResult ClaimPostSeasonRewards()
+    {
+        if (PostSeason == null)
+        {
+            Debug.LogError("[LeagueManager]: 시작된 포스트시즌이 없습니다");
+            return null;
+        }
+
+        if (PlayerDataManager.Instance == null)
+        {
+            Debug.LogError("[LeagueManager]: PlayerDataManager가 씬에 없습니다");
+            return null;
+        }
+
+        string playerTeamName = PlayerDataManager.Instance.PlayerTeamName;
+
+        if (!PostSeason.TryGetReachedRound(playerTeamName, out PostSeasonRound reachedRound))
+        {
+            Debug.LogWarning($"[LeagueManager]: '{playerTeamName}'은(는) 가을야구에 진출하지 않았습니다");
+            return null;
+        }
+
+        bool isChampion = PostSeason.ChampionTeamName == playerTeamName;
+
+        return _rewardService.GrantPostSeason(PostSeason, playerTeamName, GetPostSeasonReward(reachedRound, isChampion));
+    }
+
+    /// <summary>
+    /// 현재 순위표
+    /// </summary>
     public LeagueStandingRow[] GetRanking()
     {
         if (_runner == null)
@@ -325,5 +384,21 @@ public class LeagueManager : MonoBehaviour
         }
 
         return _runner.Season.Standings.GetRanking();
+    }
+
+    //도달 단계별 보상 수량. 우승은 한국시리즈 진출 보상을 대체한다
+    private PostSeasonReward GetPostSeasonReward(PostSeasonRound reachedRound, bool isChampion)
+    {
+        if (isChampion)
+            return _championReward;
+
+        return reachedRound switch
+        {
+            PostSeasonRound.WildCard => _wildCardReward,
+            PostSeasonRound.SemiPlayOff => _semiPlayOffReward,
+            PostSeasonRound.PlayOff => _playOffReward,
+            PostSeasonRound.KoreanSeries => _koreanSeriesReward,
+            _ => default
+        };
     }
 }

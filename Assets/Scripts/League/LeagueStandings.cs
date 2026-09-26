@@ -18,57 +18,50 @@ public class LeagueStandings
         _records = new List<TeamRecord>(teamNames.Count);
 
         foreach (string teamName in teamNames)
-        {
-            if (string.IsNullOrEmpty(teamName))
-            {
-                Debug.LogError("[LeagueStandings]: 팀명이 비어 있어 순위표에 넣지 않았습니다");
-                continue;
-            }
-
-            if (_recordLookup.ContainsKey(teamName))
-            {
-                Debug.LogError($"[LeagueStandings]: '{teamName}' 팀이 두 번 들어와 한 번만 넣었습니다");
-                continue;
-            }
-
-            TeamRecord record = new TeamRecord(teamName);
-            _recordLookup.Add(teamName, record);
-            _records.Add(record);
-        }
+            TryAddRecord(string.IsNullOrEmpty(teamName) ? null : new TeamRecord(teamName));
     }
 
-    //세이브 복원 전용 생성자 - 이미 값이 채워진 성적을 그대로 담는다
+    /// <summary>
+    /// 세이브 복원 전용 생성자 - 이미 값이 채워진 성적을 그대로 담는다
+    /// </summary>
     public LeagueStandings(IReadOnlyList<TeamRecord> records)
     {
         _recordLookup = new Dictionary<string, TeamRecord>(records.Count);
         _records = new List<TeamRecord>(records.Count);
 
         foreach (TeamRecord record in records)
-        {
-            if (record == null || string.IsNullOrEmpty(record.TeamName))
-            {
-                Debug.LogError("[LeagueStandings]: 복원 데이터에 빈 성적이 있어 건너뛰었습니다");
-                continue;
-            }
-
-            if (_recordLookup.ContainsKey(record.TeamName))
-            {
-                Debug.LogError($"[LeagueStandings]: 복원 데이터에 '{record.TeamName}' 팀이 두 번 들어 있습니다");
-                continue;
-            }
-
-            _recordLookup.Add(record.TeamName, record);
-            _records.Add(record);
-        }
+            TryAddRecord(record);
     }
 
-    //경기 결과 1건을 양 팀 성적에 반영
+    //팀명이 비었거나 이미 들어 있으면 넣지 않는다. 한 팀이 두 줄이면 순위표가 어긋난다
+    private bool TryAddRecord(TeamRecord record)
+    {
+        if (record == null || string.IsNullOrEmpty(record.TeamName))
+        {
+            Debug.LogError("[LeagueStandings]: 팀명이 비어 있어 순위표에 넣지 않았습니다");
+            return false;
+        }
+
+        if (_recordLookup.ContainsKey(record.TeamName))
+        {
+            Debug.LogError($"[LeagueStandings]: '{record.TeamName}' 팀이 두 번 들어와 한 번만 넣었습니다");
+            return false;
+        }
+
+        _recordLookup.Add(record.TeamName, record);
+        _records.Add(record);
+
+        return true;
+    }
+
+    /// <summary>
+    /// 경기 결과 1건을 양 팀 성적에 반영
+    /// </summary>
     public bool ApplyGameResult(LeagueGame game, int homeScore, int awayScore)
     {
         TeamRecord homeRecord = GetRecord(game.HomeTeamName);
         TeamRecord awayRecord = GetRecord(game.AwayTeamName);
 
-        //둘 중 하나라도 없으면 한쪽만 반영되어 순위표가 어긋나므로 아무것도 반영하지 않음
         if (homeRecord == null || awayRecord == null)
             return false;
 
@@ -78,7 +71,9 @@ public class LeagueStandings
         return true;
     }
 
-    //팀명으로 성적 조회
+    /// <summary>
+    /// 팀명으로 성적 조회
+    /// </summary>
     public TeamRecord GetRecord(string teamName)
     {
         if (_recordLookup.TryGetValue(teamName, out TeamRecord record))
@@ -88,7 +83,9 @@ public class LeagueStandings
         return null;
     }
 
-    //순위 계산 (기획서 7.7 - 승률 → 득실차 → 상대전적)
+    /// <summary>
+    /// 순위 계산 (승률 → 득실차 → 상대전적)
+    /// </summary>
     public LeagueStandingRow[] GetRanking()
     {
         List<TeamRecord> sorted = new List<TeamRecord>(_records);
@@ -132,11 +129,8 @@ public class LeagueStandings
             int end = start + 1;
 
             while (end < sorted.Count && IsTied(sorted[start], sorted[end]))
-            {
                 end++;
-            }
 
-            //동률이 2팀 이상일 때만 상대전적을 따짐
             if (end - start > 1)
             {
                 List<TeamRecord> tiedGroup = sorted.GetRange(start, end - start);

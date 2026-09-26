@@ -18,7 +18,9 @@ public class TeamRecord
     public int GamePlayedCount => Wins + Losses + Draws;
     public int RunDifference => RunsScored - RunsAllowed;
 
-    //KBO 방식 - 무승부는 승률 계산에서 제외 (기획서 7.7)
+    /// <summary>
+    /// KBO 방식 - 무승부는 승률 계산에서 제외
+    /// </summary>
     public float WinRate => Wins + Losses == 0 ? 0f : (float)Wins / (Wins + Losses);
 
     //타이브레이커 3순위(상대전적)용 - 상대 팀명별 승/패
@@ -30,7 +32,9 @@ public class TeamRecord
         TeamName = teamName;
     }
 
-    //세이브 복원 전용 생성자 - 경기를 다시 치르지 않고 누적값을 그대로 되살린다
+    /// <summary>
+    /// 세이브 복원 전용 생성자 - 경기를 다시 치르지 않고 누적값을 그대로 되살린다
+    /// </summary>
     public TeamRecord(string teamName, int wins, int losses, int draws, int runsScored, int runsAllowed,
         string[] opponentNames, int[] winsAgainst, int[] lossesAgainst)
     {
@@ -44,7 +48,6 @@ public class TeamRecord
         if (opponentNames == null || winsAgainst == null || lossesAgainst == null)
             return;
 
-        //세 배열은 인덱스가 서로 대응하므로 길이가 어긋나면 상대전적을 신뢰할 수 없음
         if (opponentNames.Length != winsAgainst.Length || opponentNames.Length != lossesAgainst.Length)
         {
             Debug.LogError($"[TeamRecord]: {teamName}의 상대전적 배열 길이가 어긋나 복원하지 않았습니다");
@@ -58,7 +61,9 @@ public class TeamRecord
         }
     }
 
-    //경기 1건 반영 (득점 · 실점은 이 팀 기준)
+    /// <summary>
+    /// 경기 1건 반영 (득점 · 실점은 이 팀 기준)
+    /// </summary>
     public void AddResult(string opponentTeamName, int runsScored, int runsAllowed)
     {
         RunsScored += runsScored;
@@ -80,13 +85,17 @@ public class TeamRecord
         }
     }
 
-    //해당 상대에게 거둔 승수
+    /// <summary>
+    /// 해당 상대에게 거둔 승수
+    /// </summary>
     public int GetWinsAgainst(string opponentTeamName)
     {
         return _winsAgainst.TryGetValue(opponentTeamName, out int count) ? count : 0;
     }
 
-    //해당 상대에게 당한 패수
+    /// <summary>
+    /// 해당 상대에게 당한 패수
+    /// </summary>
     public int GetLossesAgainst(string opponentTeamName)
     {
         return _lossesAgainst.TryGetValue(opponentTeamName, out int count) ? count : 0;

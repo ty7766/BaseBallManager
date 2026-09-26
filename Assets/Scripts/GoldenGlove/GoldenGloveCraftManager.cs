@@ -1,48 +1,29 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 골든글러브 제작 (기획서 4장)
+/// 골든글러브 제작
 /// </summary>
-/// <remarks>
-/// 골든글러브 카드는 뽑기로 나오지 않고 제작으로만 얻는다.
-/// 제작 재료는 골든글러브 포인트 + 포인트 + 훈련 카드 3종이며, 하나라도 모자라면 아무것도 차감되지 않는다.
-/// </remarks>
-public class GoldenGloveCraftManager : MonoBehaviour
+public class GoldenGloveCraftManager : SingletonBehaviour<GoldenGloveCraftManager>
 {
-    public static GoldenGloveCraftManager Instance { get; private set; }
-
     [Header("일반 제작 - 전체 골글 풀에서 랜덤")]
     [SerializeField]
-    private int _randomGoldenGlovePoint = 300;
+    private int _randomGoldenGlovePoint = 50000;
     [SerializeField]
-    private int _randomPoint = 15000;
+    private int _randomPoint = 2000000;
     [SerializeField]
-    private int _randomTrainCard = 20;
+    private int _randomTrainCard = 100;
 
-    [Header("팀 선택 제작 - 팀만 지정 (기획서 4장 - 더 비쌈)")]
+    [Header("팀 선택 제작 - 팀만 지정 (더 비쌈)")]
     [SerializeField]
-    private int _teamSelectGoldenGlovePoint = 750;
+    private int _teamSelectGoldenGlovePoint = 100000;
     [SerializeField]
-    private int _teamSelectPoint = 40000;
+    private int _teamSelectPoint = 5000000;
     [SerializeField]
-    private int _teamSelectTrainCard = 50;
+    private int _teamSelectTrainCard = 300;
 
     //제작 때마다 새 List를 만들지 않도록 재사용하는 후보 버퍼
     private readonly List<int> _candidateBuffer = new List<int>(64);
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
 
     /// <summary>
     /// 제작 1회 비용 (UI 표기용)
@@ -68,7 +49,7 @@ public class GoldenGloveCraftManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 일반 제작 - 전체 골글 풀에서 랜덤 1장 (기획서 4장). 실패 시 null
+    /// 일반 제작 - 전체 골글 풀에서 랜덤 1장. 실패 시 null
     /// </summary>
     public GoldenGloveCraftResult CraftRandom()
     {
@@ -98,14 +79,12 @@ public class GoldenGloveCraftManager : MonoBehaviour
             return null;
         }
 
-        //① 인벤토리 공간 (기획서 9.3 - 한도가 차면 제작도 차단)
         if (InventoryManager.Instance.IsFull)
         {
             Debug.LogWarning("[GoldenGloveCraftManager] : 인벤토리가 꽉 차서 제작할 수 없습니다");
             return null;
         }
 
-        //② 후보 풀. 재화를 차감하기 전에 확인해야 카드를 못 주고 재료만 먹는 일이 없다
         CollectCandidates(teamName);
 
         if (_candidateBuffer.Count == 0)
@@ -118,21 +97,26 @@ public class GoldenGloveCraftManager : MonoBehaviour
             return null;
         }
 
-        //③ 재화 차감. 부족 사유는 CurrencyManager가 로그로 남김
         if (!CurrencyManager.Instance.SpendAll(GetCost(craftType)))
             return null;
 
-        //④ 카드 지급
         int cardId = _candidateBuffer[Random.Range(0, _candidateBuffer.Count)];
         int instanceId = InventoryManager.Instance.AddCard(cardId);
 
-        if (instanceId == -1)
+        if (instanceId == InventoryManager.InvalidInstanceId)
         {
             Debug.LogError($"[GoldenGloveCraftManager] : 재화를 차감했으나 카드 지급에 실패했습니다 (cardId {cardId})");
             return null;
         }
 
         CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardId);
+
+        //후보는 마스터 풀에서 뽑았으므로 여기서 실패하면 카드 데이터가 도중에 바뀐 것이다
+        if (masterData == null)
+        {
+            Debug.LogError($"[GoldenGloveCraftManager] : 지급한 카드의 마스터 데이터를 찾지 못했습니다 (cardId {cardId})");
+            return null;
+        }
 
         return new GoldenGloveCraftResult(cardId, instanceId, masterData.Name, masterData.TeamName);
     }

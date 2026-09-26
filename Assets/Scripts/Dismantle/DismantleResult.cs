@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// 카드 분해 1건의 보상 (기획서 9.2)
+/// 카드 분해 1건의 보상
 /// </summary>
 public class DismantleResult
 {

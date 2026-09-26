@@ -1,82 +1,99 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 
+/// <summary>
+/// CSV 파일에서 뽑아온 카드들의 속성과 잠금/훈련/강화/돌파 속성
+/// </summary>
 public class CardInstance
 {
-    public int InstanceId { get; private set; }             //인스턴스ID
+    /// <summary>
+    /// 훈련으로 오르는 세부 스탯 수. 훈련 분배 배열의 길이 계약이다
+    /// </summary>
+    public const int TrainStatCount = 4;
+
+    public int InstanceId { get; private set; }              //인스턴스ID
     public int CardId { get; private set; }                  //카드 ID - CSV와 연결
-    public int EnhanceLevel { get; private set; }           //강화 레벨
+    public int EnhanceLevel { get; private set; }            //강화 레벨
     public int TrainLevel { get; private set; }              //훈련 레벨
     public bool IsLocked { get; private set; }               //잠금 상태
     public bool BreakthroughUsed { get; private set; }       //훈련 돌파 사용 여부
-
-    private int[] _trainDelta;
     public IReadOnlyList<int> TrainDelta => _trainDelta;     //훈련 스탯 분배값
 
-    //카드를 처음 획득했을 때의 초기값 생성자
+    private readonly int[] _trainDelta;
+
+    /// <summary>
+    /// 신규 카드 획득 시 초기 값 생성자
+    /// </summary>
     public CardInstance(int instanceId, int cardId)
     {
         InstanceId = instanceId;
         CardId = cardId;
-        EnhanceLevel = 0;
         TrainLevel = 1;
-        _trainDelta = new int[4];
+        EnhanceLevel = 0;
         IsLocked = false;
         BreakthroughUsed = false;
+        _trainDelta = new int[TrainStatCount];
     }
 
-    //세이브 복원 전용 생성자 - 저장된 상태를 그대로 되살린다
+    /// <summary>
+    /// 세이브 복원 전용 생성자 - 저장된 상태를 그대로 되살린다
+    /// </summary>
     public CardInstance(int instanceId, int cardId, int enhanceLevel, int trainLevel,
         bool breakthroughUsed, int[] trainDelta, bool isLocked)
+        :this(instanceId, cardId)
     {
-        InstanceId = instanceId;
-        CardId = cardId;
         EnhanceLevel = enhanceLevel;
         TrainLevel = trainLevel;
         BreakthroughUsed = breakthroughUsed;
         IsLocked = isLocked;
 
-        _trainDelta = new int[4];
-
-        //세이브가 깨졌더라도 스탯 계산이 터지지 않도록 4칸은 항상 확보한다
-        if (trainDelta == null || trainDelta.Length != 4)
+        if (trainDelta == null || trainDelta.Length != TrainStatCount)
         {
-            UnityEngine.Debug.LogError($"[CardInstance] : 복원할 훈련 분배값이 올바르지 않습니다 (instanceId {instanceId})");
+            Debug.LogError($"[CardInstance]: 복원할 훈련 분배값이 올바르지 않습니다 (instanceId {instanceId})");
             return;
         }
 
-        //외부 배열을 그대로 들고 있으면 세이브 DTO 쪽 수정이 카드에 새어 들어온다
-        System.Array.Copy(trainDelta, _trainDelta, 4);
+        Array.Copy(trainDelta, _trainDelta, TrainStatCount);
     }
 
     /// <summary>
-    /// (외부 접근용) 카드의 인게임 속성을 관리 및 호출
+    /// 카드 잠금 설정
     /// </summary>
-
-    //카드 잠금 설정
     public void SetLocked(bool locked)
     {
         IsLocked = locked;
     }
 
-    //강화 레벨 1 증가
+    /// <summary>
+    /// 강화 레벨 1 증가
+    /// </summary>
     public void ApplyEnhance()
     {
         EnhanceLevel++;
     }
 
-    //훈련 레벨 1 증가 + 스탯 분배 반영
-    //delta : 이번 레벨 업에서 오른 각 스탯 증가량
-    public void ApplyTrain(int[] delta)
+    /// <summary>
+    /// 훈련 레벨 1 증가 + 스탯 분배 반영
+    /// </summary>
+    public bool ApplyTrain(int[] increasedStat)
     {
-        for (int i = 0;  i < _trainDelta.Length; i++)
+        if (increasedStat == null || increasedStat.Length != TrainStatCount)
         {
-            _trainDelta[i] += delta[i];
+            Debug.LogError($"[CardInstance]: 훈련 분배 값이 올바르지 않습니다. (instanceId) = {InstanceId}");
+            return false;
         }
 
+        for (int i = 0; i < TrainStatCount; i++)
+            _trainDelta[i] += increasedStat[i];
+
         TrainLevel++;
+        return true;
     }
 
-    //돌파 완료 표시
+    /// <summary>
+    /// 돌파 완료 표시
+    /// </summary>
     public void ApplyBreakthrough()
     {
         BreakthroughUsed = true;

@@ -2,28 +2,54 @@
 using UnityEngine;
 
 /// <summary>
-/// 포스트시즌 진행 (기획서 7.5 - 144경기 리그 한정, 상위 5팀 KBO 사다리)
+/// 포스트시즌 진행 (144경기 리그 한정, 상위 5팀 KBO 사다리)
 /// </summary>
 public class PostSeasonRunner
 {
-    //포스트시즌이 열리는 정규시즌 경기 수
+    /// <summary>
+    /// 포스트시즌이 열리는 정규시즌 경기 수
+    /// </summary>
     public const int PostSeasonLeagueGameCount = 144;
 
-    //가을야구 진출 팀 수
+    /// <summary>
+    /// 가을야구 진출 팀 수
+    /// </summary>
     public const int QualifiedTeamCount = 5;
+
+    private const int SeriesCount = 4;
+
+    //단계별 승리 조건 (와일드카드 2선승제지만 4위가 1승을 안고 시작)
+    private const int WildCardWinsToClinch = 2;
+    private const int WildCardHigherSeedAdvantage = 1;
+    private const int FiveGameWinsToClinch = 3;
+    private const int KoreanSeriesWinsToClinch = 4;
+
+    //무승부 재경기를 감안한 시리즈당 최대 경기 수 여유분
+    private const int DrawReplayAllowance = 5;
 
     public IReadOnlyList<PostSeasonSeries> Series => _series;
 
-    //전부 끝났으면 null
+    /// <summary>
+    /// 전부 끝났으면 null
+    /// </summary>
     public PostSeasonSeries CurrentSeries => IsFinished ? null : _series[_currentSeriesIndex];
 
     public bool IsFinished => _currentSeriesIndex >= _series.Count;
 
-    //세이브 기록용 (기획서 7.6)
+    /// <summary>
+    /// 세이브 기록용
+    /// </summary>
     public int CurrentSeriesIndex => _currentSeriesIndex;
     public IReadOnlyDictionary<string, int> RotationIndices => _rotationIndices;
 
-    //한국시리즈 우승 팀 (끝나기 전이면 null)
+    /// <summary>
+    /// 종료 보상을 이미 수령했는지. 저장 후 재실행으로 중복 수령하는 것을 막는다
+    /// </summary>
+    public bool RewardsGranted { get; private set; }
+
+    /// <summary>
+    /// 한국시리즈 우승 팀 (끝나기 전이면 null)
+    /// </summary>
     public string ChampionTeamName => IsFinished ? _series[_series.Count - 1].WinnerTeamName : null;
 
     //상위 시드 홈 여부 (KBO 방식). 재경기로 길어지면 상위 시드 홈으로 처리
@@ -35,23 +61,28 @@ public class PostSeasonRunner
     private readonly LeagueGameContextFactory _contextFactory;
     private readonly GameSimulator _simulator;
 
-    //팀별 누적 등판 경기 수 - 선발 로테이션을 정규시즌에서 이어감 (기획서 6.2)
+    //팀별 누적 등판 경기 수 - 선발 로테이션을 정규시즌에서 이어감
     private readonly Dictionary<string, int> _rotationIndices;
 
     private int _currentSeriesIndex;
 
     private PostSeasonRunner(List<PostSeasonSeries> series, LeagueGameContextFactory contextFactory,
-        Dictionary<string, int> rotationIndices, int pullThreshold, int currentSeriesIndex = 0)
+        Dictionary<string, int> rotationIndices, int pullThreshold, IGameInterruptHandler interruptHandler,
+        int currentSeriesIndex = 0, bool rewardsGranted = false)
     {
         _series = series;
         _contextFactory = contextFactory;
         _rotationIndices = rotationIndices;
-        _simulator = new GameSimulator(pullThreshold);
+        _simulator = new GameSimulator(pullThreshold, interruptHandler);
         _currentSeriesIndex = currentSeriesIndex;
+        RewardsGranted = rewardsGranted;
     }
 
-    //정규시즌 결과로 대진표 구성. 조건을 못 채우면 null
-    public static PostSeasonRunner Create(LeagueSeason season, LeagueGameContextFactory contextFactory, int pullThreshold = 3)
+    /// <summary>
+    /// 정규시즌 결과로 대진표 구성. 조건을 못 채우면 null
+    /// </summary>
+    public static PostSeasonRunner Create(LeagueSeason season, LeagueGameContextFactory contextFactory,
+        int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
     {
         if (!season.IsFinished)
         {
@@ -59,7 +90,6 @@ public class PostSeasonRunner
             return null;
         }
 
-        //기획서 7.5 - 144경기 미만 리그는 포스트시즌 없이 최종 순위로 마감
         if (season.TotalDayCount != PostSeasonLeagueGameCount)
         {
             Debug.LogWarning($"[PostSeasonRunner]: {season.Tier} 리그는 {season.TotalDayCount}경기라 포스트시즌이 없습니다");
@@ -74,13 +104,17 @@ public class PostSeasonRunner
             return null;
         }
 
-        List<PostSeasonSeries> series = new List<PostSeasonSeries>(4)
+        List<PostSeasonSeries> series = new List<PostSeasonSeries>(SeriesCount)
         {
-            //4위는 1승을 안고 시작 - 1승만 하면 진출, 5위는 2연승 필요
-            new PostSeasonSeries(PostSeasonRound.WildCard, ranking[3].Record.TeamName, ranking[4].Record.TeamName, 2, 1),
-            new PostSeasonSeries(PostSeasonRound.SemiPlayOff, ranking[2].Record.TeamName, null, 3, 0),
-            new PostSeasonSeries(PostSeasonRound.PlayOff, ranking[1].Record.TeamName, null, 3, 0),
-            new PostSeasonSeries(PostSeasonRound.KoreanSeries, ranking[0].Record.TeamName, null, 4, 0)
+            new PostSeasonSeries(PostSeasonRound.WildCard,
+                ranking[3].Record.TeamName, ranking[4].Record.TeamName,
+                WildCardWinsToClinch, WildCardHigherSeedAdvantage),
+            new PostSeasonSeries(PostSeasonRound.SemiPlayOff,
+                ranking[2].Record.TeamName, null, FiveGameWinsToClinch, 0),
+            new PostSeasonSeries(PostSeasonRound.PlayOff,
+                ranking[1].Record.TeamName, null, FiveGameWinsToClinch, 0),
+            new PostSeasonSeries(PostSeasonRound.KoreanSeries,
+                ranking[0].Record.TeamName, null, KoreanSeriesWinsToClinch, 0)
         };
 
         Dictionary<string, int> rotationIndices = new Dictionary<string, int>(ranking.Length);
@@ -90,18 +124,14 @@ public class PostSeasonRunner
             rotationIndices[row.Record.TeamName] = row.Record.GamePlayedCount;
         }
 
-        return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold);
+        return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold, interruptHandler);
     }
 
     /// <summary>
-    /// 저장된 진행도로 복원 (기획서 7.6). 데이터가 깨졌으면 null
+    /// 저장된 진행도로 복원. 데이터가 깨졌으면 null
     /// </summary>
-    /// <remarks>
-    /// 대진표는 정규시즌 순위로 다시 뽑지 않고 <b>저장된 그대로</b> 되살린다.
-    /// 순위표에서 다시 뽑으면 같은 결과가 나오긴 하지만, 이미 진행된 시리즈의 승자가 다음 시리즈에
-    /// 채워져 있는 상태까지는 재현되지 않는다.
-    /// </remarks>
-    public static PostSeasonRunner Restore(PostSeasonSaveData saveData, LeagueGameContextFactory contextFactory, int pullThreshold = 3)
+    public static PostSeasonRunner Restore(PostSeasonSaveData saveData, LeagueGameContextFactory contextFactory,
+        int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
     {
         if (saveData == null || saveData.Series == null || saveData.Series.Length == 0)
         {
@@ -130,14 +160,48 @@ public class PostSeasonRunner
 
         Dictionary<string, int> rotationIndices = ToRotationIndices(saveData);
 
-        //로테이션이 비면 전 팀이 선발 1번부터 다시 던지게 되어 기획서 6.2가 깨진다
         if (rotationIndices == null)
             return null;
 
-        return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold, saveData.CurrentSeriesIndex);
+        return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold, interruptHandler,
+            saveData.CurrentSeriesIndex, saveData.RewardsGranted);
     }
 
-    //경기 1건 진행. 더 진행할 경기가 없거나 실패하면 null
+    /// <summary>
+    /// 해당 팀이 오른 가장 높은 단계. 참가하지 않았으면 false
+    /// </summary>
+    public bool TryGetReachedRound(string teamName, out PostSeasonRound reachedRound)
+    {
+        reachedRound = default;
+
+        if (string.IsNullOrEmpty(teamName))
+            return false;
+
+        bool found = false;
+
+        foreach (PostSeasonSeries series in _series)
+        {
+            if (series.HigherSeedTeamName != teamName && series.LowerSeedTeamName != teamName)
+                continue;
+
+            reachedRound = series.Round;
+            found = true;
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// 종료 보상 수령 표시
+    /// </summary>
+    public void MarkRewardsGranted()
+    {
+        RewardsGranted = true;
+    }
+
+    /// <summary>
+    /// 경기 1건 진행. 더 진행할 경기가 없거나 실패하면 null
+    /// </summary>
     public LeagueGameScore? SimulateNextGame()
     {
         PostSeasonSeries series = CurrentSeries;
@@ -154,8 +218,7 @@ public class PostSeasonRunner
             return null;
         }
 
-        //무승부는 승수를 올리지 않아 재경기가 된다 (기획서 7.5). 반복이 끝나지 않는 경우를 대비한 상한
-        int maxGameCount = series.WinsToClinch * 2 + 5;
+        int maxGameCount = series.WinsToClinch * 2 + DrawReplayAllowance;
 
         if (series.Scores.Count >= maxGameCount)
         {
@@ -172,7 +235,6 @@ public class PostSeasonRunner
         SimulationContext context = _contextFactory.Create(game,
             GetRotationIndex(game.HomeTeamName), GetRotationIndex(game.AwayTeamName));
 
-        //원인 로그는 컨텍스트 빌더가 남김
         if (context == null)
             return null;
 
@@ -207,7 +269,6 @@ public class PostSeasonRunner
         bool[] pattern = GetHomePattern(series.Round);
         int gameIndex = series.Scores.Count;
 
-        //재경기로 패턴을 넘어가면 상위 시드 홈으로 처리
         return gameIndex >= pattern.Length || pattern[gameIndex];
     }
 

@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// 투수 1명의 경기 1건 기록 (기획서 8.5 박스스코어)
+/// 투수 1명의 경기 1건 기록
 /// </summary>
 public class PitcherGameStats
 {
@@ -22,21 +22,22 @@ public class PitcherGameStats
     }
 
     /// <summary>
-    /// 이닝 표기 문자열 ("5 2/3" 형태)
+    /// 이닝 표기 문자열. 야구는 아웃 3개 단위라 소수점이 아닌 "5 2/3" 형태로 쓴다
     /// </summary>
-    /// <remarks>야구는 이닝을 아웃 3개 단위로 세므로 소수점이 아니라 분수로 표기한다.</remarks>
     public string GetInningsPitchedText()
     {
-        int fullInnings = OutsRecorded / 3;
-        int remainder = OutsRecorded % 3;
+        int fullInnings = OutsRecorded / GameState.OutsPerInning;
+        int remainder = OutsRecorded % GameState.OutsPerInning;
 
         if (remainder == 0)
             return fullInnings.ToString();
 
-        return $"{fullInnings} {remainder}/3";
+        return $"{fullInnings} {remainder}/{GameState.OutsPerInning}";
     }
 
-    //타석 1회 결과 반영
+    /// <summary>
+    /// 타석 1회 결과를 반영한다
+    /// </summary>
     public void AddBatterFaced(BatterOutcome outcome, int pitchCount, int runsAllowed)
     {
         BattersFaced++;
@@ -62,6 +63,14 @@ public class PitcherGameStats
                 StrikeOuts++;
                 break;
         }
+    }
+
+    /// <summary>
+    /// 도루자 아웃 1개. SB·CS 스탯은 타자 쪽에만 남기고 이닝 계산에만 반영한다
+    /// </summary>
+    public void AddCaughtStealingOut()
+    {
+        OutsRecorded++;
     }
 
     //결과별로 잡아낸 아웃 수. 실책 출루는 아웃이 아니다

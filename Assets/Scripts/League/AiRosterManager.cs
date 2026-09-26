@@ -4,10 +4,8 @@ using UnityEngine;
 /// <summary>
 /// 티어에 맞는 팀 로스터를 세트 단위로 생성해 보관 (플레이어 팀 포함 10팀)
 /// </summary>
-public class AiRosterManager : MonoBehaviour
+public class AiRosterManager : SingletonBehaviour<AiRosterManager>
 {
-    public static AiRosterManager Instance { get; private set; }
-
     public LeagueTier CurrentTier => _currentTier;
     public int TeamCount => _rosters.Count;
     public IReadOnlyDictionary<string, AiTeamRoster> Rosters => _rosters;
@@ -18,22 +16,14 @@ public class AiRosterManager : MonoBehaviour
 
     //팀명 -> 완성된 로스터. 리그 시작 시 1회 채우고 리그 내내 재사용
     private readonly Dictionary<string, AiTeamRoster> _rosters = new Dictionary<string, AiTeamRoster>(AiRosterSet.TeamCount);
+
+    //로스터 세트의 배치 순서 보존용. 이 순서가 일정 대진을 결정하므로 딕셔너리 열거에 맡기면 안 된다
+    private readonly List<string> _teamNamesInOrder = new List<string>(AiRosterSet.TeamCount);
     private LeagueTier _currentTier;
 
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-
-    //티어에 맞는 AI 로스터 전체 생성 (리그 시작 시 1회 호출)
+    /// <summary>
+    /// 티어에 맞는 AI 로스터 전체 생성 (리그 시작 시 1회 호출)
+    /// </summary>
     public bool BuildRosters(LeagueTier tier)
     {
         if (_tierTable == null)
@@ -53,8 +43,8 @@ public class AiRosterManager : MonoBehaviour
         int tierStatBonus = _tierTable.GetStatBonus(tier);
         IReadOnlyList<AiTeamRosterData> teams = rosterSet.Teams;
 
-        //티어를 바꿔 다시 부를 수 있으므로 이전 로스터를 먼저 버림
         _rosters.Clear();
+        _teamNamesInOrder.Clear();
 
         for (int i = 0; i < teams.Count; i++)
         {
@@ -63,27 +53,27 @@ public class AiRosterManager : MonoBehaviour
             if (teamData == null)
             {
                 Debug.LogError($"[AiRosterManager]: {tier} 티어 로스터 세트의 {i + 1}번 칸이 비어 있습니다");
-                _rosters.Clear();
+                ClearRosters();
                 return false;
             }
 
             AiTeamRoster roster = AiRosterBuilder.BuildTeam(teamData, tierStatBonus);
 
-            //편성 실패 - BuildTeam이 이미 원인을 로그로 남겼음
             if (roster == null)
             {
-                _rosters.Clear();
+                ClearRosters();
                 return false;
             }
 
             if (_rosters.ContainsKey(roster.TeamName))
             {
                 Debug.LogError($"[AiRosterManager]: {tier} 티어 로스터 세트에 '{roster.TeamName}' 팀이 두 번 들어 있습니다");
-                _rosters.Clear();
+                ClearRosters();
                 return false;
             }
 
             _rosters.Add(roster.TeamName, roster);
+            _teamNamesInOrder.Add(roster.TeamName);
         }
 
         _currentTier = tier;
@@ -93,12 +83,14 @@ public class AiRosterManager : MonoBehaviour
         return true;
     }
 
-    //플레이어 팀을 뺀 나머지 팀명 (기획서 7.8 - 나를 제외한 9팀)
+    /// <summary>
+    /// 플레이어 팀을 뺀 나머지 팀명 (나를 제외한 9팀)
+    /// </summary>
     public List<string> GetOpponentTeamNames(string playerTeamName)
     {
-        List<string> opponentNames = new List<string>(_rosters.Count);
+        List<string> opponentNames = new List<string>(_teamNamesInOrder.Count);
 
-        foreach (string teamName in _rosters.Keys)
+        foreach (string teamName in _teamNamesInOrder)
         {
             if (teamName == playerTeamName)
                 continue;
@@ -109,7 +101,9 @@ public class AiRosterManager : MonoBehaviour
         return opponentNames;
     }
 
-    //팀명으로 AI 로스터 조회
+    /// <summary>
+    /// 팀명으로 AI 로스터 조회
+    /// </summary>
     public AiTeamRoster GetRoster(string teamName)
     {
         if (_rosters.TryGetValue(teamName, out AiTeamRoster roster))
@@ -119,9 +113,18 @@ public class AiRosterManager : MonoBehaviour
         return null;
     }
 
-    //생성된 AI 팀명 전체 반환 (리그 일정 생성용)
-    public IReadOnlyCollection<string> GetTeamNames()
+    /// <summary>
+    /// 생성된 팀명 전체 반환 (로스터 세트의 배치 순서 그대로)
+    /// </summary>
+    public IReadOnlyList<string> GetTeamNames()
     {
-        return _rosters.Keys;
+        return _teamNamesInOrder;
+    }
+
+    //실패 시 부분 생성 상태를 남기지 않는다
+    private void ClearRosters()
+    {
+        _rosters.Clear();
+        _teamNamesInOrder.Clear();
     }
 }

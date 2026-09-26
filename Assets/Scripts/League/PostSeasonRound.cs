@@ -1,5 +1,5 @@
 ﻿/// <summary>
-/// 포스트시즌 단계 (기획서 7.5 - KBO 사다리)
+/// 포스트시즌 단계 (KBO 사다리)
 /// </summary>
 public enum PostSeasonRound
 {

@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
 
 /// <summary>
-/// 시뮬레이션 경기 중 타자의 상태 로그 출력용
+/// 타석 1회의 결과 종류
 /// </summary>
-
 public enum BatterOutcome
 {
     StrikeOut,      //삼진
@@ -18,6 +17,9 @@ public enum BatterOutcome
     DoublePlay,     //병살
     SacrificeFly    //희생플라이
 }
+/// <summary>
+/// 타석 1회의 결과 로그. 화면 출력과 박스스코어 집계에 함께 쓴다
+/// </summary>
 public class SimulationBatterLog
 {
     public BatterOutcome Outcome {  get; }
@@ -33,8 +35,7 @@ public class SimulationBatterLog
     public int PitcherInstanceId { get; }       //상대한 투수 (기록 집계 키)
     public string PitcherName { get; }          //로그 출력용 투수 이름
 
-    //이번 타석에서 홈을 밟은 주자들. 선수별 득점(R) 집계에 필요하다
-    public IReadOnlyList<int> ScoredRunnerIds { get; }
+    public IReadOnlyList<int> ScoredRunnerIds { get; }   //홈을 밟은 주자들 (선수별 득점 집계용)
 
     public SimulationBatterLog(BatterOutcome outcome, int pitchCount, int runsScored, string batterName,
         int inning, bool isTopInning, int outCountBefore,

@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 카드 마스터 풀에서 AI 팀 로스터 편성
+/// SO 로스터와 티어 보정으로 시뮬용 AI 팀 로스터를 조립한다
 /// </summary>
 public static class AiRosterBuilder
 {
-    //SO 로스터 + 티어 보정 -> 시뮬용 AI 팀 로스터 조립
+    /// <summary>
+    /// AI 팀 로스터. 슬롯이 비었거나 카드를 못 찾으면 null
+    /// </summary>
     public static AiTeamRoster BuildTeam(AiTeamRosterData rosterData, int tierStatBonus)
     {
         if (rosterData == null)
@@ -31,8 +33,7 @@ public static class AiRosterBuilder
         if (relievePitchers.Length != AiTeamRosterData.RelieverCount)
             return null;
 
-        //빈 슬롯 센티넬은 0 (cardId는 1부터 시작)
-        if (rosterData.CloserCardId == 0)
+        if (rosterData.CloserCardId == CardMasterData.NoCardId)
         {
             Debug.LogError($"[AiRosterBuilder]: {rosterData.TeamName} 마무리 슬롯이 비어 있습니다");
             return null;
@@ -68,7 +69,7 @@ public static class AiRosterBuilder
         {
             AiHitterSlot slot = slots[i];
 
-            if (slot.CardId == 0)
+            if (slot.CardId == CardMasterData.NoCardId)
             {
                 Debug.LogError($"[AiRosterBuilder]: {rosterData.TeamName} {i + 1}번 타순({slot.Position}) 슬롯이 비어 있습니다");
                 return Array.Empty<HitterSnapshot>();
@@ -91,13 +92,19 @@ public static class AiRosterBuilder
     //cardId 배열 -> 투수 스냅샷 배열 (선발·불펜 공용)
     private static PitcherSnapshot[] BuildPitchers(IReadOnlyList<int> cardIds, string teamName, string roleLabel, int tierStatBonus)
     {
+        if (cardIds == null)
+        {
+            Debug.LogError($"[AiRosterBuilder]: {teamName} {roleLabel} 목록이 없습니다");
+            return Array.Empty<PitcherSnapshot>();
+        }
+
         PitcherSnapshot[] pitchers = new PitcherSnapshot[cardIds.Count];
 
         for (int i = 0; i < cardIds.Count; i++)
         {
             int cardId = cardIds[i];
 
-            if (cardId == 0)
+            if (cardId == CardMasterData.NoCardId)
             {
                 Debug.LogError($"[AiRosterBuilder]: {teamName} {roleLabel} {i + 1}번 슬롯이 비어 있습니다");
                 return Array.Empty<PitcherSnapshot>();
@@ -120,12 +127,20 @@ public static class AiRosterBuilder
     //마스터 데이터 + 티어 보정 = AI 타자 스냅샷
     private static HitterSnapshot ToHitterSnapshot(HitterMasterData hitterData, int tierStatBonus)
     {
-        return new HitterSnapshot(hitterData.CardId, hitterData.Name, hitterData.Power + tierStatBonus, hitterData.Contact + tierStatBonus, hitterData.Run + tierStatBonus, hitterData.Defense + tierStatBonus);
+        return new HitterSnapshot(hitterData.CardId, hitterData.Name,
+            hitterData.Power + tierStatBonus,
+            hitterData.Contact + tierStatBonus,
+            hitterData.Run + tierStatBonus,
+            hitterData.Defense + tierStatBonus);
     }
 
     //마스터 데이터 + 티어 보정 = AI 투수 스냅샷
     private static PitcherSnapshot ToPitcherSnapshot(PitcherMasterData pitcherData, int tierStatBonus)
     {
-        return new PitcherSnapshot(pitcherData.CardId, pitcherData.Name, pitcherData.Velocity + tierStatBonus, pitcherData.Stuff + tierStatBonus, pitcherData.Control + tierStatBonus, pitcherData.Stamina + tierStatBonus);
+        return new PitcherSnapshot(pitcherData.CardId, pitcherData.Name,
+            pitcherData.Velocity + tierStatBonus,
+            pitcherData.Stuff + tierStatBonus,
+            pitcherData.Control + tierStatBonus,
+            pitcherData.Stamina + tierStatBonus);
     }
 }

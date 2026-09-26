@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 /// <summary>
-/// 타자/투수 스탯을 받아 타석 결과(삼진, 볼넷, 안타, 실책, 아웃 등) 산출
+/// 타자·투수 스탯으로 타석 결과(삼진·볼넷·안타·실책·아웃)를 판정한다
 /// </summary>
 public class BatterOutcomeCalculator
 {
@@ -19,142 +19,160 @@ public class BatterOutcomeCalculator
     private const float HitCoefficient = 0.10f;
     private const float ErrorDefenseCoefficient = 0.006f;
 
+    private const float MinStrikeOutProb = 0.05f;
+    private const float MaxStrikeOutProb = 0.40f;
+    private const float MinWalkProb = 0.02f;
+    private const float MaxWalkProb = 0.25f;
+    private const float MinHomeRunProb = 0.002f;
+    private const float MaxHomeRunProb = 0.10f;
+    private const float MinHitProb = 0.12f;
+    private const float MaxHitProb = 0.50f;
+    private const float MinErrorProb = 0.003f;
+    private const float MaxErrorProb = 0.03f;
+
     //안타 종류 분배 (홈런 제외) - KBO 기준 단타 79% / 2루타 19% / 3루타 1.5%
     private const float BaseTripleShare = 0.015f;
     private const float BaseDoubleShare = 0.190f;
     private const float LongHitBonusScale = 0.10f;
+    private const float TripleBonusShare = 0.1f;
+    private const float DoubleBonusShare = 0.9f;
+    private const float PowerWeightInLongHit = 0.6f;
+    private const float RunWeightInLongHit = 0.4f;
 
-    // 확률 메서드를 조합하여 최종 타석 결과 반환
+    //아웃 종류 분배. 병살이 가능한 상황에서는 땅볼 비중이 올라간다
+    private const float FlyOutShareWithDoublePlay = 0.45f;
+    private const float GroundOutShareWithDoublePlay = 0.9f;
+    private const float FlyOutShare = 0.5f;
+
+    /// <summary>
+    /// 삼진 -> 볼넷 -> 홈런 -> 실책 -> 안타 순으로 굴려 타석 결과를 정한다
+    /// </summary>
     public BatterOutcome Calculate(GameState state, HitterSnapshot hitter, PitcherSnapshot pitcher, float avgDefense)
     {
-        // 1. 삼진
         if (Roll(CalcStrikeOutProb(hitter, pitcher)))
             return BatterOutcome.StrikeOut;
-        // 2. 볼넷
+
         if (Roll(CalcWalkProb(hitter, pitcher)))
             return BatterOutcome.Walk;
-        // 3. 홈런
+
         if (Roll(CalcHomeRunProb(hitter, pitcher)))
             return BatterOutcome.HomeRun;
-        // 4. 실책
+
         if (Roll(CalcErrorProb(avgDefense)))
             return BatterOutcome.Error;
-        // 5. 안타
+
         if (Roll(CalcHitProb(hitter, pitcher)))
-        {
-            // 파워/주루가 평균보다 높을수록 장타 비중 증가 (평균이면 보정 0)
-            float longHitBonus = LongHitBonusScale
-                * (StatBaseline.GetEdge(hitter.Power, StatBaseline.HitterPower) * 0.6f + StatBaseline.GetEdge(hitter.Run, StatBaseline.HitterRun) * 0.4f);
+            return ResolveHitType(hitter);
 
-            float tripleThreshold = Mathf.Max(0f, BaseTripleShare + longHitBonus * 0.1f);
-            float doubleThreshold = tripleThreshold + Mathf.Max(0f, BaseDoubleShare + longHitBonus * 0.9f);
-
-            float r = Random.value;
-            if (r < tripleThreshold)
-                return BatterOutcome.Triple;
-            else if (r < doubleThreshold)
-                return BatterOutcome.Double;
-            else
-                return BatterOutcome.Single;
-        }
-        // 6. 아웃 종류
-        else
-        {
-            bool canDoublePlay = state.FirstBase != -1 && state.OutCount < 2;
-            float r = Random.value;
-
-            if (canDoublePlay)
-            {
-                if (r < 0.45f)
-                {
-                    // 희생플라이: 뜬공 + 3루 주자 있음 + 2아웃 미만
-                    if (state.ThirdBase != -1)
-                        return BatterOutcome.SacrificeFly;
-                    return BatterOutcome.FlyOut;
-                }
-                else if (r < 0.9f)
-                    return BatterOutcome.GroundOut;
-                else
-                    return BatterOutcome.DoublePlay;
-            }
-            else
-            {
-                if (r < 0.5f)
-                {
-                    // 희생플라이: 뜬공 + 3루 주자 있음 + 2아웃 미만
-                    if (state.ThirdBase != -1 && state.OutCount < 2)
-                        return BatterOutcome.SacrificeFly;
-                    return BatterOutcome.FlyOut;
-                }
-                return BatterOutcome.GroundOut;
-            }
-        }
+        return ResolveOutType(state);
     }
 
-    // 삼진 확률 계산
-    // 타자 정확↓, 투수 구위/구속↑ 일수록 높아짐
-    private float CalcStrikeOutProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
+    //파워·주루가 평균보다 높을수록 장타 비중이 올라간다
+    private static BatterOutcome ResolveHitType(HitterSnapshot hitter)
+    {
+        float longHitBonus = LongHitBonusScale
+            * (StatBaseline.GetEdge(hitter.Power, StatBaseline.HitterPower) * PowerWeightInLongHit
+                + StatBaseline.GetEdge(hitter.Run, StatBaseline.HitterRun) * RunWeightInLongHit);
+
+        float tripleThreshold = Mathf.Max(0f, BaseTripleShare + longHitBonus * TripleBonusShare);
+        float doubleThreshold = tripleThreshold + Mathf.Max(0f, BaseDoubleShare + longHitBonus * DoubleBonusShare);
+
+        float roll = Random.value;
+
+        if (roll < tripleThreshold)
+            return BatterOutcome.Triple;
+
+        if (roll < doubleThreshold)
+            return BatterOutcome.Double;
+
+        return BatterOutcome.Single;
+    }
+
+    //희생플라이는 뜬공 + 3루 주자 + 2아웃 미만일 때만 성립한다
+    private static BatterOutcome ResolveOutType(GameState state)
+    {
+        bool canDoublePlay = state.FirstBase != GameState.NoRunner
+            && state.OutCount < GameState.OutsPerInning - 1;
+
+        float roll = Random.value;
+
+        if (canDoublePlay)
+        {
+            if (roll < FlyOutShareWithDoublePlay)
+                return ResolveFlyBall(state);
+
+            if (roll < GroundOutShareWithDoublePlay)
+                return BatterOutcome.GroundOut;
+
+            return BatterOutcome.DoublePlay;
+        }
+
+        if (roll < FlyOutShare)
+            return ResolveFlyBall(state);
+
+        return BatterOutcome.GroundOut;
+    }
+
+    //뜬공이 희생플라이가 되는지 판정
+    private static BatterOutcome ResolveFlyBall(GameState state)
+    {
+        if (state.ThirdBase != GameState.NoRunner && state.OutCount < GameState.OutsPerInning - 1)
+            return BatterOutcome.SacrificeFly;
+
+        return BatterOutcome.FlyOut;
+    }
+
+    //타자 정확이 낮고 투수 구위·구속이 높을수록 올라간다
+    private static float CalcStrikeOutProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
         float pitcherPowerEdge = StatBaseline.GetEdge(StatBaseline.GetPitcherPower(pitcher), StatBaseline.PitcherPower);
         float contactEdge = StatBaseline.GetEdge(hitter.Contact, StatBaseline.HitterContact);
 
-        float probStrikeOut = BaseStrikeOutProb + StrikeOutCoefficient * (pitcherPowerEdge - contactEdge);
-
-        return Mathf.Clamp(probStrikeOut, 0.05f, 0.40f);
+        return Mathf.Clamp(BaseStrikeOutProb + StrikeOutCoefficient * (pitcherPowerEdge - contactEdge),
+            MinStrikeOutProb, MaxStrikeOutProb);
     }
 
-    // 볼넷 확률 계산
-    // 타자 정확(선구안)↑, 투수 제구↓ 일수록 높아짐
-    private float CalcWalkProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
+    //타자 선구안이 좋고 투수 제구가 나쁠수록 올라간다
+    private static float CalcWalkProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
         float contactEdge = StatBaseline.GetEdge(hitter.Contact, StatBaseline.HitterContact);
         float controlEdge = StatBaseline.GetEdge(pitcher.Control, StatBaseline.PitcherControl);
 
-        float probWalk = BaseWalkProb + WalkCoefficient * (contactEdge - controlEdge);
-
-        return Mathf.Clamp(probWalk, 0.02f, 0.25f);
+        return Mathf.Clamp(BaseWalkProb + WalkCoefficient * (contactEdge - controlEdge),
+            MinWalkProb, MaxWalkProb);
     }
 
-    // 홈런 확률 계산
-    // 타자 파워↑, 투수 구위/구속↓ 일수록 높아짐
-    private float CalcHomeRunProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
+    //타자 파워가 높고 투수 구위·구속이 낮을수록 올라간다
+    private static float CalcHomeRunProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
         float powerEdge = StatBaseline.GetEdge(hitter.Power, StatBaseline.HitterPower);
         float pitcherPowerEdge = StatBaseline.GetEdge(StatBaseline.GetPitcherPower(pitcher), StatBaseline.PitcherPower);
 
-        float probHomeRun = BaseHomeRunProb + HomeRunCoefficient * (powerEdge - pitcherPowerEdge);
-
-        return Mathf.Clamp(probHomeRun, 0.002f, 0.10f);
+        return Mathf.Clamp(BaseHomeRunProb + HomeRunCoefficient * (powerEdge - pitcherPowerEdge),
+            MinHomeRunProb, MaxHomeRunProb);
     }
 
-    // 안타 확률 계산 (BABIP 개념)
-    // 타자 정확↑, 투수 구위↓ 일수록 높아짐
-    private float CalcHitProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
+    //인플레이 타구가 안타가 될 확률 (BABIP 개념)
+    private static float CalcHitProb(HitterSnapshot hitter, PitcherSnapshot pitcher)
     {
         float contactEdge = StatBaseline.GetEdge(hitter.Contact, StatBaseline.HitterContact);
         float stuffEdge = StatBaseline.GetEdge(pitcher.Stuff, StatBaseline.PitcherStuff);
 
-        float probHit = BaseHitProb + HitCoefficient * (contactEdge - stuffEdge);
-
-        return Mathf.Clamp(probHit, 0.12f, 0.50f);
+        return Mathf.Clamp(BaseHitProb + HitCoefficient * (contactEdge - stuffEdge),
+            MinHitProb, MaxHitProb);
     }
 
-    // 실책 확률 계산
-    // 수비팀 평균 수비↑ 일수록 낮아짐
-    private float CalcErrorProb(float avgDefense)
+    //수비팀 평균 수비가 높을수록 낮아진다. avgDefense는 0~1로 정규화된 값이다
+    private static float CalcErrorProb(float avgDefense)
     {
-        //avgDefense는 0~1로 정규화된 값이라 100을 곱해 원래 스탯 단위로 되돌림
         float defenseEdge = StatBaseline.GetEdge(avgDefense * 100f, StatBaseline.HitterDefense);
 
-        float probError = BaseErrorProb - ErrorDefenseCoefficient * defenseEdge;
-
-        return Mathf.Clamp(probError, 0.003f, 0.03f);
+        return Mathf.Clamp(BaseErrorProb - ErrorDefenseCoefficient * defenseEdge,
+            MinErrorProb, MaxErrorProb);
     }
 
-    // 타석의 발생 확률 판정
-    private bool Roll(float probability)
+    private static bool Roll(float probability)
     {
-        float randomValue = Random.value;
-        return randomValue < probability;
+        return Random.value < probability;
     }
 }

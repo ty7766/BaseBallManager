@@ -234,7 +234,7 @@ public static class AiRosterValidator
             errorCount++;
         }
 
-        //다른 팀 선수 편성은 의도일 수 있으므로 경고만 (기획서 7.8 미러전 취지)
+        //다른 팀 선수 편성은 의도일 수 있으므로 경고만
         if (entry.TeamName != teamLabel)
         {
             Debug.LogWarning($"[AiRosterValidator] {teamLabel} {slotLabel}: {entry.Name} 선수의 소속은 {entry.TeamName}입니다", context);

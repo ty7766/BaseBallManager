@@ -9,9 +9,10 @@ public class AiTeamRoster
     public HitterSnapshot[] Lineup { get; }                 //야수 9명
     public PitcherSnapshot[] StartingPitchers { get; }      //SP 5명
     public PitcherSnapshot[] RelievePitchers { get; }       //RP 5명
-    public PitcherSnapshot Closer { get; }               //CP 1명
+    public PitcherSnapshot Closer { get; }                  //CP 1명
 
-    public AiTeamRoster(string teamName, HitterSnapshot[] lineup, PitcherSnapshot[] startingPitchers, PitcherSnapshot[] relievePitchers, PitcherSnapshot closer)
+    public AiTeamRoster(string teamName, HitterSnapshot[] lineup, PitcherSnapshot[] startingPitchers,
+        PitcherSnapshot[] relievePitchers, PitcherSnapshot closer)
     {
         TeamName = teamName;
         Lineup = lineup;
@@ -20,14 +21,20 @@ public class AiTeamRoster
         Closer = closer;
     }
 
-    //로테이션에 맞는 투수진 7칸 조립
+    /// <summary>
+    /// 로테이션 차례에 맞춰 투수진 7칸을 조립한다
+    /// </summary>
     public PitcherSnapshot[] GetPitcherStaff(int rotationIndex)
     {
-        PitcherSnapshot[] allPitchers = new PitcherSnapshot[7];
+        PitcherSnapshot[] allPitchers = new PitcherSnapshot[SimulationContext.PitcherSlotCount];
 
-        allPitchers[0] = StartingPitchers[rotationIndex % StartingPitchers.Length];
-        Array.Copy(RelievePitchers, 0, allPitchers, 1, 5);
-        allPitchers[6] = Closer;
+        allPitchers[SimulationContext.StartingPitcherSlot] =
+            StartingPitchers[rotationIndex % StartingPitchers.Length];
+
+        Array.Copy(RelievePitchers, 0, allPitchers,
+            SimulationContext.StartingPitcherSlot + 1, RelievePitchers.Length);
+
+        allPitchers[SimulationContext.CloserSlot] = Closer;
 
         return allPitchers;
     }

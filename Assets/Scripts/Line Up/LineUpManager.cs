@@ -2,262 +2,285 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class LineUpManager : MonoBehaviour
+/// <summary>
+/// 라인업 슬롯 관리 - 야수 9 + 벤치 5 + 투수 11(SP5·RP5·CP1)
+/// </summary>
+public class LineUpManager : SingletonBehaviour<LineUpManager>
 {
-    public static LineUpManager Instance { get; private set; }
+    /// <summary>
+    /// 빈 슬롯 센티넬
+    /// </summary>
+    public const int EmptySlot = -1;
 
-    //야수 슬롯 (9칸)
-    private Dictionary<HitterPosition, (int instanceId, int battingOrder)> _hitterSlots;
+    /// <summary>
+    /// 선발 야수 슬롯 수 (= 타순 수)
+    /// </summary>
+    public const int HitterSlotCount = 9;
 
-    //야수 후보 슬롯 (5칸)
-    private int[] _benchSlots;
+    /// <summary>
+    /// 벤치 야수 슬롯 수
+    /// </summary>
+    public const int BenchSlotCount = 5;
 
-    //투수 슬롯 (SP 5칸, RP 5칸, CP 1칸)
-    private Dictionary<PitcherPosition, int[]> _pitcherSlots;
+    /// <summary>
+    /// 선발 투수 슬롯 수 (배열 순서 = 로테이션 순서)
+    /// </summary>
+    public const int StartingPitcherCount = 5;
 
-    private void Awake()
+    /// <summary>
+    /// 불펜 투수 슬롯 수
+    /// </summary>
+    public const int RelieverCount = 5;
+
+    /// <summary>
+    /// 마무리 투수 슬롯 수
+    /// </summary>
+    public const int CloserCount = 1;
+
+    private readonly Dictionary<HitterPosition, (int instanceId, int battingOrder)> _hitterSlots =
+        new Dictionary<HitterPosition, (int instanceId, int battingOrder)>(HitterSlotCount);
+
+    private readonly int[] _benchSlots = new int[BenchSlotCount];
+
+    private readonly Dictionary<PitcherPosition, int[]> _pitcherSlots = new Dictionary<PitcherPosition, int[]>(3)
     {
-        if (Instance == null)
-        {
-            Instance = this;
+        { PitcherPosition.SP, new int[StartingPitcherCount] },
+        { PitcherPosition.RP, new int[RelieverCount] },
+        { PitcherPosition.CP, new int[CloserCount] }
+    };
 
-            _hitterSlots = new Dictionary<HitterPosition, (int instanceId, int battingOrder)>();
-            foreach (HitterPosition pos in System.Enum.GetValues(typeof(HitterPosition)))
-                _hitterSlots[pos] = (-1, 0);
-            _benchSlots = new int[5];
-            Array.Fill(_benchSlots, -1);
-            _pitcherSlots = new Dictionary<PitcherPosition, int[]>();
-            _pitcherSlots[PitcherPosition.SP] = new int[5];
-            _pitcherSlots[PitcherPosition.RP] = new int[5];
-            _pitcherSlots[PitcherPosition.CP] = new int[1];
-            Array.Fill(_pitcherSlots[PitcherPosition.SP], -1);
-            Array.Fill(_pitcherSlots[PitcherPosition.RP], -1);
-            Array.Fill(_pitcherSlots[PitcherPosition.CP], -1);
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+    protected override void OnSingletonAwake()
+    {
+        ClearAll();
     }
 
-    //타자 슬롯에 카드 배치
+    /// <summary>
+    /// 빈 야수 슬롯에 카드를 배치한다 (타순 1~9, 포지션 일치 필요. DH는 아무 야수나 가능).
+    /// 이미 차 있는 슬롯은 RemoveHitter로 비운 뒤 배치한다
+    /// </summary>
     public bool AssignHitter(HitterPosition slot, int instanceId, int battingOrder)
     {
-        CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
-        if (cardInstance == null)
+        if (battingOrder <= 0 || battingOrder > HitterSlotCount)
         {
-            Debug.LogWarning("[LineUpManager]: 해당 카드가 존재하지 않습니다");
+            Debug.LogWarning($"[LineUpManager]: 타순은 1~{HitterSlotCount}만 가능합니다 ({battingOrder})");
             return false;
         }
 
-        CardMasterData cardData = CardDataManager.Instance.GetCardMasterData(cardInstance.CardId);
-        if (cardData == null || cardData is not HitterMasterData)
+        if (_hitterSlots[slot].instanceId != EmptySlot)
         {
+            Debug.LogWarning($"[LineUpManager]: {slot} 슬롯은 이미 차 있습니다");
             return false;
         }
 
-        //타순은 1번부터 9번까지 허용
-        if (battingOrder <= 0 || battingOrder >= 10)
-        {
-            return false;
-        }
-
-        //타순 중복 방지
         if (IsBattingOrderTaken(battingOrder, slot))
         {
-            Debug.LogWarning($"[LineUpManager]: {battingOrder}번 타순은 이미 다른 선수가 사용 중입니다.");
+            Debug.LogWarning($"[LineUpManager]: {battingOrder}번 타순은 이미 다른 선수가 사용 중입니다");
             return false;
         }
 
-        //이미 다른 슬롯에 배치된 카드인지 확인
         if (IsCardAssigned(instanceId))
         {
-            Debug.LogWarning("[LineUpManager]: 이 카드는 이미 다른 슬롯에 배치되어있습니다");
+            Debug.LogWarning($"[LineUpManager]: 이미 다른 슬롯에 배치된 카드입니다 (instanceId {instanceId})");
             return false;
         }
 
-        //DH 포지션에는 아무 카드 가능
-        if (slot != HitterPosition.DH)
-        {
-            HitterPositionParser.TryParse(cardData.Position, out HitterPosition cardPosition);
-            //해당 포지션과 일치하는 카드인지 확인
-            if (cardPosition != slot)
-            {
-                return false;
-            }
-        }
+        HitterMasterData hitterData = GetHitterMasterData(instanceId);
+
+        if (hitterData == null)
+            return false;
+
+        if (slot != HitterPosition.DH && !IsHitterPositionMatched(hitterData, slot, instanceId))
+            return false;
 
         _hitterSlots[slot] = (instanceId, battingOrder);
+
         return true;
     }
 
-    //타자 슬롯에 카드 제거
+    /// <summary>
+    /// 야수 슬롯을 비운다
+    /// </summary>
     public bool RemoveHitter(HitterPosition slot)
     {
-        //해당 슬롯이 비어있는지 확인
-        if (_hitterSlots[slot].instanceId == -1)
+        if (_hitterSlots[slot].instanceId == EmptySlot)
         {
-            Debug.LogWarning("[LineUpManager]: 해당 슬롯이 이미 비어있습니다.");
+            Debug.LogWarning($"[LineUpManager]: {slot} 슬롯이 이미 비어 있습니다");
             return false;
         }
 
-        //슬롯 초기화
-        _hitterSlots[slot] = (-1, 0);
+        _hitterSlots[slot] = (EmptySlot, 0);
+
         return true;
     }
 
-    //벤치 슬롯에 카드 배치
+    /// <summary>
+    /// 벤치 슬롯에 카드를 배치한다
+    /// </summary>
     public bool AssignBench(int benchIndex, int instanceId)
     {
-        if(benchIndex < 0 || benchIndex >= _benchSlots.Length)
-            return false;
-
-        if (_benchSlots[benchIndex] != -1)
+        if (benchIndex < 0 || benchIndex >= _benchSlots.Length)
         {
-            Debug.LogWarning("[LineUpManager]: 해당 슬롯은 이미 할당되어있습니다.");
+            Debug.LogWarning($"[LineUpManager]: 벤치 슬롯 번호가 범위를 벗어났습니다 ({benchIndex})");
             return false;
         }
 
-        CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
-        if (cardInstance == null)
+        if (_benchSlots[benchIndex] != EmptySlot)
         {
-            Debug.LogWarning("[LineUpManager]: 해당 카드가 존재하지 않습니다.");
-            return false;
-        }
-
-        CardMasterData cardData = CardDataManager.Instance.GetCardMasterData(cardInstance.CardId);
-        if (cardData == null || cardData is not HitterMasterData)
-        {
+            Debug.LogWarning($"[LineUpManager]: {benchIndex}번 벤치 슬롯은 이미 차 있습니다");
             return false;
         }
 
         if (IsCardAssigned(instanceId))
         {
-            Debug.LogWarning("[LineUpManager]: 카드가 이미 배치되어있습니다.");
+            Debug.LogWarning($"[LineUpManager]: 이미 다른 슬롯에 배치된 카드입니다 (instanceId {instanceId})");
             return false;
         }
 
+        if (GetHitterMasterData(instanceId) == null)
+            return false;
+
         _benchSlots[benchIndex] = instanceId;
+
         return true;
     }
 
-    //벤치 슬롯에 카드 제거
+    /// <summary>
+    /// 벤치 슬롯을 비운다
+    /// </summary>
     public bool RemoveBench(int benchIndex)
     {
         if (benchIndex < 0 || benchIndex >= _benchSlots.Length)
-            return false;
-
-        //해당 슬롯이 비어있는지 확인
-        if (_benchSlots[benchIndex] == -1)
         {
-            Debug.LogWarning("[LineUpManager]: 해당 슬롯이 이미 비어있습니다.");
+            Debug.LogWarning($"[LineUpManager]: 벤치 슬롯 번호가 범위를 벗어났습니다 ({benchIndex})");
             return false;
         }
 
-        //슬롯 초기화
-        _benchSlots[benchIndex] = -1;
+        if (_benchSlots[benchIndex] == EmptySlot)
+        {
+            Debug.LogWarning($"[LineUpManager]: {benchIndex}번 벤치 슬롯이 이미 비어 있습니다");
+            return false;
+        }
+
+        _benchSlots[benchIndex] = EmptySlot;
+
         return true;
     }
 
-    //투수 슬롯에 카드 추가
+    /// <summary>
+    /// 투수 슬롯에 카드를 배치한다 (카드의 보직과 슬롯 보직이 같아야 한다)
+    /// </summary>
     public bool AssignPitcher(PitcherPosition position, int slotIndex, int instanceId)
     {
-        if (slotIndex < 0 || slotIndex >= _pitcherSlots[position].Length)
-            return false;
+        int[] slots = _pitcherSlots[position];
 
-        if (_pitcherSlots[position][slotIndex] != -1)
+        if (slotIndex < 0 || slotIndex >= slots.Length)
         {
-            Debug.LogWarning("[LineUpManager]: 해당 슬롯은 이미 할당되어있습니다.");
-            return false;
-        }
-
-        CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
-        if (cardInstance == null)
-        {
-            Debug.LogWarning("[LineUpManager]: 해당 카드가 존재하지 않습니다.");
+            Debug.LogWarning($"[LineUpManager]: {position} 슬롯 번호가 범위를 벗어났습니다 ({slotIndex})");
             return false;
         }
 
-        CardMasterData cardData = CardDataManager.Instance.GetCardMasterData(cardInstance.CardId);
-        if (cardData == null || cardData is not PitcherMasterData)
+        if (slots[slotIndex] != EmptySlot)
         {
-            return false;
-        }
-
-        PitcherPositionParser.TryParse(cardData.Position, out PitcherPosition cardPosition);
-        //해당 포지션과 일치하는 카드인지 확인
-        if (cardPosition != position)
-        {
+            Debug.LogWarning($"[LineUpManager]: {position} {slotIndex}번 슬롯은 이미 차 있습니다");
             return false;
         }
 
         if (IsCardAssigned(instanceId))
         {
-            Debug.LogWarning("[LineUpManager]: 카드가 이미 배치되어있습니다.");
+            Debug.LogWarning($"[LineUpManager]: 이미 다른 슬롯에 배치된 카드입니다 (instanceId {instanceId})");
             return false;
         }
 
-        _pitcherSlots[position][slotIndex] = instanceId;
+        PitcherMasterData pitcherData = GetPitcherMasterData(instanceId);
+
+        if (pitcherData == null)
+            return false;
+
+        if (!PitcherPositionParser.TryParse(pitcherData.Position, out PitcherPosition cardPosition))
+        {
+            Debug.LogError($"[LineUpManager]: 카드의 보직 표기를 해석할 수 없습니다 (instanceId {instanceId} / {pitcherData.Position})");
+            return false;
+        }
+
+        if (cardPosition != position)
+        {
+            Debug.LogWarning($"[LineUpManager]: 보직이 맞지 않습니다 (슬롯 {position} / 카드 {cardPosition})");
+            return false;
+        }
+
+        slots[slotIndex] = instanceId;
+
         return true;
     }
 
-    //투수 슬롯에 카드 제거
+    /// <summary>
+    /// 투수 슬롯을 비운다
+    /// </summary>
     public bool RemovePitcher(PitcherPosition position, int slotIndex)
     {
-        if (slotIndex < 0 || slotIndex >= _pitcherSlots[position].Length)
-            return false;
+        int[] slots = _pitcherSlots[position];
 
-        //해당 슬롯이 비어있는지 확인
-        if (_pitcherSlots[position][slotIndex] == -1)
+        if (slotIndex < 0 || slotIndex >= slots.Length)
         {
-            Debug.LogWarning("[LineUpManager]: 해당 슬롯이 이미 비어있습니다.");
+            Debug.LogWarning($"[LineUpManager]: {position} 슬롯 번호가 범위를 벗어났습니다 ({slotIndex})");
             return false;
         }
 
-        //슬롯 초기화
-        _pitcherSlots[position][slotIndex] = -1;
+        if (slots[slotIndex] == EmptySlot)
+        {
+            Debug.LogWarning($"[LineUpManager]: {position} {slotIndex}번 슬롯이 이미 비어 있습니다");
+            return false;
+        }
+
+        slots[slotIndex] = EmptySlot;
+
         return true;
     }
 
-    //타자의 타순 설정 및 변경
+    /// <summary>
+    /// 이미 배치된 야수의 타순을 바꾼다
+    /// </summary>
     public bool SetBattingOrder(HitterPosition slot, int order)
     {
-        if (_hitterSlots[slot].instanceId == -1)
+        if (order <= 0 || order > HitterSlotCount)
         {
-            Debug.LogWarning("[LineUpManager]: 해당 슬롯이 이미 비어있습니다.");
+            Debug.LogWarning($"[LineUpManager]: 타순은 1~{HitterSlotCount}만 가능합니다 ({order})");
+            return false;
+        }
+
+        if (_hitterSlots[slot].instanceId == EmptySlot)
+        {
+            Debug.LogWarning($"[LineUpManager]: {slot} 슬롯이 비어 있습니다");
             return false;
         }
 
         if (IsBattingOrderTaken(order, slot))
         {
-            Debug.LogWarning($"[LineUpManager]: {order}번 타순은 이미 다른 선수가 사용 중입니다.");
+            Debug.LogWarning($"[LineUpManager]: {order}번 타순은 이미 다른 선수가 사용 중입니다");
             return false;
         }
 
-        if (order <= 0 || order >= 10)
-            return false;
-
         _hitterSlots[slot] = (_hitterSlots[slot].instanceId, order);
+
         return true;
     }
 
-    //라인업이 모두 채워졌는지 검사
-    //1. 벤치 슬롯은 채워져있지 않아도 됨
-    //2. 투/타 슬롯이 채워져있지 않으면 리그 입장 불가능
+    /// <summary>
+    /// 야수 9칸과 투수 11칸이 모두 찼는지 검사한다 (벤치는 선택이라 보지 않는다)
+    /// </summary>
     public bool IsLineupComplete()
     {
-        foreach(var hitter in _hitterSlots.Values)
+        foreach ((int instanceId, int battingOrder) hitter in _hitterSlots.Values)
         {
-            if (hitter.instanceId == -1)
+            if (hitter.instanceId == EmptySlot)
                 return false;
         }
 
-        foreach(int[] value in _pitcherSlots.Values)
+        foreach (int[] slots in _pitcherSlots.Values)
         {
-            foreach (int pitcherID in value)
+            foreach (int pitcherInstanceId in slots)
             {
-                if (pitcherID == -1)
+                if (pitcherInstanceId == EmptySlot)
                     return false;
             }
         }
@@ -265,29 +288,31 @@ public class LineUpManager : MonoBehaviour
         return true;
     }
 
-    //이미 배치되어있는 카드인지 확인 (분해 차단 판정에도 사용 - 기획서 9.2)
+    /// <summary>
+    /// 어느 슬롯에든 배치된 카드인지 확인한다 (분해·조합·강화 차단 판정에도 쓴다)
+    /// </summary>
     public bool IsCardAssigned(int instanceId)
     {
-        //히터 슬롯에 이미 배치되어있는지 확인
-        foreach(var hitterID in _hitterSlots.Values)
+        if (instanceId == EmptySlot)
+            return false;
+
+        foreach ((int instanceId, int battingOrder) hitter in _hitterSlots.Values)
         {
-            if (hitterID.instanceId == instanceId)
-                return true;
-        }
-        
-        //벤치 슬롯에 이미 배치되어있는지 확인
-        foreach(int benchID in _benchSlots)
-        {
-            if (benchID == instanceId)
+            if (hitter.instanceId == instanceId)
                 return true;
         }
 
-        //투수 슬롯에 이미 배치되어있는지 확인
-        foreach (int[] value in _pitcherSlots.Values)
+        foreach (int benchInstanceId in _benchSlots)
         {
-            foreach(var pitcherID in value)
+            if (benchInstanceId == instanceId)
+                return true;
+        }
+
+        foreach (int[] slots in _pitcherSlots.Values)
+        {
+            foreach (int pitcherInstanceId in slots)
             {
-                if (pitcherID == instanceId)
+                if (pitcherInstanceId == instanceId)
                     return true;
             }
         }
@@ -295,72 +320,141 @@ public class LineUpManager : MonoBehaviour
         return false;
     }
 
-    //해당 타순이 이미 다른 슬롯에서 사용 중인지 확인
-    private bool IsBattingOrderTaken(int order, HitterPosition excludeSlot)
-    {
-        foreach(var pair in _hitterSlots)
-        {
-            if (pair.Key == excludeSlot)
-                continue;
-            if (pair.Value.instanceId == -1)
-                continue;
-            if (pair.Value.battingOrder == order)
-                return true;
-        }
-        return false;
-    }
-
-    //정렬된 타순의 instanceId 배열 반환
+    /// <summary>
+    /// 타순대로 정렬된 야수 instanceId 배열. 라인업이 미완성이면 빈 배열
+    /// </summary>
     public int[] GetHittersInBattingOrder()
     {
         if (!IsLineupComplete())
         {
-            Debug.LogWarning("[LineUpManager]: 라인업이 완성되지 않았습니다.");
+            Debug.LogWarning("[LineUpManager]: 라인업이 완성되지 않았습니다");
             return Array.Empty<int>();
         }
 
-        int[] result = new int[9];
-        foreach (var slot in _hitterSlots.Values)
-        {
+        int[] result = new int[HitterSlotCount];
+
+        foreach ((int instanceId, int battingOrder) slot in _hitterSlots.Values)
             result[slot.battingOrder - 1] = slot.instanceId;
-        }
 
         return result;
     }
 
-    //벤치 야수 instanceId 배열 반환
+    /// <summary>
+    /// 벤치 야수 instanceId 배열 사본
+    /// </summary>
     public int[] GetBenchInstanceIds()
     {
         int[] result = new int[_benchSlots.Length];
         Array.Copy(_benchSlots, result, _benchSlots.Length);
+
         return result;
     }
 
-    //투수 슬롯 instanceId 배열 반환
+    /// <summary>
+    /// 해당 보직의 투수 instanceId 배열 사본
+    /// </summary>
     public int[] GetPitcherInstanceIds(PitcherPosition position)
     {
         int[] source = _pitcherSlots[position];
         int[] result = new int[source.Length];
-
         Array.Copy(source, result, source.Length);
+
         return result;
     }
 
-    //야수 슬롯 1칸 조회 (빈 슬롯은 (-1, 0)). 라인업이 미완성이어도 읽을 수 있어 세이브에 사용
+    /// <summary>
+    /// 야수 슬롯 1칸 조회 (빈 슬롯은 (-1, 0)). 미완성 라인업도 읽을 수 있어 세이브에 쓴다
+    /// </summary>
     public (int instanceId, int battingOrder) GetHitterSlot(HitterPosition slot)
     {
         return _hitterSlots[slot];
     }
 
-    //전 슬롯 비우기 (세이브 복원 직전 - 이전 상태가 남아 중복 배치로 복원이 실패하는 것을 막음)
+    /// <summary>
+    /// 전 슬롯을 비운다 (세이브 복원 직전에 호출해 중복 배치 실패를 막는다)
+    /// </summary>
     public void ClearAll()
     {
-        foreach (HitterPosition position in System.Enum.GetValues(typeof(HitterPosition)))
-            _hitterSlots[position] = (-1, 0);
+        foreach (HitterPosition position in Enum.GetValues(typeof(HitterPosition)))
+            _hitterSlots[position] = (EmptySlot, 0);
 
-        Array.Fill(_benchSlots, -1);
+        Array.Fill(_benchSlots, EmptySlot);
 
         foreach (int[] slots in _pitcherSlots.Values)
-            Array.Fill(slots, -1);
+            Array.Fill(slots, EmptySlot);
+    }
+
+    //배치하려는 카드의 야수 마스터 데이터. 없거나 투수면 null
+    private HitterMasterData GetHitterMasterData(int instanceId)
+    {
+        CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
+
+        if (cardInstance == null)
+            return null;
+
+        CardMasterData cardData = CardDataManager.Instance.GetCardMasterData(cardInstance.CardId);
+
+        if (cardData is not HitterMasterData hitterData)
+        {
+            Debug.LogWarning($"[LineUpManager]: 야수 슬롯에는 야수 카드만 배치할 수 있습니다 (instanceId {instanceId})");
+            return null;
+        }
+
+        return hitterData;
+    }
+
+    //배치하려는 카드의 투수 마스터 데이터. 없거나 야수면 null
+    private PitcherMasterData GetPitcherMasterData(int instanceId)
+    {
+        CardInstance cardInstance = InventoryManager.Instance.GetCard(instanceId);
+
+        if (cardInstance == null)
+            return null;
+
+        CardMasterData cardData = CardDataManager.Instance.GetCardMasterData(cardInstance.CardId);
+
+        if (cardData is not PitcherMasterData pitcherData)
+        {
+            Debug.LogWarning($"[LineUpManager]: 투수 슬롯에는 투수 카드만 배치할 수 있습니다 (instanceId {instanceId})");
+            return null;
+        }
+
+        return pitcherData;
+    }
+
+    //카드의 포지션 표기가 슬롯과 맞는지 검사. 표기를 해석할 수 없으면 실패로 본다
+    private bool IsHitterPositionMatched(HitterMasterData hitterData, HitterPosition slot, int instanceId)
+    {
+        if (!HitterPositionParser.TryParse(hitterData.Position, out HitterPosition cardPosition))
+        {
+            Debug.LogError($"[LineUpManager]: 카드의 포지션 표기를 해석할 수 없습니다 (instanceId {instanceId} / {hitterData.Position})");
+            return false;
+        }
+
+        if (cardPosition != slot)
+        {
+            Debug.LogWarning($"[LineUpManager]: 포지션이 맞지 않습니다 (슬롯 {slot} / 카드 {cardPosition})");
+            return false;
+        }
+
+        return true;
+    }
+
+    //해당 타순을 다른 슬롯이 쓰고 있는지 확인
+    private bool IsBattingOrderTaken(int order, HitterPosition excludeSlot)
+    {
+        foreach (KeyValuePair<HitterPosition, (int instanceId, int battingOrder)> pair in _hitterSlots)
+        {
+            if (pair.Key == excludeSlot)
+                continue;
+
+            if (pair.Value.instanceId == EmptySlot)
+                continue;
+
+            if (pair.Value.battingOrder == order)
+                return true;
+        }
+
+        return false;
     }
 }

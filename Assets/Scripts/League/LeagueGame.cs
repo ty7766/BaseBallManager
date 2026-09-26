@@ -12,13 +12,17 @@ public readonly struct LeagueGame
         AwayTeamName = awayTeamName;
     }
 
-    //해당 팀이 이 경기에 나오는지
+    /// <summary>
+    /// 해당 팀이 이 경기에 나오는지
+    /// </summary>
     public bool Contains(string teamName)
     {
         return HomeTeamName == teamName || AwayTeamName == teamName;
     }
 
-    //해당 팀의 상대 팀명 (참가하지 않는 팀이면 null)
+    /// <summary>
+    /// 해당 팀의 상대 팀명 (참가하지 않는 팀이면 null)
+    /// </summary>
     public string GetOpponent(string teamName)
     {
         if (HomeTeamName == teamName)

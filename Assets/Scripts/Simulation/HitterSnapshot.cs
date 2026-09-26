@@ -1,9 +1,7 @@
 ﻿/// <summary>
-/// 시뮬레이션 전 현재 라인업에 등록되어있는 타자들의 정보를 기록
-/// 이 스냅샷으로 시뮬레이션 전 한 번만 계산하여 시뮬레이션 진행
+/// 강화·훈련이 반영된 타자 최종 스탯. 경기 시작 전 한 번만 계산해 주입한다
 /// </summary>
-
-public struct HitterSnapshot
+public readonly struct HitterSnapshot
 {
     public int InstanceId { get; }
     public string Name { get; }

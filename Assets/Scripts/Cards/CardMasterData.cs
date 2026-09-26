@@ -1,18 +1,24 @@
-
+﻿/// <summary>
+/// 카드의 정보
+/// </summary>
 public abstract class CardMasterData
 {
-    public int          CardId      { get; private set; }
-    public string       Name        { get; private set; }
-    public string       TeamName    { get; private set; }
-    public int          Year        { get; private set; }
-    public CardType     CardType    { get; private set; }
-    public CardGrade    CardGrade   { get; private set; }
-    public string       Position    { get; private set; }
-    public int          OVR         {  get; private set; }
+    /// <summary>
+    /// 카드가 지정되지 않은 슬롯. cardId는 1부터라 int 기본값이 곧 빈 슬롯이다
+    /// </summary>
+    public const int NoCardId = 0;
 
+    public int CardId { get; }
+    public string Name { get; }
+    public string TeamName { get; }
+    public int Year { get; }
+    public CardType CardType { get; }
+    public CardGrade CardGrade { get; }
+    public string Position { get; }
+    public int OVR { get; }
 
-
-    public CardMasterData(int cardId, string name, string teamName, int year, CardType cardType, CardGrade cardGrade, string position, int ovr)
+    protected CardMasterData(int cardId, string name, string teamName, int year,
+        CardType cardType, CardGrade cardGrade, string position, int ovr)
     {
         CardId = cardId;
         Name = name;

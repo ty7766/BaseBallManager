@@ -1,11 +1,10 @@
 ﻿/// <summary>
-/// 경기 시뮬레이션 도중 인터럽트 핸들러
-/// 매 타석 종료시 호출
+/// 경기 도중 교체 지시를 시뮬에 전달하는 인터럽트 핸들러
 /// </summary>
-
 public interface IGameInterruptHandler
 {
-    //매 타석 종료 시 GameSimulator가 호출
-    //반환된 지시를 시뮬이 반영 후 다음 타석 진행
+    /// <summary>
+    /// 매 타석 종료 시 GameSimulator가 호출한다. 반환한 지시가 다음 타석 전에 반영된다
+    /// </summary>
     InterruptDecision OnAtBatEnded(GameState state, SimulationContext context);
 }

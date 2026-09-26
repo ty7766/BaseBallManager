@@ -1,44 +1,54 @@
 ﻿using System.Collections.Generic;
-using UnityEngine;
 
 /// <summary>
-/// 이닝
-/// 아웃 카운트
-/// 베이스 주자
-/// 양 팀 득점
-/// 현재 타순
-/// 양 팀 투수 상태
-/// 경기 종료 여부
-/// 
-/// 경기 시뮬레이션 중 모든 상태 변수를 담는 클래스
+/// 경기 진행 중 바뀌는 모든 상태 (이닝·아웃·주자·점수·타순·투수)
 /// </summary>
 public class GameState
 {
+    /// <summary>
+    /// 주자 없음 센티넬
+    /// </summary>
+    public const int NoRunner = -1;
+
+    /// <summary>
+    /// 이닝을 끝내는 아웃 수
+    /// </summary>
+    public const int OutsPerInning = 3;
+
+    /// <summary>
+    /// 정규 이닝 수
+    /// </summary>
+    public const int RegulationInnings = 9;
+
+    /// <summary>
+    /// 연장 포함 최대 이닝. 넘기면 동점이어도 무승부로 끝낸다
+    /// </summary>
+    public const int MaxInnings = 11;
+
     public int Inning { get; private set; }         //현재 이닝
-    public bool IsTopInning { get; private set; }  //true = 초 원정 공격
-    public int OutCount { get; private set; }        //현재 아웃 카운트
+    public bool IsTopInning { get; private set; }   //true = 초 원정 공격
+    public int OutCount { get; private set; }       //현재 아웃 카운트
     public int HomeScore { get; private set; }      //홈 팀 점수
     public int AwayScore { get; private set; }      //원정 팀 점수
 
-    //InstanceId로 조회 -> 스탯 확인 -> 주자가 어디까지 진루할 수 있는지 판단
-    //따라서 bool을 쓰지 않고 instanceId를 담을 수 있는 int 선언
-    public int FirstBase { get; private set; }     //-1이면 주자 없음
+    public int FirstBase { get; private set; }      //주자의 instanceId. NoRunner면 비어 있음
     public int SecondBase { get; private set; }
     public int ThirdBase { get; private set; }
 
     public int HomeBattingIndex { get; private set; }   //홈팀 타자 타순
     public int AwayBattingIndex { get; private set; }   //원정팀 타자 타순
 
-    public PitcherState HomePitcherState { get; private set; }  //홈팀 투수 현재 체력
-    public PitcherState AwayPitcherState { get; private set; }  //원정팀 투수 현재 체력
+    public PitcherState HomePitcherState { get; private set; }  //홈팀 등판 투수
+    public PitcherState AwayPitcherState { get; private set; }  //원정팀 등판 투수
 
-    public bool IsGameOver { get; private set; }    //경기가 종료되었는지 여부
+    public bool IsGameOver { get; private set; }
 
-    private HashSet<int> _homeUsedHitterInstanceIds;        //교체된 홈팀 타자 인스턴스 ID
-    private HashSet<int> _awayUsedHitterInstanceIds;        //교체된 원정팀 타자 인스턴스 ID
-    private HashSet<int> _homeUsedPitcherSlotIndices;       //교체된 홈팀 투수 슬롯 번호
-    private HashSet<int> _awayUsedPitcherSlotIndices;       //교체된 원정팀 투수 슬롯 번호
-
+    private readonly HashSet<int> _homeUsedHitterInstanceIds = new HashSet<int>();
+    private readonly HashSet<int> _awayUsedHitterInstanceIds = new HashSet<int>();
+    private readonly HashSet<int> _homeUsedBenchIndices = new HashSet<int>();
+    private readonly HashSet<int> _awayUsedBenchIndices = new HashSet<int>();
+    private readonly HashSet<int> _homeUsedPitcherSlotIndices = new HashSet<int>();
+    private readonly HashSet<int> _awayUsedPitcherSlotIndices = new HashSet<int>();
 
     public GameState(SimulationContext context)
     {
@@ -47,52 +57,45 @@ public class GameState
         OutCount = 0;
         HomeScore = 0;
         AwayScore = 0;
-        FirstBase = -1;
-        SecondBase = -1;
-        ThirdBase = -1;
+        FirstBase = NoRunner;
+        SecondBase = NoRunner;
+        ThirdBase = NoRunner;
         HomeBattingIndex = 0;
         AwayBattingIndex = 0;
-        HomePitcherState = new PitcherState(context.HomePitchers[0], 0);
-        AwayPitcherState = new PitcherState(context.AwayPitchers[0], 0);
+        HomePitcherState = new PitcherState(context.HomePitchers[SimulationContext.StartingPitcherSlot],
+            SimulationContext.StartingPitcherSlot);
+        AwayPitcherState = new PitcherState(context.AwayPitchers[SimulationContext.StartingPitcherSlot],
+            SimulationContext.StartingPitcherSlot);
         IsGameOver = false;
-
-        _homeUsedHitterInstanceIds = new HashSet<int>();
-        _awayUsedHitterInstanceIds = new HashSet<int>();
-        _homeUsedPitcherSlotIndices = new HashSet<int>();
-        _awayUsedPitcherSlotIndices = new HashSet<int>();
     }
-    
-    //아웃 카운트 증가 및 3아웃 이닝 종료 처리
+
+    /// <summary>
+    /// 아웃 1 증가. 3아웃이면 잔루를 지우고 공수를 바꾸거나 경기를 끝낸다
+    /// </summary>
     public void AddOut()
     {
         OutCount++;
 
-        //3아웃일 때만 로직 실행
-        if (OutCount < 3)
+        if (OutCount < OutsPerInning)
             return;
 
-        //3아웃 되면 이닝 전환
         OutCount = 0;
-        FirstBase = SecondBase = ThirdBase = -1;        //잔루 소멸
+        FirstBase = SecondBase = ThirdBase = NoRunner;
 
-        //3아웃 되면 초 -> 말
         if (IsTopInning)
         {
-            //9회 이후 초가 끝난 시점에 홈팀이 앞서 있으면 말 공격을 하지 않고 그대로 끝난다.
-            //홈팀은 이미 이겨 있어 더 칠 이유가 없고, 치게 두면 득실차만 부풀려진다 (순위 타이브레이커 2순위 - 기획서 7.7)
-            if (Inning >= 9 && HomeScore > AwayScore)
+            if (Inning >= RegulationInnings && HomeScore > AwayScore)
             {
                 IsGameOver = true;
                 return;
             }
 
-            IsTopInning = false;    //초 -> 말
+            IsTopInning = false;
             HomePitcherState.ResetInningStats();
             return;
         }
 
-        //9회가 끝난 뒤 동점이 아니거나 이닝이 12회로 넘어가면 게임 종료
-        if ((Inning >= 9 && HomeScore != AwayScore) || (Inning >= 11))
+        if ((Inning >= RegulationInnings && HomeScore != AwayScore) || Inning >= MaxInnings)
         {
             IsGameOver = true;
             return;
@@ -103,63 +106,72 @@ public class GameState
         AwayPitcherState.ResetInningStats();
     }
 
-    //현재 공격 중인 팀 점수 증가
+    /// <summary>
+    /// 공격 중인 팀의 득점 1 증가. 홈팀이 9회 이후 역전하면 끝내기로 종료한다
+    /// </summary>
     public void AddRun()
     {
-        //점수 증가
         if (IsTopInning)
-            AwayScore++;
-        else
         {
-            HomeScore++;
-
-            //끝내기인지 확인
-            if ((Inning >= 9) && (HomeScore > AwayScore))
-                IsGameOver = true;
+            AwayScore++;
+            return;
         }
+
+        HomeScore++;
+
+        if (Inning >= RegulationInnings && HomeScore > AwayScore)
+            IsGameOver = true;
     }
 
-    //현재 공격 중인 팀의 타순 1 증가
+    /// <summary>
+    /// 공격 중인 팀의 타순을 1 전진시킨다
+    /// </summary>
     public void AdvanceBatter()
     {
         if (IsTopInning)
-            AwayBattingIndex = (AwayBattingIndex + 1) % 9;
+            AwayBattingIndex = (AwayBattingIndex + 1) % SimulationContext.LineupSize;
         else
-            HomeBattingIndex = (HomeBattingIndex + 1) % 9;
+            HomeBattingIndex = (HomeBattingIndex + 1) % SimulationContext.LineupSize;
     }
 
-    //현재 등판 중인 투수 교체
+    /// <summary>
+    /// 등판 투수를 해당 슬롯의 투수로 바꾼다
+    /// </summary>
     public void SubstitutePitcher(SimulationContext context, bool isHome, int newSlotIndex)
     {
         if (isHome)
-        {
             HomePitcherState = new PitcherState(context.HomePitchers[newSlotIndex], newSlotIndex);
-        }
         else
-        {
             AwayPitcherState = new PitcherState(context.AwayPitchers[newSlotIndex], newSlotIndex);
-        }
     }
 
-    //1루 주자 세팅
+    /// <summary>
+    /// 1루 주자 설정
+    /// </summary>
     public void SetFirstBase(int instanceId)
     {
         FirstBase = instanceId;
     }
 
-    //2루 주자 세팅
+    /// <summary>
+    /// 2루 주자 설정
+    /// </summary>
     public void SetSecondBase(int instanceId)
     {
         SecondBase = instanceId;
     }
 
-    //3루 주자 세팅
+    /// <summary>
+    /// 3루 주자 설정
+    /// </summary>
     public void SetThirdBase(int instanceId)
     {
         ThirdBase = instanceId;
     }
 
-    //교체로 빠진 야수 기록
+    /// <summary>
+    /// 교체로 빠진 야수를 기록한다 (다시 내보낼 수 없게)
+    /// </summary>
     public void MarkHitterUsed(bool isHome, int instanceId)
     {
         if (isHome)
@@ -168,7 +180,30 @@ public class GameState
             _awayUsedHitterInstanceIds.Add(instanceId);
     }
 
-    //교체로 빠진 투수 기록
+    /// <summary>
+    /// 투입한 벤치 슬롯을 기록한다 (같은 벤치 카드가 두 타순에 들어가지 못하게)
+    /// </summary>
+    public void MarkBenchUsed(bool isHome, int benchIndex)
+    {
+        if (isHome)
+            _homeUsedBenchIndices.Add(benchIndex);
+        else
+            _awayUsedBenchIndices.Add(benchIndex);
+    }
+
+    /// <summary>
+    /// 해당 벤치 슬롯이 이미 투입됐는지 확인한다
+    /// </summary>
+    public bool IsBenchUsed(bool isHome, int benchIndex)
+    {
+        return isHome
+            ? _homeUsedBenchIndices.Contains(benchIndex)
+            : _awayUsedBenchIndices.Contains(benchIndex);
+    }
+
+    /// <summary>
+    /// 강판된 투수 슬롯을 기록한다 (다시 올릴 수 없게)
+    /// </summary>
     public void MarkPitcherUsed(bool isHome, int slotIndex)
     {
         if (isHome)
@@ -177,15 +212,23 @@ public class GameState
             _awayUsedPitcherSlotIndices.Add(slotIndex);
     }
 
-    //해당 야수가 이미 빠진 상태인지 조회
+    /// <summary>
+    /// 해당 야수가 이미 교체로 빠졌는지 확인한다
+    /// </summary>
     public bool IsHitterUsed(bool isHome, int instanceId)
     {
-        return isHome ? _homeUsedHitterInstanceIds.Contains(instanceId) : _awayUsedHitterInstanceIds.Contains(instanceId);
+        return isHome
+            ? _homeUsedHitterInstanceIds.Contains(instanceId)
+            : _awayUsedHitterInstanceIds.Contains(instanceId);
     }
 
-    //해당 투수가 이미 빠진 상태인지 조회
+    /// <summary>
+    /// 해당 투수 슬롯이 이미 강판됐는지 확인한다
+    /// </summary>
     public bool IsPitcherUsed(bool isHome, int slotIndex)
     {
-        return isHome ? _homeUsedPitcherSlotIndices.Contains(slotIndex) : _awayUsedPitcherSlotIndices.Contains(slotIndex);
+        return isHome
+            ? _homeUsedPitcherSlotIndices.Contains(slotIndex)
+            : _awayUsedPitcherSlotIndices.Contains(slotIndex);
     }
 }

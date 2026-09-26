@@ -7,7 +7,9 @@ using UnityEngine;
 /// </summary>
 public static class LeagueScheduleGenerator
 {
-    //플레이어 1팀 + AI 9팀 일정 생성. 실패 시 null
+    /// <summary>
+    /// 플레이어 1팀 + AI 9팀 일정 생성. 실패 시 null
+    /// </summary>
     public static LeagueSchedule Generate(LeagueTier tier, string playerTeamName, IReadOnlyList<string> aiTeamNames, int gameCount, int seriesLength)
     {
         string[] teams = BuildTeamArray(playerTeamName, aiTeamNames);
@@ -27,7 +29,6 @@ public static class LeagueScheduleGenerator
             return null;
         }
 
-        //연전이 중간에 끊기면 팀별 경기 수가 어긋나 순위표가 불공정해짐
         if (gameCount % seriesLength != 0)
         {
             Debug.LogError($"[LeagueScheduleGenerator]: {tier} 티어의 경기 수 {gameCount}가 연전 수 {seriesLength}로 나누어떨어지지 않습니다");
@@ -39,12 +40,10 @@ public static class LeagueScheduleGenerator
 
         int dayIndex = 0;
 
-        //한 라운드를 seriesLength번 반복 = 같은 상대와 연전
         for (int unit = 0; unit < gameCount / seriesLength; unit++)
         {
             LeagueGame[] roundGames = cycle[unit % cycle.Length];
 
-            //9라운드 사이클을 한 바퀴 돌 때마다 홈/원정을 통째로 뒤집어 팀별 홈경기 수를 맞춤
             bool flipHomeAway = (unit / cycle.Length) % 2 == 1;
 
             for (int series = 0; series < seriesLength; series++)
@@ -88,7 +87,6 @@ public static class LeagueScheduleGenerator
                 return null;
             }
 
-            //같은 팀이 두 번 들어가면 하루에 자기 자신과 붙는 대진이 만들어짐
             if (!usedNames.Add(teamName))
             {
                 Debug.LogError($"[LeagueScheduleGenerator]: '{teamName}' 팀이 두 번 들어 있습니다");
@@ -109,7 +107,6 @@ public static class LeagueScheduleGenerator
 
         LeagueGame[][] cycle = new LeagueGame[roundCount][];
 
-        //0번(플레이어)을 고정하고 나머지를 회전시킴
         string[] rotation = new string[teams.Length];
         Array.Copy(teams, rotation, teams.Length);
 
@@ -122,8 +119,6 @@ public static class LeagueScheduleGenerator
                 string first = rotation[i];
                 string second = rotation[teams.Length - 1 - i];
 
-                //대진 자리(i)별로 홈/원정을 번갈아 배정.
-                //회전에 따라 모든 팀이 모든 자리를 한 번씩 거치므로 홈 경기가 고르게 퍼짐
                 games[i] = (i % 2 == 0)
                     ? new LeagueGame(first, second)
                     : new LeagueGame(second, first);
@@ -163,7 +158,6 @@ public static class LeagueScheduleGenerator
                 : game;
         }
 
-        //플레이어는 경기마다 홈/원정 교대 (기획서 7.3)
         bool isPlayerHome = playerGameIndex % 2 == 0;
         LeagueGame playerGame = dayGames[LeagueGameDay.PlayerGameIndex];
 
