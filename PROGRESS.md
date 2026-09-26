@@ -185,7 +185,9 @@
   - `CardMasterData.PhotoKey` + CSV `photo` **선택 열** 신설. 열이 없거나 비어 있으면 사진 없음으로 돌아간다
   - 노말·시그·골글이 같은 인물이면 같은 사진을 쓰므로 **cardId가 아니라 인물 단위**로 매핑한다
   - 🔴 **저장소가 GitHub 공개**라 사진은 커밋하지 않는다. `.gitignore`로 `Assets/Resources/Photos/` 제외
-  - `PhotoPipeline/build_photos.py` — 배경 제거(rembg) + 얼굴 기준 정렬 + 512×640 저장을 폴더 통째로 처리
+  - `PhotoPipeline/build_photos.py` — 배경 제거(rembg) + 얼굴 기준 정렬 + **768×960** 저장을 폴더 통째로 처리
+  - 카드 베이스는 **1398×1957 3종**(노말·시그·골글). **노말 3·4·5성은 같은 베이스에 별 개수만 다르다**
+  - 저장소는 공개 유지. 사진만 로컬 보관 (작성자 확정)
 
 - U1~U3은 한 번에 처리한다. 스냅샷은 `readonly struct`라 필드 추가가 곧 생성자 변경이고, 호출부는 `AiRosterBuilder`·`SimulationContextBuilder` 두 곳뿐이다
 - **U4는 판단이 필요하다.** 4-1의 "`Simulation/`은 `Cards/`를 모른다" 원칙과 "팀명을 컨텍스트에 넣는 편의" 중 선택

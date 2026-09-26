@@ -1,5 +1,5 @@
 """
-선수 사진 일괄 처리 — 배경 제거 + 얼굴 기준 정렬 + 512x640 저장
+선수 사진 일괄 처리 — 배경 제거 + 얼굴 기준 정렬 + 768x960 저장
 
 사용법
     pip install "rembg[cli]" opencv-python pillow
@@ -7,10 +7,10 @@
 
     PhotoPipeline/input/   원본 사진을 넣는다. 파일명이 곧 photo 키가 된다 (예: gujawook.jpg)
     PhotoPipeline/cutout/  배경 제거 중간 결과 (자동 생성)
-    PhotoPipeline/output/  최종 결과. Assets/Resources/Photos/ 로 복사하면 된다
+    PhotoPipeline/output/  최종 결과 (768x960). Assets/Resources/Photos/ 로 복사하면 된다
 
 경기_UI_명세.md 3-2 의 규격을 그대로 따른다.
-    512 x 640 / 눈높이 세로 32% / 머리 위 여백 10% / 얼굴 중심 가로 50%
+    768 x 960 / 눈높이 세로 32% / 머리 위 여백 10% / 얼굴 중심 가로 50%
 """
 
 import os
@@ -22,7 +22,7 @@ import numpy as np
 from PIL import Image
 
 # --- 납품 규격 (경기_UI_명세.md 3-2) ---
-OUT_W, OUT_H = 512, 640
+OUT_W, OUT_H = 768, 960
 EYE_LINE_RATIO = 0.32      # 눈높이가 오는 세로 위치
 HEAD_MARGIN_RATIO = 0.10   # 머리 위 최소 여백
 FACE_HEIGHT_RATIO = 0.34   # 출력 높이 대비 얼굴 박스 높이 목표
@@ -92,7 +92,7 @@ def content_box(alpha):
 
 
 def align(path):
-    """얼굴(없으면 알파 박스) 기준으로 스케일·위치를 맞춘 512x640 RGBA 를 만든다."""
+    """얼굴(없으면 알파 박스) 기준으로 스케일·위치를 맞춘 768x960 RGBA 를 만든다."""
     rgba = cv2.imread(path, cv2.IMREAD_UNCHANGED)
     if rgba is None:
         return None, "읽기 실패"
