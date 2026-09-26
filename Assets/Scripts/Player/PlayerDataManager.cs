@@ -14,6 +14,11 @@ public class PlayerDataManager : SingletonBehaviour<PlayerDataManager>
     /// </summary>
     public bool TutorialCompleted { get; private set; }
 
+    /// <summary>
+    /// 경기 중 교체 방식. 수동이어야 일시정지 인터럽트를 쓸 수 있다
+    /// </summary>
+    public SubstitutionMode CurrentSubstitutionMode { get; private set; } = SubstitutionMode.Auto;
+
     public bool SetPlayerTeam(string teamName)
     {
         if (string.IsNullOrEmpty(teamName))
@@ -48,6 +53,21 @@ public class PlayerDataManager : SingletonBehaviour<PlayerDataManager>
     }
 
     /// <summary>
+    /// 교체 방식 변경. 진행 중인 경기에는 적용되지 않는다
+    /// </summary>
+    public bool SetSubstitutionMode(SubstitutionMode mode)
+    {
+        if (!IsValidSubstitutionMode(mode))
+        {
+            Debug.LogError($"[PlayerDataManager] : 알 수 없는 교체 방식입니다 ({(int)mode})");
+            return false;
+        }
+
+        CurrentSubstitutionMode = mode;
+        return true;
+    }
+
+    /// <summary>
     /// 튜토리얼 완료 표시. 이미 완료된 상태면 false (보상 중복 지급 차단)
     /// </summary>
     public bool CompleteTutorial()
@@ -62,7 +82,8 @@ public class PlayerDataManager : SingletonBehaviour<PlayerDataManager>
     /// <summary>
     /// 세이브 복원용 일괄 주입
     /// </summary>
-    public bool Restore(string teamName, LeagueTier highestUnlockedTier, bool tutorialCompleted)
+    public bool Restore(string teamName, LeagueTier highestUnlockedTier, bool tutorialCompleted,
+        SubstitutionMode substitutionMode)
     {
         if (!SetPlayerTeam(teamName))
             return false;
@@ -73,8 +94,21 @@ public class PlayerDataManager : SingletonBehaviour<PlayerDataManager>
             return false;
         }
 
+        if (!IsValidSubstitutionMode(substitutionMode))
+        {
+            Debug.LogError($"[PlayerDataManager] : 알 수 없는 교체 방식입니다 ({(int)substitutionMode})");
+            return false;
+        }
+
         HighestUnlockedTier = highestUnlockedTier;
         TutorialCompleted = tutorialCompleted;
+        CurrentSubstitutionMode = substitutionMode;
         return true;
+    }
+
+    //enum 범위 검사. 세이브에서 읽은 값을 캐스팅한 뒤에 쓴다
+    private static bool IsValidSubstitutionMode(SubstitutionMode mode)
+    {
+        return mode == SubstitutionMode.Auto || mode == SubstitutionMode.Manual;
     }
 }

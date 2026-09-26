@@ -127,7 +127,7 @@ public static class AiRosterBuilder
     //마스터 데이터 + 티어 보정 = AI 타자 스냅샷
     private static HitterSnapshot ToHitterSnapshot(HitterMasterData hitterData, int tierStatBonus)
     {
-        return new HitterSnapshot(hitterData.CardId, hitterData.Name,
+        return new HitterSnapshot(hitterData.CardId, hitterData.Name, hitterData.Year, hitterData.Position,
             hitterData.Power + tierStatBonus,
             hitterData.Contact + tierStatBonus,
             hitterData.Run + tierStatBonus,
@@ -137,7 +137,7 @@ public static class AiRosterBuilder
     //마스터 데이터 + 티어 보정 = AI 투수 스냅샷
     private static PitcherSnapshot ToPitcherSnapshot(PitcherMasterData pitcherData, int tierStatBonus)
     {
-        return new PitcherSnapshot(pitcherData.CardId, pitcherData.Name,
+        return new PitcherSnapshot(pitcherData.CardId, pitcherData.Name, pitcherData.Year, pitcherData.Position,
             pitcherData.Velocity + tierStatBonus,
             pitcherData.Stuff + tierStatBonus,
             pitcherData.Control + tierStatBonus,

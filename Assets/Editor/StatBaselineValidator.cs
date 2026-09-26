@@ -99,13 +99,13 @@ public static class StatBaselineValidator
     private static void AppendProbabilityComparison(StringBuilder report, PoolAverage pool)
     {
         Tally current = Simulate(
-            new HitterSnapshot(1, "평균", Round(pool.HitterPower), Round(pool.HitterContact), Round(pool.HitterRun), Round(pool.HitterDefense)),
-            new PitcherSnapshot(2, "평균", Round(pool.PitcherVelocity), Round(pool.PitcherStuff), Round(pool.PitcherControl), 100),
+            new HitterSnapshot(1, "평균", 0, string.Empty, Round(pool.HitterPower), Round(pool.HitterContact), Round(pool.HitterRun), Round(pool.HitterDefense)),
+            new PitcherSnapshot(2, "평균", 0, string.Empty, Round(pool.PitcherVelocity), Round(pool.PitcherStuff), Round(pool.PitcherControl), 100),
             pool.HitterDefense / 100f);
 
         Tally baseline = Simulate(
-            new HitterSnapshot(1, "기준", Round(StatBaseline.HitterPower), Round(StatBaseline.HitterContact), Round(StatBaseline.HitterRun), Round(StatBaseline.HitterDefense)),
-            new PitcherSnapshot(2, "기준", Round(BaselineVelocity), Round(StatBaseline.PitcherStuff), Round(StatBaseline.PitcherControl), 100),
+            new HitterSnapshot(1, "기준", 0, string.Empty, Round(StatBaseline.HitterPower), Round(StatBaseline.HitterContact), Round(StatBaseline.HitterRun), Round(StatBaseline.HitterDefense)),
+            new PitcherSnapshot(2, "기준", 0, string.Empty, Round(BaselineVelocity), Round(StatBaseline.PitcherStuff), Round(StatBaseline.PitcherControl), 100),
             StatBaseline.HitterDefense / 100f);
 
         report.AppendLine($"── 평균 카드끼리 붙였을 때 ({ProbabilityTrials:N0}타석 실측) ──");

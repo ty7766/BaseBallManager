@@ -39,6 +39,7 @@ public class PlayerSaveService
             PlayerTeamName = PlayerDataManager.Instance.PlayerTeamName,
             HighestUnlockedTier = (int)PlayerDataManager.Instance.HighestUnlockedTier,
             TutorialCompleted = PlayerDataManager.Instance.TutorialCompleted,
+            SubstitutionMode = (int)PlayerDataManager.Instance.CurrentSubstitutionMode,
 
             NextInstanceId = InventoryManager.Instance.NextInstanceId,
             MaxCapacity = InventoryManager.Instance.MaxCapacity,
@@ -88,7 +89,8 @@ public class PlayerSaveService
 
         //검증을 통과했으므로 아래 복원은 실패하지 않는다. 실패하면 검증기와 복원기의 규칙이 어긋난 것이다
         if (!PlayerDataManager.Instance.Restore(saveData.PlayerTeamName,
-                (LeagueTier)saveData.HighestUnlockedTier, saveData.TutorialCompleted)
+                (LeagueTier)saveData.HighestUnlockedTier, saveData.TutorialCompleted,
+                (SubstitutionMode)saveData.SubstitutionMode)
             || !RestoreCurrencies(saveData)
             || !InventoryManager.Instance.Restore(cards, saveData.NextInstanceId, saveData.MaxCapacity))
         {
@@ -129,6 +131,13 @@ public class PlayerSaveService
         if (!LeagueTierTable.IsValidTier((LeagueTier)saveData.HighestUnlockedTier))
         {
             Debug.LogError($"[PlayerSaveService]: 세이브의 해금 티어가 올바르지 않습니다 ({saveData.HighestUnlockedTier})");
+            return false;
+        }
+
+        if (saveData.SubstitutionMode != (int)global::SubstitutionMode.Auto
+            && saveData.SubstitutionMode != (int)global::SubstitutionMode.Manual)
+        {
+            Debug.LogError($"[PlayerSaveService]: 세이브의 교체 방식이 올바르지 않습니다 ({saveData.SubstitutionMode})");
             return false;
         }
 

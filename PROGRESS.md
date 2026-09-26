@@ -174,6 +174,15 @@
 | U6 | **교체 모드(자동/수동) 설정** | 경기 중 일시정지 버튼 노출 | `PlayerSaveData`에 필드 추가 + `LeagueManager.SetInterruptHandler` 연동 |
 | U7 | **타석 진행 코루틴 드라이버** | 경기 중 자동 흐름 | `GameSession.StepAtBat()`을 일정 간격으로 돌리는 MonoBehaviour. `LiveGameController`도 아직 씬에 없다 |
 
+**U1~U4 · U6 · U7 완료 (세션 50).** 남은 것은 U5(팀 로고 애셋 10종, 작성자)뿐이다.
+- U1~U3 `HitterSnapshot`·`PitcherSnapshot`에 `Year`·`Position` 추가, `OVR`은 최종 4스탯 평균 프로퍼티
+- U4 `LeagueManager.NextPlayerGame` — 팀명은 `LeagueGame`에서 받는다. 시뮬 코어는 팀을 계속 모른다
+- U6 `SubstitutionMode`(Auto/Manual) 신설. `PlayerDataManager` 보유 + 세이브 왕복 +
+  `LeagueManager.ActiveInterruptHandler`가 자동 모드에서 창구를 끊는다
+- U7 `GamePlaybackDriver` — `StepAtBat()`을 일정 간격으로 돌리고 로그를 이벤트로 흘린다.
+  일시정지는 예약이라 타석 경계에서만 실제로 멈춘다 (`IsPauseRequested` → `IsPaused`)
+- 🔴 **선수 사진은 v1.0에서 쓰지 않는다** — 저장소가 공개라 저작권 문제. `경기_UI_명세.md` 3-2
+
 - U1~U3은 한 번에 처리한다. 스냅샷은 `readonly struct`라 필드 추가가 곧 생성자 변경이고, 호출부는 `AiRosterBuilder`·`SimulationContextBuilder` 두 곳뿐이다
 - **U4는 판단이 필요하다.** 4-1의 "`Simulation/`은 `Cards/`를 모른다" 원칙과 "팀명을 컨텍스트에 넣는 편의" 중 선택
 

@@ -50,6 +50,11 @@ public class PlayerSaveData
     public bool TutorialCompleted;
 
     /// <summary>
+    /// 경기 중 교체 방식 (SubstitutionMode)
+    /// </summary>
+    public int SubstitutionMode;
+
+    /// <summary>
     /// 아래 2개 배열은 같은 길이이며 인덱스가 서로 대응한다 (Dictionary 직렬화 불가 회피)
     /// </summary>
     public int[] CurrencyTypes;          //(int)CurrencyType
