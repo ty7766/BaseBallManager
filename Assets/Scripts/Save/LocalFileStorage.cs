@@ -38,7 +38,7 @@ public class LocalFileStorage : ISaveStorage
     }
 
     /// <summary>
-    /// 임시 파일에 먼저 쓴 뒤 교체한다. 쓰는 도중 앱이 죽어도 기존 세이브가 잘리지 않는다
+    /// 임시 파일에 먼저 쓴 뒤 한 번의 호출로 교체한다. 쓰는 도중 앱이 죽어도 기존 세이브가 남는다
     /// </summary>
     public bool Save(string key, string json)
     {
@@ -55,10 +55,8 @@ public class LocalFileStorage : ISaveStorage
 
             File.WriteAllText(tempPath, json, Encoding.UTF8);
 
-            if (File.Exists(filePath))
-                File.Delete(filePath);
-
-            File.Move(tempPath, filePath);
+            //덮어쓰기 Move는 OS가 한 번에 교체한다. 지운 뒤 옮기면 그 사이에 죽었을 때 세이브가 통째로 사라진다
+            File.Move(tempPath, filePath, true);
 
             return true;
         }

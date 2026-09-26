@@ -43,6 +43,11 @@ public class PostSeasonRunner
     public IReadOnlyDictionary<string, int> RotationIndices => _rotationIndices;
 
     /// <summary>
+    /// 종료 보상을 이미 수령했는지 (기획서 7.5). 저장 후 재실행으로 중복 수령하는 것을 막는다
+    /// </summary>
+    public bool RewardsGranted { get; private set; }
+
+    /// <summary>
     /// 한국시리즈 우승 팀 (끝나기 전이면 null)
     /// </summary>
     public string ChampionTeamName => IsFinished ? _series[_series.Count - 1].WinnerTeamName : null;
@@ -62,19 +67,22 @@ public class PostSeasonRunner
     private int _currentSeriesIndex;
 
     private PostSeasonRunner(List<PostSeasonSeries> series, LeagueGameContextFactory contextFactory,
-        Dictionary<string, int> rotationIndices, int pullThreshold, int currentSeriesIndex = 0)
+        Dictionary<string, int> rotationIndices, int pullThreshold, IGameInterruptHandler interruptHandler,
+        int currentSeriesIndex = 0, bool rewardsGranted = false)
     {
         _series = series;
         _contextFactory = contextFactory;
         _rotationIndices = rotationIndices;
-        _simulator = new GameSimulator(pullThreshold);
+        _simulator = new GameSimulator(pullThreshold, interruptHandler);
         _currentSeriesIndex = currentSeriesIndex;
+        RewardsGranted = rewardsGranted;
     }
 
     /// <summary>
     /// 정규시즌 결과로 대진표 구성. 조건을 못 채우면 null
     /// </summary>
-    public static PostSeasonRunner Create(LeagueSeason season, LeagueGameContextFactory contextFactory, int pullThreshold = 3)
+    public static PostSeasonRunner Create(LeagueSeason season, LeagueGameContextFactory contextFactory,
+        int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
     {
         if (!season.IsFinished)
         {
@@ -116,13 +124,14 @@ public class PostSeasonRunner
             rotationIndices[row.Record.TeamName] = row.Record.GamePlayedCount;
         }
 
-        return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold);
+        return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold, interruptHandler);
     }
 
     /// <summary>
     /// 저장된 진행도로 복원 (기획서 7.6). 데이터가 깨졌으면 null
     /// </summary>
-    public static PostSeasonRunner Restore(PostSeasonSaveData saveData, LeagueGameContextFactory contextFactory, int pullThreshold = 3)
+    public static PostSeasonRunner Restore(PostSeasonSaveData saveData, LeagueGameContextFactory contextFactory,
+        int pullThreshold = 3, IGameInterruptHandler interruptHandler = null)
     {
         if (saveData == null || saveData.Series == null || saveData.Series.Length == 0)
         {
@@ -154,7 +163,40 @@ public class PostSeasonRunner
         if (rotationIndices == null)
             return null;
 
-        return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold, saveData.CurrentSeriesIndex);
+        return new PostSeasonRunner(series, contextFactory, rotationIndices, pullThreshold, interruptHandler,
+            saveData.CurrentSeriesIndex, saveData.RewardsGranted);
+    }
+
+    /// <summary>
+    /// 해당 팀이 오른 가장 높은 단계. 참가하지 않았으면 false
+    /// </summary>
+    public bool TryGetReachedRound(string teamName, out PostSeasonRound reachedRound)
+    {
+        reachedRound = default;
+
+        if (string.IsNullOrEmpty(teamName))
+            return false;
+
+        bool found = false;
+
+        foreach (PostSeasonSeries series in _series)
+        {
+            if (series.HigherSeedTeamName != teamName && series.LowerSeedTeamName != teamName)
+                continue;
+
+            reachedRound = series.Round;
+            found = true;
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// 종료 보상 수령 표시
+    /// </summary>
+    public void MarkRewardsGranted()
+    {
+        RewardsGranted = true;
     }
 
     /// <summary>

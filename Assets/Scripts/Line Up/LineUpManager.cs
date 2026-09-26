@@ -55,13 +55,20 @@ public class LineUpManager : SingletonBehaviour<LineUpManager>
     }
 
     /// <summary>
-    /// 야수 슬롯에 카드를 배치한다 (타순 1~9, 포지션 일치 필요. DH는 아무 야수나 가능)
+    /// 빈 야수 슬롯에 카드를 배치한다 (타순 1~9, 포지션 일치 필요. DH는 아무 야수나 가능).
+    /// 이미 차 있는 슬롯은 RemoveHitter로 비운 뒤 배치한다
     /// </summary>
     public bool AssignHitter(HitterPosition slot, int instanceId, int battingOrder)
     {
         if (battingOrder <= 0 || battingOrder > HitterSlotCount)
         {
             Debug.LogWarning($"[LineUpManager]: 타순은 1~{HitterSlotCount}만 가능합니다 ({battingOrder})");
+            return false;
+        }
+
+        if (_hitterSlots[slot].instanceId != EmptySlot)
+        {
+            Debug.LogWarning($"[LineUpManager]: {slot} 슬롯은 이미 차 있습니다");
             return false;
         }
 

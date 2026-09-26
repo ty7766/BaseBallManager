@@ -65,6 +65,14 @@ public class PitcherGameStats
         }
     }
 
+    /// <summary>
+    /// 도루자 아웃 1개. SB·CS 스탯은 타자 쪽에만 남기고 이닝 계산에만 반영한다 (기획서 8.3.1)
+    /// </summary>
+    public void AddCaughtStealingOut()
+    {
+        OutsRecorded++;
+    }
+
     //결과별로 잡아낸 아웃 수. 실책 출루는 아웃이 아니다
     private static int GetOutsFrom(BatterOutcome outcome)
     {

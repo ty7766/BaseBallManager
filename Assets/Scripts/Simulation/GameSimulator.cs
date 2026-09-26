@@ -110,7 +110,7 @@ public class GameSimulator
         if (!_pitcherChangeEval.ShouldChange(defPitcherState, gameState, effectiveInningRuns))
             return;
 
-        int nextSlot = _pitcherChangeEval.GetNextPitcherSlot(defPitcherState, gameState);
+        int nextSlot = _pitcherChangeEval.GetNextPitcherSlot(defPitcherState, gameState, isTopInning);
 
         if (nextSlot == PitcherChangeEvaluator.NoNextPitcher)
             return;
@@ -130,6 +130,7 @@ public class GameSimulator
 
         int inning = gameState.Inning;
         int outCountBefore = gameState.OutCount;
+        PitcherSnapshot pitcher = (isTopInning ? gameState.HomePitcherState : gameState.AwayPitcherState).Snapshot;
 
         bool isSuccess = _stealCalc.IsSuccess(attempt, context, isTopInning);
 
@@ -157,7 +158,8 @@ public class GameSimulator
         }
 
         stealLogs.Add(new SimulationStealLog(inning, isTopInning, outCountBefore,
-            attempt.RunnerInstanceId, attempt.RunnerName, attempt.FromBase, isSuccess));
+            attempt.RunnerInstanceId, attempt.RunnerName, pitcher.InstanceId, pitcher.Name,
+            attempt.FromBase, isSuccess));
 
         return !gameState.IsGameOver && isTopInning == gameState.IsTopInning;
     }
@@ -197,25 +199,61 @@ public class GameSimulator
                 continue;
             }
 
-            if (attackBench[sub.BenchIndex].InstanceId == 0)
+            HitterSnapshot benchHitter = attackBench[sub.BenchIndex];
+
+            if (benchHitter.InstanceId == SimulationContext.NoHitter)
             {
                 Debug.LogWarning($"[GameSimulator]: 벤치 {sub.BenchIndex}번이 비어 있어 대타 교체를 건너뜁니다");
                 continue;
             }
 
+            if (state.IsBenchUsed(isHomeAttacking, sub.BenchIndex))
+            {
+                Debug.LogWarning($"[GameSimulator]: 벤치 {sub.BenchIndex}번은 이미 투입됐습니다 (한 선수가 두 타순에 설 수 없음)");
+                continue;
+            }
+
+            if (state.IsHitterUsed(isHomeAttacking, benchHitter.InstanceId))
+            {
+                Debug.LogWarning($"[GameSimulator]: {benchHitter.Name} 선수는 이미 교체로 빠졌습니다 (기획서 8.6 재투입 불가)");
+                continue;
+            }
+
             int originHitterInstanceId = attackLineup[sub.BattingOrderIndex].InstanceId;
             state.MarkHitterUsed(isHomeAttacking, originHitterInstanceId);
-            attackLineup[sub.BattingOrderIndex] = attackBench[sub.BenchIndex];
+            state.MarkBenchUsed(isHomeAttacking, sub.BenchIndex);
+            attackLineup[sub.BattingOrderIndex] = benchHitter;
         }
 
-        if (decision.PitcherSubstitutionSlot == LiveGameController.NoPitcherSubstitution)
+        ApplyPitcherSubstitution(decision, state, context, isHomeDefending);
+    }
+
+    //투수 교체 인터럽트. 같은 슬롯 재지정은 PitcherState를 새로 만들어 체력을 되돌리므로 막는다
+    private static void ApplyPitcherSubstitution(InterruptDecision decision, GameState state,
+        SimulationContext context, bool isHomeDefending)
+    {
+        int newSlotIndex = decision.PitcherSubstitutionSlot;
+
+        if (newSlotIndex == LiveGameController.NoPitcherSubstitution)
             return;
 
         int originPitcherSlotIndex = isHomeDefending
             ? state.HomePitcherState.PitcherSlotIndex
             : state.AwayPitcherState.PitcherSlotIndex;
 
+        if (newSlotIndex == originPitcherSlotIndex)
+        {
+            Debug.LogWarning($"[GameSimulator]: {newSlotIndex}번 투수는 이미 등판 중입니다");
+            return;
+        }
+
+        if (state.IsPitcherUsed(isHomeDefending, newSlotIndex))
+        {
+            Debug.LogWarning($"[GameSimulator]: {newSlotIndex}번 투수는 이미 강판됐습니다 (기획서 8.6 재투입 불가)");
+            return;
+        }
+
         state.MarkPitcherUsed(isHomeDefending, originPitcherSlotIndex);
-        state.SubstitutePitcher(context, isHomeDefending, decision.PitcherSubstitutionSlot);
+        state.SubstitutePitcher(context, isHomeDefending, newSlotIndex);
     }
 }

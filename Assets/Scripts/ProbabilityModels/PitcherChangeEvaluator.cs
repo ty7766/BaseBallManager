@@ -43,12 +43,11 @@ public class PitcherChangeEvaluator
     }
 
     /// <summary>
-    /// 다음에 올릴 투수 슬롯. 남은 투수가 없으면 -1
+    /// 다음에 올릴 투수 슬롯. 남은 투수가 없으면 -1.
+    /// isHomePitching은 타석 시작 시점 값이어야 한다 (3아웃이면 gameState는 이미 공수가 바뀌어 있다)
     /// </summary>
-    public int GetNextPitcherSlot(PitcherState currentState, GameState gameState)
+    public int GetNextPitcherSlot(PitcherState currentState, GameState gameState, bool isHomePitching)
     {
-        bool isHomePitching = gameState.IsTopInning;
-
         int scoreDiff = isHomePitching
             ? gameState.HomeScore - gameState.AwayScore
             : gameState.AwayScore - gameState.HomeScore;

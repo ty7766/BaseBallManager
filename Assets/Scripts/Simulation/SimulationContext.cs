@@ -30,6 +30,11 @@ public class SimulationContext
     /// </summary>
     public const int MaxBenchSize = 5;
 
+    /// <summary>
+    /// 선수가 없는 칸. 스냅샷 기본값의 InstanceId가 0이라 빈 벤치 칸이 곧 이 값이다
+    /// </summary>
+    public const int NoHitter = 0;
+
     public bool IsPlayerHome { get; }
 
     public HitterSnapshot[] HomeLineup { get; }     //홈팀 타자 라인업 (타순 순서. 요소는 교체로 바뀔 수 있음)

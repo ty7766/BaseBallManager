@@ -10,6 +10,9 @@ public class SimulationStealLog
     public int RunnerInstanceId { get; }    //선수별 기록 집계 키
     public string RunnerName { get; }       //로그 출력용 주자 이름
 
+    public int PitcherInstanceId { get; }   //도루자 아웃을 이닝에 더할 투수 (기록 집계 키)
+    public string PitcherName { get; }      //로그 출력용 투수 이름
+
     /// <summary>
     /// 출발 베이스 (1 = 1루에서 2루로 / 2 = 2루에서 3루로)
     /// </summary>
@@ -18,7 +21,8 @@ public class SimulationStealLog
     public bool IsSuccess { get; }
 
     public SimulationStealLog(int inning, bool isTopInning, int outCountBefore,
-        int runnerInstanceId, string runnerName, int fromBase, bool isSuccess)
+        int runnerInstanceId, string runnerName, int pitcherInstanceId, string pitcherName,
+        int fromBase, bool isSuccess)
     {
         Inning = inning;
         IsTopInning = isTopInning;
@@ -26,6 +30,8 @@ public class SimulationStealLog
 
         RunnerInstanceId = runnerInstanceId;
         RunnerName = runnerName;
+        PitcherInstanceId = pitcherInstanceId;
+        PitcherName = pitcherName;
         FromBase = fromBase;
         IsSuccess = isSuccess;
     }

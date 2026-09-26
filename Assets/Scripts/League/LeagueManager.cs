@@ -30,6 +30,18 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     [SerializeField, Range(0, 100)]
     private int _star4RewardPercent = 30;
 
+    [Header("포스트시즌 보상 (기획서 7.5). 오른 가장 높은 단계 하나만 지급한다")]
+    [SerializeField, Tooltip("와일드카드 결정전 진출")]
+    private PostSeasonReward _wildCardReward;
+    [SerializeField, Tooltip("준플레이오프 진출")]
+    private PostSeasonReward _semiPlayOffReward;
+    [SerializeField, Tooltip("플레이오프 진출")]
+    private PostSeasonReward _playOffReward;
+    [SerializeField, Tooltip("한국시리즈 진출")]
+    private PostSeasonReward _koreanSeriesReward;
+    [SerializeField, Tooltip("한국시리즈 우승 (진출 보상 대신 이것을 지급)")]
+    private PostSeasonReward _championReward;
+
     private LeagueRunner _runner;
     private LeagueSaveService _saveService;
     private PostSeasonSaveService _postSeasonSaveService;
@@ -37,6 +49,9 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
 
     //포스트시즌 복원 시 로스터를 다시 만들기 위해 보관 (정규시즌 없이 이어하기 가능하게)
     private LeagueTier _currentTier;
+
+    //수동 교체 모드의 인터럽트 창구 (기획서 8.6). UI가 없으면 null이라 자동 진행만 한다
+    private IGameInterruptHandler _interruptHandler;
 
     protected override void OnSingletonAwake()
     {
@@ -46,6 +61,14 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
         _postSeasonSaveService = new PostSeasonSaveService(storage);
         _rewardService = new LeagueRewardService(_tierTable, _unlockRankThreshold,
             _goldenGloveEnhanceCardReward, _star3RewardPercent, _star4RewardPercent);
+    }
+
+    /// <summary>
+    /// 경기 중 수동 교체 창구를 연결한다 (기획서 8.6). 다음 리그·포스트시즌부터 적용된다
+    /// </summary>
+    public void SetInterruptHandler(IGameInterruptHandler interruptHandler)
+    {
+        _interruptHandler = interruptHandler;
     }
 
     /// <summary>
@@ -108,7 +131,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
 
         LeagueSeason season = new LeagueSeason(schedule, new LeagueStandings(allTeamNames));
 
-        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold);
+        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold, _interruptHandler);
         _currentTier = tier;
         PostSeason = null;
 
@@ -130,7 +153,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
             return false;
         }
 
-        PostSeason = PostSeasonRunner.Create(_runner.Season, _runner.ContextFactory, _pullThreshold);
+        PostSeason = PostSeasonRunner.Create(_runner.Season, _runner.ContextFactory, _pullThreshold, _interruptHandler);
 
         return PostSeason != null;
     }
@@ -200,7 +223,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
         LeagueGameContextFactory contextFactory =
             new LeagueGameContextFactory(AiRosterManager.Instance.Rosters, saveData.PlayerTeamName);
 
-        PostSeason = PostSeasonRunner.Restore(saveData, contextFactory, _pullThreshold);
+        PostSeason = PostSeasonRunner.Restore(saveData, contextFactory, _pullThreshold, _interruptHandler);
 
         if (PostSeason == null)
             return false;
@@ -284,7 +307,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
         if (!PlayerDataManager.Instance.SetPlayerTeam(season.PlayerTeamName))
             return false;
 
-        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold);
+        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold, _interruptHandler);
         _currentTier = season.Tier;
         PostSeason = null;
 
@@ -320,6 +343,36 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     }
 
     /// <summary>
+    /// 포스트시즌 종료 보상 수령 (기획서 7.5). 실패하거나 이미 받았으면 null
+    /// </summary>
+    public PostSeasonRewardResult ClaimPostSeasonRewards()
+    {
+        if (PostSeason == null)
+        {
+            Debug.LogError("[LeagueManager]: 시작된 포스트시즌이 없습니다");
+            return null;
+        }
+
+        if (PlayerDataManager.Instance == null)
+        {
+            Debug.LogError("[LeagueManager]: PlayerDataManager가 씬에 없습니다");
+            return null;
+        }
+
+        string playerTeamName = PlayerDataManager.Instance.PlayerTeamName;
+
+        if (!PostSeason.TryGetReachedRound(playerTeamName, out PostSeasonRound reachedRound))
+        {
+            Debug.LogWarning($"[LeagueManager]: '{playerTeamName}'은(는) 가을야구에 진출하지 않았습니다");
+            return null;
+        }
+
+        bool isChampion = PostSeason.ChampionTeamName == playerTeamName;
+
+        return _rewardService.GrantPostSeason(PostSeason, playerTeamName, GetPostSeasonReward(reachedRound, isChampion));
+    }
+
+    /// <summary>
     /// 현재 순위표 (기획서 7.7)
     /// </summary>
     public LeagueStandingRow[] GetRanking()
@@ -331,5 +384,21 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
         }
 
         return _runner.Season.Standings.GetRanking();
+    }
+
+    //도달 단계별 보상 수량. 우승은 한국시리즈 진출 보상을 대체한다
+    private PostSeasonReward GetPostSeasonReward(PostSeasonRound reachedRound, bool isChampion)
+    {
+        if (isChampion)
+            return _championReward;
+
+        return reachedRound switch
+        {
+            PostSeasonRound.WildCard => _wildCardReward,
+            PostSeasonRound.SemiPlayOff => _semiPlayOffReward,
+            PostSeasonRound.PlayOff => _playOffReward,
+            PostSeasonRound.KoreanSeries => _koreanSeriesReward,
+            _ => default
+        };
     }
 }

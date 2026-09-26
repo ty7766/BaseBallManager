@@ -78,6 +78,13 @@ public static class BoxScoreBuilder
 
                 if (!attack.TryAddStealAttempt(stealLog.RunnerInstanceId, stealLog.IsSuccess))
                     Debug.LogError($"[BoxScoreBuilder]: 타석 기록이 없는 주자가 도루했습니다 (instanceId {stealLog.RunnerInstanceId})");
+
+                if (stealLog.IsSuccess)
+                    continue;
+
+                TeamAccumulator defense = stealLog.IsTopInning ? home : away;
+
+                defense.GetPitcher(stealLog.PitcherInstanceId, stealLog.PitcherName).AddCaughtStealingOut();
             }
         }
 

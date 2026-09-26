@@ -45,6 +45,8 @@ public class GameState
 
     private readonly HashSet<int> _homeUsedHitterInstanceIds = new HashSet<int>();
     private readonly HashSet<int> _awayUsedHitterInstanceIds = new HashSet<int>();
+    private readonly HashSet<int> _homeUsedBenchIndices = new HashSet<int>();
+    private readonly HashSet<int> _awayUsedBenchIndices = new HashSet<int>();
     private readonly HashSet<int> _homeUsedPitcherSlotIndices = new HashSet<int>();
     private readonly HashSet<int> _awayUsedPitcherSlotIndices = new HashSet<int>();
 
@@ -176,6 +178,27 @@ public class GameState
             _homeUsedHitterInstanceIds.Add(instanceId);
         else
             _awayUsedHitterInstanceIds.Add(instanceId);
+    }
+
+    /// <summary>
+    /// 투입한 벤치 슬롯을 기록한다 (같은 벤치 카드가 두 타순에 들어가지 못하게)
+    /// </summary>
+    public void MarkBenchUsed(bool isHome, int benchIndex)
+    {
+        if (isHome)
+            _homeUsedBenchIndices.Add(benchIndex);
+        else
+            _awayUsedBenchIndices.Add(benchIndex);
+    }
+
+    /// <summary>
+    /// 해당 벤치 슬롯이 이미 투입됐는지 확인한다
+    /// </summary>
+    public bool IsBenchUsed(bool isHome, int benchIndex)
+    {
+        return isHome
+            ? _homeUsedBenchIndices.Contains(benchIndex)
+            : _awayUsedBenchIndices.Contains(benchIndex);
     }
 
     /// <summary>

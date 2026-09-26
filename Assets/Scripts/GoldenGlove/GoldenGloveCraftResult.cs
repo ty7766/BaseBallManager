@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// 골든글러브 제작 1회 결과 (기획서 4장)
 /// </summary>
 public class GoldenGloveCraftResult

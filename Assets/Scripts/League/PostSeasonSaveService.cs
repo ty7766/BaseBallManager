@@ -53,6 +53,7 @@ public class PostSeasonSaveService
             Tier = (int)tier,
             PlayerTeamName = playerTeamName,
             CurrentSeriesIndex = postSeason.CurrentSeriesIndex,
+            RewardsGranted = postSeason.RewardsGranted,
             Series = new PostSeasonSeriesSaveData[series.Count]
         };
 

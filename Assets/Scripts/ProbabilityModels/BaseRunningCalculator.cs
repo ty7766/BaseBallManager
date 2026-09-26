@@ -43,8 +43,11 @@ public class BaseRunningCalculator
                 break;
 
             case BatterOutcome.Walk:
-            case BatterOutcome.Error:
                 PushRunnersForced(batterInstanceId, state, scoredRunnerIds);
+                break;
+
+            case BatterOutcome.Error:
+                PushAllRunners(batterInstanceId, state, scoredRunnerIds);
                 break;
 
             case BatterOutcome.StrikeOut:
@@ -58,9 +61,7 @@ public class BaseRunningCalculator
                 break;
 
             case BatterOutcome.DoublePlay:
-                state.SetFirstBase(GameState.NoRunner);
-                state.AddOut();
-                state.AddOut();
+                ApplyDoublePlay(state);
                 break;
         }
     }
@@ -127,7 +128,32 @@ public class BaseRunningCalculator
         state.SetFirstBase(batterInstanceId);
     }
 
-    //볼넷·실책 - 밀어내기. 1루가 비면 그 앞 주자는 움직이지 않는다
+    //실책 - 추가 진루 판정 없이 전원 한 베이스씩 (기획서 8.3). 밀어내기와 달리 강제되지 않은 주자도 움직인다
+    private static void PushAllRunners(int batterInstanceId, GameState state, List<int> scoredRunnerIds)
+    {
+        if (state.ThirdBase != GameState.NoRunner)
+            Score(state, state.ThirdBase, scoredRunnerIds);
+
+        state.SetThirdBase(state.SecondBase);
+        state.SetSecondBase(state.FirstBase);
+        state.SetFirstBase(batterInstanceId);
+    }
+
+    //병살 - 타자와 1루 주자가 아웃. 첫 아웃이 이닝을 끝내면 두 번째 아웃은 다음 이닝 몫이 되므로 멈춘다
+    private static void ApplyDoublePlay(GameState state)
+    {
+        bool wasTopInning = state.IsTopInning;
+
+        state.SetFirstBase(GameState.NoRunner);
+        state.AddOut();
+
+        if (state.IsGameOver || state.IsTopInning != wasTopInning)
+            return;
+
+        state.AddOut();
+    }
+
+    //볼넷 - 밀어내기. 1루가 비면 그 앞 주자는 움직이지 않는다
     private void PushRunnersForced(int batterInstanceId, GameState state, List<int> scoredRunnerIds)
     {
         if (state.FirstBase == GameState.NoRunner)
@@ -155,8 +181,13 @@ public class BaseRunningCalculator
     private void ApplySacrificeFly(GameState state, SimulationContext context, List<int> scoredRunnerIds)
     {
         int thirdBaseRunnerId = state.ThirdBase;
+        bool wasTopInning = state.IsTopInning;
 
         state.AddOut();
+
+        //3아웃이면 득점이 무효다. 막지 않으면 AddRun이 공수가 바뀐 뒤의 팀에 점수를 준다
+        if (state.IsGameOver || state.IsTopInning != wasTopInning)
+            return;
 
         if (thirdBaseRunnerId == GameState.NoRunner)
             return;

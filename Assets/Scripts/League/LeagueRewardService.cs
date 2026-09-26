@@ -99,6 +99,54 @@ public class LeagueRewardService
     }
 
     /// <summary>
+    /// 포스트시즌 종료 보상 수령. 수량은 호출부가 도달 단계에 맞춰 넘긴다. 실패하거나 이미 받았으면 null
+    /// </summary>
+    public PostSeasonRewardResult GrantPostSeason(PostSeasonRunner postSeason, string playerTeamName, PostSeasonReward reward)
+    {
+        if (postSeason == null)
+        {
+            Debug.LogError("[LeagueRewardService]: 보상을 지급할 포스트시즌이 없습니다");
+            return null;
+        }
+
+        if (!postSeason.IsFinished)
+        {
+            Debug.LogWarning("[LeagueRewardService]: 포스트시즌이 아직 진행 중입니다");
+            return null;
+        }
+
+        if (postSeason.RewardsGranted)
+        {
+            Debug.LogWarning("[LeagueRewardService]: 이미 보상을 수령한 포스트시즌입니다");
+            return null;
+        }
+
+        if (CurrencyManager.Instance == null)
+        {
+            Debug.LogError("[LeagueRewardService]: CurrencyManager가 씬에 없습니다");
+            return null;
+        }
+
+        if (!postSeason.TryGetReachedRound(playerTeamName, out PostSeasonRound reachedRound))
+        {
+            Debug.LogWarning($"[LeagueRewardService]: '{playerTeamName}'은(는) 가을야구에 진출하지 않았습니다");
+            return null;
+        }
+
+        bool isChampion = postSeason.ChampionTeamName == playerTeamName;
+
+        AddIfPositive(CurrencyType.Gold, reward.Gold);
+        AddIfPositive(CurrencyType.GoldenGlovePoint, reward.GoldenGlovePoint);
+        AddIfPositive(CurrencyType.SignatureTicket, reward.SignatureTicket);
+        AddIfPositive(CurrencyType.EnhanceCardGoldenGlove, reward.GoldenGloveEnhanceCard);
+
+        postSeason.MarkRewardsGranted();
+
+        return new PostSeasonRewardResult(reachedRound, isChampion,
+            reward.Gold, reward.GoldenGlovePoint, reward.SignatureTicket, reward.GoldenGloveEnhanceCard);
+    }
+
+    /// <summary>
     /// 경기 1건 종료 시 보상 (기획서 9.1 - 훈련돌파 카드 · 강화 전용 카드의 획득 경로)
     /// </summary>
     public void GrantPerGameRewards(LeagueTier tier)
@@ -111,6 +159,13 @@ public class LeagueRewardService
 
         if (Roll(_tierTable.GetPerGameEnhanceCardChance(tier)))
             CurrencyManager.Instance.Add(PickEnhanceCardType(), 1);
+    }
+
+    //0 이하는 지급 대상이 아니다. CurrencyManager가 경고를 남기지 않도록 여기서 거른다
+    private static void AddIfPositive(CurrencyType type, int amount)
+    {
+        if (amount > 0)
+            CurrencyManager.Instance.Add(type, amount);
     }
 
     //백분율 확률 판정

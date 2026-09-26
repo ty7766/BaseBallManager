@@ -41,7 +41,10 @@
 | 73~77 | `Player/` · `Save/` 5개 | ✅ |
 | 78~82 | `Currency/` · `Dismantle` · `Combine` · `GoldenGlove` · `Core` | ✅ (싱글톤 전환 + 주석 규칙) |
 
-**전 파일 정밀 검수 완료 (1·2회차).** 검증 하니스 91건 중 90건 통과, 1건은 아래 2-1의 🔴 미해결 항목.
+**전 파일 정밀 검수 완료 (1·2회차).**
+
+**세션 48: 3회차 전수 검수 — 결함 9종을 하니스로 실측 확인한 뒤 전부 수정.** 검증 50건 전건 통과.
+남은 미해결은 아래 2-1의 🔴 `StatBaseline` 드리프트 하나뿐이다 (코드가 아니라 데이터 문제).
 
 ---
 
@@ -89,7 +92,7 @@
 |---|---|---|
 | 1 | `GachaManager` 인스펙터 — **천장 50** 확인 | `_pityLimit`은 씬에 직렬화된 적 없는 새 필드 |
 | 2 | 같은 인스펙터 — 확률 6개 확인 | `_gradeSigProbabilitySig` → `_signatureChanceOnStar5` 개명으로 기존 값이 풀리고 코드 기본값 0.15 적용 |
-| 3 | `CombineManager` 씬 배치 | 매니저 **14종 → 15종**. 승급 확률은 기본값(25% / 10%) |
+| ~~3~~ | ~~`CombineManager` 씬 배치~~ | ✅ 세션 48에서 씬 YAML에 직접 배치 (매니저 **15종**). `_upgradeChanceStar3` 0.25 / `_upgradeChanceStar4` 0.1 / `_materialCount` 3 직렬화 완료 |
 | 4 | `.meta` 생성 확인 | `GameSession` · `CombineManager` · `CombineResult` · `SingletonBehaviour` |
 | 5 | 시그니쳐 · 골든글러브 마스터 CSV 입력 | 🔒 작성자. cardId **append-only** — 타자 `160~` / 투수 `50167~` |
 | 6 | `StartingSignatureTable._entries` 채우기 | **5번이 끝나야 가능.** 현재 비어 있어 전 팀이 시작 카드 없이 출발 |
@@ -100,12 +103,15 @@
 | 11 | `.meta` 생성 확인 | `ProbabilityModels/RunnerLookup` · `Simulation/HitterSubstitution`(파일명 대소문자 변경) |
 | 12 | 매니저 15종 스크립트 참조 확인 | 7개가 `SingletonBehaviour<T>` 상속으로 바뀜 — 씬 컴포넌트는 그대로지만 한 번 열어 확인 |
 | 13 | 🔒 시그니쳐·골글 CSV 입력 후 `StatBaseline` 재측정 | 2-1 참고. 하니스가 수치를 찍어준다 |
+| 14 | 🔒 `LeagueManager` 인스펙터 — **포스트시즌 보상 5칸** | 세션 48 신설. 와일드카드 / 준PO / PO / 한국시리즈 / **우승** 각각 골드·골글포인트·시그권·골카전용. **전부 0이라 지금은 아무것도 지급되지 않는다** |
+| 15 | 🔒 `GoldenGloveCraftManager` 제작 비용 | 씬 값은 확정치(50,000 / 1,000,000 / 100)라 정상. 코드 기본값만 낮게 남아 있다 — 작성자가 플레이하며 조정 |
 
 ### 2-4. 코드 쪽 대기
 
 | 항목 | 상태 |
 |---|---|
 | 로드맵 9번 경기 UI | ⏸️ UI 디자인 대기. 화면 4개 구성은 확정(4-6), `GameSession` 준비 완료 |
+| `LiveGameController` 씬 배치 + `LeagueManager.SetInterruptHandler` 호출 | ⏸️ **주입 경로는 세션 48에서 뚫어 뒀다.** UI 착수 시 컨트롤러를 만들어 연결만 하면 수동 교체가 리그·포스트시즌에 걸린다 |
 | 무승부 상대전적 표시 (`TeamRecord._drawsAgainst`) | ⏸️ UI에 "1무" 자리가 있는지 확정 후 판단 |
 | 로드맵 11번 튜토리얼 | ⏭️ 최종 |
 
@@ -120,6 +126,10 @@
 | `LoadHitters`/`LoadPitchers` 공통화 | 보류. 앱 실행당 1회 호출이라 성능 무관, 카드 종류가 2개로 고정. **로더에 검사 로직을 추가하는 시점에 재판단** |
 | `InventoryManager.TryExpandCapacityWithGold` | 인벤토리가 `CurrencyManager` + 가격 정책을 앎(SRP). 호출부 0건 + 단일 가격이라 **누진 곡선 도입 시점에 분리** |
 | `SingletonBehaviour` 전환 | 검수 차례가 온 매니저부터. `OnSingletonAwake`가 필요한 건 `LineUpManager`(슬롯 초기화) · `LeagueManager`(세이브 서비스 생성) 2개, 나머지는 `Awake` 삭제로 끝 |
+| `GoldenGloveCraftManager` 코드 기본값 | 확정치의 1/166(300 / 15,000 / 20). 씬 값이 맞아 지금은 정상이나 **필드 개명 한 번이면 씬 값이 풀려 조용히 무너진다.** 작성자가 인게임 밸런싱 때 정리 |
+| 시그니쳐 뽑기 빈 결과 2.94% | 5성 중 15%가 시그 풀을 찾는데 CSV가 비어 있어 `null` 반환(10,000회 중 294회). 천장도 49에서 영구 대기. **시그 CSV 입력으로 해소된다** |
+| `BoxScoreBuilder` 투수 등판 순서 | 타석 로그를 전부 돌린 뒤 도루 로그를 처리하므로, 타자를 한 명도 상대하지 않고 **도루자 아웃만 잡은 투수**가 목록 맨 뒤로 간다. 로그에 전역 순번이 없어 보류 |
+| `SingletonBehaviour`에 `OnDestroy` 없음 | `Instance`를 비우지 않아 도메인 리로드를 끈 에디터에서 죽은 참조가 남을 수 있다. 실기기에는 영향 없음 |
 
 ---
 
@@ -149,12 +159,14 @@ CSV에서 cardId를 재배치하면 **모든 SO가 예외·로그·컴파일 에
 
 - 검증은 **스크래치패드 dotnet 하니스**(UnityEngine 최소 셰임 + `JsonUtility` 재현 + 실제 CSV 로드)에서만 한다
 - 프로젝트 테스트 파일 **0개 유지**. 하니스는 검증 후 삭제
-- **검증 하니스** (세션 46~47): 컴파일 + 런타임 검증 91건. `dotnet run -c Release`로 실행한다
+- **검증 하니스** (세션 46~48): 컴파일 + 런타임 검증 50건. `dotnet run -c Release`로 실행한다
   - 세이브 왕복(리그·포스트시즌) · 손상 세이브 거부 · 일정 결정성/공정성
   - 재화 규약(`SpendAll` 중복·음수 복원) · 인벤 일괄 제거 원자성 · 저장소 원자적 쓰기
   - **실제 CSV 325장 파싱** (cardId 유일성 · 포지션 해석 · OVR = 4스탯 평균 · 팀 10개)
   - **확률 실측**: 조합 승급(75/22.5/2.5%) · 뽑기 등급(70/25/5%) · 천장 50회 · 1000경기 시뮬 지표
   - `JsonUtility`는 셰임에서 리플렉션 기반으로 재현했다 (공개 필드만 직렬화하는 Unity 규칙)
+  - 세션 48 추가: **투수 교체 팀 판별** · **인터럽트 교체 3종**(벤치 중복·체력 리셋·강판 재투입) · **실책 진루** ·
+    **투수 이닝 = 타석 아웃 + 도루자 아웃** · **세이브 부분 실패 롤백** · **포스트시즌 보상 15건**(도달 단계·중복 수령·세이브 왕복)
 - **컴파일 검증 하니스** (세션 46 신설): 스크래치패드에 `UnityShim.cs`(UnityEngine 최소 셰임) + `harness.csproj`를 두고
   `dotnet build -p:GameRoot=<프로젝트 경로>`로 `Assets/Scripts/**` 전체를 컴파일한다. Unity를 켜지 않고 오류를 잡는다.
   셰임이 덮는 범위: `MonoBehaviour` · `ScriptableObject` · `Debug` · `Mathf` · `Random` · `JsonUtility` · `Application` · `Resources` · `TextAsset` + 직렬화 속성 8종
@@ -200,6 +212,7 @@ Core                  SingletonBehaviour
 | `0` 센티넬 | 에디터 SO의 빈 카드 슬롯. cardId가 1부터라 안전하고 `int` 기본값이 곧 빈 슬롯 |
 | 컬렉션 반환 | 실패 시 `null`이 아니라 **빈 컬렉션** (CLAUDE.md 3-2) |
 | 투수 배열 | `[0]=SP / [1~5]=RP / [6]=CP` 7칸 |
+| 공수 판별 | **확률 모델은 `GameState.IsTopInning`을 직접 읽지 않는다.** 호출부가 타석 시작 시점에 캡처한 `isTopInning`을 매개변수로 넘긴다 (`StealCalculator.IsSuccess` · `PitcherChangeEvaluator.GetNextPitcherSlot`) |
 | 실패 시 전부 롤백 | `Restore` · `BuildRosters` · 임포터 — **부분 성공 상태를 남기지 않는다** |
 | 재화 소모 | `SpendAll`은 "전부 검사 → 전부 차감" 2패스. 강화·훈련·돌파는 되돌릴 수 없어 부분 차감이 곧 영구 손실 |
 | 강화 전용 카드 | 인벤토리 카드가 아니라 **재화**(`CurrencyType`). 카드로 만들면 마스터 CSV에 스탯·포지션이 없는 유령 카드가 200장 한도를 먹고 라인업·분해·필터가 전부 예외 분기를 갖는다 |
@@ -228,10 +241,12 @@ Core                  SingletonBehaviour
 
 - **`isTopInning` / `scoreBefore` / `inningRunsBefore`는 `Apply()` 전에 캡처한다.**
   `Apply()` 내부 `AddOut()`이 3아웃 시 공수를 반전시키므로, 이후 참조하면 **엉뚱한 팀**의 상태를 읽는다
-  (세션 25·38에서 같은 원인으로 버그 2건 발생)
+  (세션 25·38·48에서 같은 원인으로 버그 3건 발생)
 - **`IsTopInning == true`는 초 = 원정 공격 = 홈 수비.** 투수 판별 시 반전 주의
 - **`SimulationContext`는 이름과 달리 라인업 배열이 mutable** — `ApplyInterruptDecision`이 직접 덮어쓴다.
   AI 로스터 원본을 그대로 넘기면 대타 교체 1회가 고정 로스터를 영구 오염시킨다 → `CopyLineup`으로 사본 전달
+- **`AddOut()`을 두 번 부르거나 그 뒤에 `AddRun()`을 부르는 코드는 3아웃 가드를 반드시 둔다.**
+  병살·희생플라이가 그렇다. 가드가 없으면 득점이 공수가 바뀐 **상대 팀**에 들어간다
 - **9회 초 종료 시 홈팀이 앞서면 말 공격 없이 종료** (`GameState.AddOut`). 없으면 득실차가 부풀려져 순위 타이브레이커가 왜곡된다
 - 진행 루프는 `GameSession` 한 벌 — `SimulateGame()`도 `while (session.StepAtBat()) { }` 로 경유한다.
   두 루프를 따로 두면 일괄 시뮬과 실시간 관전의 규칙이 언젠가 갈라진다
@@ -325,7 +340,7 @@ Claude는 이 구간 수치를 건드리지 않는다. 근거만 남긴다.
 | 유형 | 사례 |
 |---|---|
 | **인접한 비슷한 메서드를 복사** | `ParseCardGrade`가 `ParseCardType`의 `"N"/"S"/"G"`를 그대로 물려받아 게임이 아예 안 뜸. "모양만 바꾸는" 리팩토링에서도 분기 값이 바뀔 수 있다 |
-| **공수 판별 반전** | `GetNextPitcherSlot`이 `!IsTopInning`으로 판별 → 지고 있을 때 마무리 투입. 세션 23에서 고친 버그가 세션 26에 되살아남 |
+| **공수 판별 반전** | `GetNextPitcherSlot`이 `!IsTopInning`으로 판별 → 지고 있을 때 마무리 투입. 세션 23에서 고친 버그가 26에 되살아났고, **48에서 세 번째로 재발**(`Apply()` 이후의 `gameState.IsTopInning`을 읽음). 3,000경기 중 이닝 경계 교체의 20%가 반대 팀 기준으로 판단. 이번엔 매개변수로 못 박아 구조적으로 막았다 |
 | **`Apply()` 이후 상태 참조** | 인터럽트 교체가 상대 팀에 적용 → AI 벤치가 빈 배열이라 `IndexOutOfRangeException` |
 | **얕은 복사 후 원본 Clear** | `InterruptDecision`에 리스트 참조를 넘기고 `_pending.Clear()` → 반환 객체까지 비워짐 |
 | **씬 인스펙터 값이 코드 기본값을 덮음** | `_useAiRosterForPlayerTeam`이 씬에 `1`로 남아 **AI 로스터로 리그가 돌고 있었음.** 필드 개명 시 씬 값이 풀리는 것도 같은 계열 |
@@ -333,6 +348,10 @@ Claude는 이 구간 수치를 건드리지 않는다. 근거만 남긴다.
 | **반환값을 버림** | `Restore`를 `bool`로 바꿨는데 호출부가 안 받아 인벤이 빈 채로 "이어하기 성공" 보고 |
 | **선발 기준 오용** | `LineUpAutoFill`이 OVR로 선수 선발 → OVR은 4스탯 단순 평균이라 타자 정확과 상관 +0.33뿐. 타율 .207로 붕괴 |
 | **전제가 깨진 공식** | `0.22 + 0.30 * (구위̂ - 정확̂)`는 "두 스탯군 평균이 같다"를 전제. 실제 11점 차라 볼넷 매치업의 96.5%가 하한에 고정 |
+| **케이스를 합치며 규칙이 흡수됨** | `switch`에서 `Walk`와 `Error`를 한 케이스로 묶자 실책이 밀어내기로 바뀜(기획서는 전원 +1베이스). 1,000경기 중 58회 진루 누락. **중복 제거는 두 케이스의 규칙이 같을 때만 한다** |
+| **쓰이지 않는 검사** | `GameState.IsHitterUsed`를 만들어 두고 읽는 곳이 0곳이라 대타 재투입이 뚫려 있었다. **Mark만 있고 Is가 없으면 그 불변식은 없는 것이다** |
+| **재생성으로 상태가 초기화됨** | 인터럽트가 현재 등판 슬롯을 다시 지정하면 `new PitcherState(...)`가 체력을 만땅으로 되돌렸다(20→80). **같은 대상으로의 교체는 no-op이 아니라 리셋이다** |
+| **부분 적용 후 실패 반환** | `PlayerSaveService.Load`가 플레이어 데이터를 먼저 덮어쓴 뒤 인벤 복원에 실패 → `false`인데 팀·티어는 이미 바뀜. **검증을 전부 끝낸 뒤 적용한다** |
 
 📝 테스트가 실패하면 **먼저 기대값 산수를 의심한다.** 세션 37·40에서 실패 7건이 전부 테스트 오류였고 프로덕션 코드는 정상이었다.
 
@@ -370,3 +389,4 @@ Claude는 이 구간 수치를 건드리지 않는다. 근거만 남긴다.
 | 46 (09-25) | **검수 방식 전환 — Claude가 직접 리팩토링·커밋.** 주석 규칙 확정(public `<summary>` 2줄 / private `//` 1줄 / 메서드 내부 금지). 검수 #17~18 `TrainManager`·`BreakthroughManager` — `SingletonBehaviour` 전환 · **`ApplyTrain` 반환값 미수신**(재화만 소모되는 경로) 수정 · `TrainStatCount` `public const` 승격으로 매직넘버 `4` 제거 · 돌파 비용 필드 개명 + 중첩 switch 분리 · 대기표의 `LeagueManager` `SetPlayerTeam` 2건 처리 |
 | 47 (09-25) | **전 파일 1회차 검수 완료** (45개 / 약 7,000줄). 🔴 수정: `GameSimulator` 자동 교체가 강판 슬롯을 기록하지 않던 문제 · `LineUpManager`가 `TryParse` 실패를 무시해 오타 카드를 LF/SP에 배치하던 문제 · `CurrencyManager.SpendAll`의 같은 재화 중복 차감(음수 가능) · 세이브 재화 복원 실패가 "이어하기 성공"으로 보고되던 문제. 구조: 시뮬 상수 `SimulationContext`/`GameState`로 통일 · 밀어내기 진루 로직 중복 제거 · `RunnerLookup` 신설 · 매니저 7종 `SingletonBehaviour` 전환 · 주석 규칙 일괄 적용(변환기 자동화) · **컴파일 검증 하니스 신설** |
 | 47 (09-25) | **전 파일 정밀 검수 완료 + 검증 하니스 91건 구축.** 🔴 수정: `LocalFileStorage` 비원자적 저장(앱이 죽으면 세이브가 잘림) · `CombineManager` 재료 부분 소멸 · `CardCSVLoader`가 null을 Split + 파싱 오류에 행 번호 없음 · 타자/투수 cardId 교차 중복 미검출 · `GachaManager` 빈 카드 풀 미캐시(매 뽑기마다 325장 재순회) · 세이브 복원 검증 4종(티어 범위·진행도 정합성·null 항목·배열 길이). 실측 검증: 조합 승급·뽑기 확률·천장·CSV 325장·1000경기 시뮬 전부 통과. **`StatBaseline` 드리프트 발견(2-1)** |
+| 48 (09-26) | **3회차 전수 검수 — 실측 기반.** 🔴 `PitcherChangeEvaluator` 공수 판별 반전 3회차 재발(이닝 경계 교체의 20%가 오판, 마무리 오투입 19.6%→0%) · 인터럽트 교체 3종(벤치 카드 중복 투입 · 같은 슬롯 재지정으로 체력 리셋 · 강판 투수 재투입) · `BaseRunningCalculator` 실책 진루가 밀어내기로 축소(기획서 8.3 위반) · `PlayerSaveService` 부분 적용 롤백. 🟠 `LocalFileStorage` 비원자적 교체(Delete→Move 창) · 도루자 아웃이 투수 이닝에서 누락(경기 27%) · `CombineManager` 씬 배치. 🟡 BOM 없는 `.cs` 5개 · `AssignHitter` 점유 슬롯 덮어쓰기 · `AiRosterManager` 딕셔너리 열거 순서 의존 · 병살/희생플라이 3아웃 가드. 신규: **포스트시즌 보상**(라운드별 절대값 인스펙터 · 중복 수령 차단 · 세이브 왕복) · `LeagueManager.SetInterruptHandler` 주입 경로. 검증: CSV 325장 · AI 로스터 SO 10팀 오류 0 · 일정 공정성 · 하니스 50건 전건 통과 |

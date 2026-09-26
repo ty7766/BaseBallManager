@@ -1,4 +1,4 @@
-public enum LeagueTier
+﻿public enum LeagueTier
 {
     Basic1 = 0, Basic2, Basic3,
     Rookie1, Rookie2, Rookie3,

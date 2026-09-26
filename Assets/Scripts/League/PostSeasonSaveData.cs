@@ -52,6 +52,11 @@ public class PostSeasonSaveData
     /// </summary>
     public int CurrentSeriesIndex;
 
+    /// <summary>
+    /// 종료 보상 수령 여부 (기획서 7.5 - 재실행으로 중복 수령하는 것을 막음)
+    /// </summary>
+    public bool RewardsGranted;
+
     public PostSeasonSeriesSaveData[] Series;
 
     /// <summary>

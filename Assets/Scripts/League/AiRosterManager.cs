@@ -16,6 +16,9 @@ public class AiRosterManager : SingletonBehaviour<AiRosterManager>
 
     //팀명 -> 완성된 로스터. 리그 시작 시 1회 채우고 리그 내내 재사용
     private readonly Dictionary<string, AiTeamRoster> _rosters = new Dictionary<string, AiTeamRoster>(AiRosterSet.TeamCount);
+
+    //로스터 세트의 배치 순서 보존용. 이 순서가 일정 대진을 결정하므로 딕셔너리 열거에 맡기면 안 된다
+    private readonly List<string> _teamNamesInOrder = new List<string>(AiRosterSet.TeamCount);
     private LeagueTier _currentTier;
 
     /// <summary>
@@ -41,6 +44,7 @@ public class AiRosterManager : SingletonBehaviour<AiRosterManager>
         IReadOnlyList<AiTeamRosterData> teams = rosterSet.Teams;
 
         _rosters.Clear();
+        _teamNamesInOrder.Clear();
 
         for (int i = 0; i < teams.Count; i++)
         {
@@ -49,7 +53,7 @@ public class AiRosterManager : SingletonBehaviour<AiRosterManager>
             if (teamData == null)
             {
                 Debug.LogError($"[AiRosterManager]: {tier} 티어 로스터 세트의 {i + 1}번 칸이 비어 있습니다");
-                _rosters.Clear();
+                ClearRosters();
                 return false;
             }
 
@@ -57,18 +61,19 @@ public class AiRosterManager : SingletonBehaviour<AiRosterManager>
 
             if (roster == null)
             {
-                _rosters.Clear();
+                ClearRosters();
                 return false;
             }
 
             if (_rosters.ContainsKey(roster.TeamName))
             {
                 Debug.LogError($"[AiRosterManager]: {tier} 티어 로스터 세트에 '{roster.TeamName}' 팀이 두 번 들어 있습니다");
-                _rosters.Clear();
+                ClearRosters();
                 return false;
             }
 
             _rosters.Add(roster.TeamName, roster);
+            _teamNamesInOrder.Add(roster.TeamName);
         }
 
         _currentTier = tier;
@@ -83,9 +88,9 @@ public class AiRosterManager : SingletonBehaviour<AiRosterManager>
     /// </summary>
     public List<string> GetOpponentTeamNames(string playerTeamName)
     {
-        List<string> opponentNames = new List<string>(_rosters.Count);
+        List<string> opponentNames = new List<string>(_teamNamesInOrder.Count);
 
-        foreach (string teamName in _rosters.Keys)
+        foreach (string teamName in _teamNamesInOrder)
         {
             if (teamName == playerTeamName)
                 continue;
@@ -109,10 +114,17 @@ public class AiRosterManager : SingletonBehaviour<AiRosterManager>
     }
 
     /// <summary>
-    /// 생성된 AI 팀명 전체 반환 (리그 일정 생성용)
+    /// 생성된 팀명 전체 반환 (로스터 세트의 배치 순서 그대로)
     /// </summary>
-    public IReadOnlyCollection<string> GetTeamNames()
+    public IReadOnlyList<string> GetTeamNames()
     {
-        return _rosters.Keys;
+        return _teamNamesInOrder;
+    }
+
+    //실패 시 부분 생성 상태를 남기지 않는다
+    private void ClearRosters()
+    {
+        _rosters.Clear();
+        _teamNamesInOrder.Clear();
     }
 }

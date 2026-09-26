@@ -78,23 +78,7 @@ public class PlayerSaveService
 
         PlayerSaveData saveData = JsonUtility.FromJson<PlayerSaveData>(json);
 
-        if (saveData == null || saveData.Cards == null)
-        {
-            Debug.LogError("[PlayerSaveService]: 세이브 데이터를 읽지 못했습니다");
-            return false;
-        }
-
-        if (string.IsNullOrEmpty(saveData.PlayerTeamName))
-        {
-            Debug.LogError("[PlayerSaveService]: 세이브에 플레이어 팀이 없습니다");
-            return false;
-        }
-
-        if (!PlayerDataManager.Instance.Restore(saveData.PlayerTeamName,
-            (LeagueTier)saveData.HighestUnlockedTier, saveData.TutorialCompleted))
-            return false;
-
-        if (!RestoreCurrencies(saveData))
+        if (!Validate(saveData))
             return false;
 
         List<CardInstance> cards = new List<CardInstance>(saveData.Cards.Length);
@@ -102,8 +86,15 @@ public class PlayerSaveService
         foreach (CardInstanceSaveData cardData in saveData.Cards)
             cards.Add(ToCardInstance(cardData));
 
-        if (!InventoryManager.Instance.Restore(cards, saveData.NextInstanceId, saveData.MaxCapacity))
+        //검증을 통과했으므로 아래 복원은 실패하지 않는다. 실패하면 검증기와 복원기의 규칙이 어긋난 것이다
+        if (!PlayerDataManager.Instance.Restore(saveData.PlayerTeamName,
+                (LeagueTier)saveData.HighestUnlockedTier, saveData.TutorialCompleted)
+            || !RestoreCurrencies(saveData)
+            || !InventoryManager.Instance.Restore(cards, saveData.NextInstanceId, saveData.MaxCapacity))
+        {
+            Debug.LogError("[PlayerSaveService]: 검증을 통과한 세이브의 복원이 실패했습니다");
             return false;
+        }
 
         GachaManager.Instance.RestorePityCounts(saveData.NormalPityCount, saveData.SignaturePityCount);
 
@@ -118,6 +109,93 @@ public class PlayerSaveService
     public bool Delete()
     {
         return _storage.Delete(SaveKey);
+    }
+
+    //어느 매니저도 건드리기 전에 전부 검사한다. 중간에 멈추면 되돌릴 수 없는 부분 적용 상태가 남는다
+    private static bool Validate(PlayerSaveData saveData)
+    {
+        if (saveData == null || saveData.Cards == null)
+        {
+            Debug.LogError("[PlayerSaveService]: 세이브 데이터를 읽지 못했습니다");
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(saveData.PlayerTeamName))
+        {
+            Debug.LogError("[PlayerSaveService]: 세이브에 플레이어 팀이 없습니다");
+            return false;
+        }
+
+        if (!LeagueTierTable.IsValidTier((LeagueTier)saveData.HighestUnlockedTier))
+        {
+            Debug.LogError($"[PlayerSaveService]: 세이브의 해금 티어가 올바르지 않습니다 ({saveData.HighestUnlockedTier})");
+            return false;
+        }
+
+        if (saveData.NormalPityCount < 0 || saveData.SignaturePityCount < 0)
+        {
+            Debug.LogError($"[PlayerSaveService]: 세이브의 천장 카운터가 음수입니다 (일반 {saveData.NormalPityCount} / 시그 {saveData.SignaturePityCount})");
+            return false;
+        }
+
+        return ValidateCurrencies(saveData) && ValidateCards(saveData);
+    }
+
+    //재화 - 두 배열의 길이 대응과 음수 보유량
+    private static bool ValidateCurrencies(PlayerSaveData saveData)
+    {
+        if (saveData.CurrencyTypes == null || saveData.CurrencyAmounts == null
+            || saveData.CurrencyTypes.Length != saveData.CurrencyAmounts.Length)
+        {
+            Debug.LogError("[PlayerSaveService]: 세이브의 재화 배열이 올바르지 않습니다");
+            return false;
+        }
+
+        for (int i = 0; i < saveData.CurrencyAmounts.Length; i++)
+        {
+            if (saveData.CurrencyAmounts[i] >= 0)
+                continue;
+
+            Debug.LogError($"[PlayerSaveService]: 세이브의 재화 보유량이 음수입니다 ({(CurrencyType)saveData.CurrencyTypes[i]} {saveData.CurrencyAmounts[i]})");
+            return false;
+        }
+
+        return true;
+    }
+
+    //보유 카드 - 빈 항목 · 발급 ID 정합 · ID 중복 · 훈련 분배 배열 길이
+    private static bool ValidateCards(PlayerSaveData saveData)
+    {
+        HashSet<int> instanceIds = new HashSet<int>(saveData.Cards.Length);
+
+        foreach (CardInstanceSaveData cardData in saveData.Cards)
+        {
+            if (cardData == null)
+            {
+                Debug.LogError("[PlayerSaveService]: 보유 카드 목록에 비어 있는 항목이 있습니다");
+                return false;
+            }
+
+            if (cardData.InstanceId >= saveData.NextInstanceId)
+            {
+                Debug.LogError($"[PlayerSaveService]: 다음 발급 ID({saveData.NextInstanceId})가 보유 카드 ID({cardData.InstanceId})보다 작거나 같습니다");
+                return false;
+            }
+
+            if (!instanceIds.Add(cardData.InstanceId))
+            {
+                Debug.LogError($"[PlayerSaveService]: 세이브에 중복된 카드 ID가 있습니다 : {cardData.InstanceId}");
+                return false;
+            }
+
+            if (cardData.TrainDelta == null || cardData.TrainDelta.Length != CardInstance.TrainStatCount)
+            {
+                Debug.LogError($"[PlayerSaveService]: 훈련 분배값이 {CardInstance.TrainStatCount}칸이 아닙니다 (instanceId {cardData.InstanceId})");
+                return false;
+            }
+        }
+
+        return true;
     }
 
     //필요한 매니저가 전부 씬에 있는지 확인
