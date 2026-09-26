@@ -170,6 +170,10 @@ CSV에서 cardId를 재배치하면 **모든 SO가 예외·로그·컴파일 에
 - **컴파일 검증 하니스** (세션 46 신설): 스크래치패드에 `UnityShim.cs`(UnityEngine 최소 셰임) + `harness.csproj`를 두고
   `dotnet build -p:GameRoot=<프로젝트 경로>`로 `Assets/Scripts/**` 전체를 컴파일한다. Unity를 켜지 않고 오류를 잡는다.
   셰임이 덮는 범위: `MonoBehaviour` · `ScriptableObject` · `Debug` · `Mathf` · `Random` · `JsonUtility` · `Application` · `Resources` · `TextAsset` + 직렬화 속성 8종
+- **API 표면 검사 하니스** (세션 48 신설): 같은 스크립트를 `netstandard2.1` + `LangVersion 9.0` **라이브러리로 한 번 더 컴파일**한다.
+  실행용 하니스는 `net9.0`이라 **Unity에 없는 BCL 오버로드를 통과시킨다** — `File.Move(string, string, bool)`을 그렇게 놓쳐
+  세션 48 커밋이 Unity에서 `CS1501`로 깨졌다. 프로젝트 설정은 `apiCompatibilityLevel: 6`(.NET Standard 2.1) · `LangVersion 9.0`.
+  **하니스가 통과해도 이 검사를 함께 돌려야 Unity를 켜기 전에 잡힌다.**
 - 하니스 함정: `SingletonBehaviour.Awake`는 `Instance`가 있으면 조기 반환한다. 섹션마다 새 매니저를 만들려면
   `<Instance>k__BackingField`를 리플렉션으로 null로 밀어야 한다. 미전환 매니저는 백킹 필드가 자기 자신에 있으므로 `BaseType`을 따라 올라가며 찾는다
 
