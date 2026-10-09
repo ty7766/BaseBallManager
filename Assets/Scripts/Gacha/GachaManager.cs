@@ -19,6 +19,11 @@ public class GachaManager : SingletonBehaviour<GachaManager>
     public int NormalPityCount => _normalPityCount;
     public int SignaturePityCount => _signaturePityCount;
 
+    /// <summary>
+    /// 천장이 발동하는 뽑기 횟수 (화면 표기용)
+    /// </summary>
+    public int PityLimit => _pityLimit;
+
     [Header("일반 뽑기 확률 구간 설정")]
     [SerializeField, Tooltip("3성 확률")]
     private float _grade3ProbabilityNor = 0.70f;
@@ -68,9 +73,10 @@ public class GachaManager : SingletonBehaviour<GachaManager>
             return null;
 
         CurrencyManager.Instance.Spend(ticketType, 1);
-        InventoryManager.Instance.AddCard(gachaResult.CardId);
 
-        return gachaResult;
+        int instanceId = InventoryManager.Instance.AddCard(gachaResult.CardId);
+
+        return new GachaResult(gachaResult.CardId, gachaResult.CardGrade, gachaResult.CardType, instanceId);
     }
 
     /// <summary>
@@ -98,9 +104,12 @@ public class GachaManager : SingletonBehaviour<GachaManager>
 
         CurrencyManager.Instance.Spend(ticketType, gachaResults.Count);
 
-        foreach (GachaResult result in gachaResults)
+        for (int i = 0; i < gachaResults.Count; i++)
         {
-            InventoryManager.Instance.AddCard(result.CardId);
+            GachaResult result = gachaResults[i];
+            int instanceId = InventoryManager.Instance.AddCard(result.CardId);
+
+            gachaResults[i] = new GachaResult(result.CardId, result.CardGrade, result.CardType, instanceId);
         }
 
         return gachaResults;

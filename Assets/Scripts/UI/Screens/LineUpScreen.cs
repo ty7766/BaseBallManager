@@ -1,0 +1,518 @@
+﻿using System;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+/// <summary>
+/// 라인업 편성. 야수 9포지션 · 벤치 5 · 투수 SP5/RP5/CP1을 채운다.
+/// 포지션·타순·중복 검사는 LineUpManager가 하고 화면은 결과만 보여준다
+/// </summary>
+public class LineUpScreen : UiScreen
+{
+    private const float RowHeight = 104f;
+    private const float RowGap = 8f;
+    private const int MaxRowCount = 11;
+
+    private static readonly HitterPosition[] HitterSlots =
+    {
+        HitterPosition.C, HitterPosition.FB, HitterPosition.SB, HitterPosition.TB,
+        HitterPosition.SS, HitterPosition.LF, HitterPosition.CF, HitterPosition.RF, HitterPosition.DH
+    };
+
+    private static readonly string[] HitterSlotLabels =
+    {
+        "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"
+    };
+
+    private readonly Action _onBack;
+    private readonly Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> _onPickCard;
+    private readonly Action<string, bool> _onNotify;
+
+    private TextMeshProUGUI _stateText;
+    private Button _hitterTabButton;
+    private Button _benchTabButton;
+    private Button _pitcherTabButton;
+    private RectTransform _rowArea;
+    private readonly List<SlotRow> _rows = new List<SlotRow>(MaxRowCount);
+
+    private Tab _tab = Tab.Hitter;
+
+    public LineUpScreen(Action onBack,
+        Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> onPickCard,
+        Action<string, bool> onNotify)
+    {
+        _onBack = onBack;
+        _onPickCard = onPickCard;
+        _onNotify = onNotify;
+    }
+
+    private enum Tab
+    {
+        Hitter,
+        Bench,
+        Pitcher
+    }
+
+    protected override string ScreenName => "LineUpScreen";
+
+    /// <summary>
+    /// 현재 탭의 슬롯 상태를 다시 읽는다
+    /// </summary>
+    public void Refresh()
+    {
+        if (LineUpManager.Instance == null)
+            return;
+
+        bool complete = LineUpManager.Instance.IsLineupComplete();
+
+        _stateText.text = complete ? "라인업 완성" : "비어 있는 슬롯이 있습니다";
+        _stateText.color = complete ? UiPalette.StatePitching : UiPalette.StateOut;
+
+        SetTabSelected(_hitterTabButton, _tab == Tab.Hitter);
+        SetTabSelected(_benchTabButton, _tab == Tab.Bench);
+        SetTabSelected(_pitcherTabButton, _tab == Tab.Pitcher);
+
+        switch (_tab)
+        {
+            case Tab.Hitter:
+                RefreshHitterRows();
+                break;
+
+            case Tab.Bench:
+                RefreshBenchRows();
+                break;
+
+            default:
+                RefreshPitcherRows();
+                break;
+        }
+    }
+
+    protected override void Build()
+    {
+        TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
+        UiBuilder.Place(title.rectTransform, 32f, 32f, 500f, 60f);
+        title.text = "라인업";
+
+        _stateText = UiBuilder.CreateText(Root, "State", 32f, UiPalette.Text2, TextAlignmentOptions.Right);
+        UiBuilder.PlaceRight(_stateText.rectTransform, 32f, 42f, 520f, 48f);
+
+        _hitterTabButton = UiBuilder.CreateButton(Root, "HitterTab", "야수 9", 34f, true,
+            () => SelectTab(Tab.Hitter));
+        UiBuilder.Place(_hitterTabButton.GetComponent<RectTransform>(), 32f, 110f, 328f, 88f);
+
+        _benchTabButton = UiBuilder.CreateButton(Root, "BenchTab", "벤치 5", 34f, false,
+            () => SelectTab(Tab.Bench));
+        UiBuilder.Place(_benchTabButton.GetComponent<RectTransform>(), 376f, 110f, 328f, 88f);
+
+        _pitcherTabButton = UiBuilder.CreateButton(Root, "PitcherTab", "투수 11", 34f, false,
+            () => SelectTab(Tab.Pitcher));
+        UiBuilder.Place(_pitcherTabButton.GetComponent<RectTransform>(), 720f, 110f, 328f, 88f);
+
+        Button autoFillButton = UiBuilder.CreateButton(Root, "AutoFill", "자동 편성", 34f, false, AutoFill);
+        UiBuilder.Place(autoFillButton.GetComponent<RectTransform>(), 32f, 212f, 500f, 88f);
+
+        Button clearButton = UiBuilder.CreateButton(Root, "ClearAll", "전체 비우기", 34f, false, ClearAll);
+        UiBuilder.Place(clearButton.GetComponent<RectTransform>(), 548f, 212f, 500f, 88f);
+
+        _rowArea = UiBuilder.CreateRect(Root, "Rows");
+        UiBuilder.Stretch(_rowArea, 32f, 316f, 32f, 200f);
+
+        for (int i = 0; i < MaxRowCount; i++)
+        {
+            SlotRow row = new SlotRow(_rowArea, i);
+
+            _rows.Add(row);
+        }
+
+        Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
+        RectTransform backRect = backButton.GetComponent<RectTransform>();
+
+        backRect.anchorMin = new Vector2(0f, 0f);
+        backRect.anchorMax = new Vector2(1f, 0f);
+        backRect.pivot = new Vector2(0.5f, 0f);
+        backRect.offsetMin = new Vector2(32f, 40f);
+        backRect.offsetMax = new Vector2(-32f, 160f);
+    }
+
+    protected override void OnShown()
+    {
+        Refresh();
+    }
+
+    private void RefreshHitterRows()
+    {
+        for (int i = 0; i < _rows.Count; i++)
+        {
+            if (i >= HitterSlots.Length)
+            {
+                _rows[i].SetVisible(false);
+                continue;
+            }
+
+            HitterPosition slot = HitterSlots[i];
+            (int instanceId, int battingOrder) = LineUpManager.Instance.GetHitterSlot(slot);
+
+            _rows[i].SetVisible(true);
+            _rows[i].SetHitterSlot(HitterSlotLabels[i], instanceId, battingOrder,
+                () => PickHitter(slot), () => ClearHitter(slot), order => ChangeOrder(slot, order));
+        }
+    }
+
+    private void RefreshBenchRows()
+    {
+        int[] bench = LineUpManager.Instance.GetBenchInstanceIds();
+
+        for (int i = 0; i < _rows.Count; i++)
+        {
+            if (i >= bench.Length)
+            {
+                _rows[i].SetVisible(false);
+                continue;
+            }
+
+            int benchIndex = i;
+
+            _rows[i].SetVisible(true);
+            _rows[i].SetSimpleSlot($"벤치 {i + 1}", bench[i],
+                () => PickBench(benchIndex), () => ClearBench(benchIndex));
+        }
+    }
+
+    private void RefreshPitcherRows()
+    {
+        int[] starters = LineUpManager.Instance.GetPitcherInstanceIds(PitcherPosition.SP);
+        int[] relievers = LineUpManager.Instance.GetPitcherInstanceIds(PitcherPosition.RP);
+        int[] closers = LineUpManager.Instance.GetPitcherInstanceIds(PitcherPosition.CP);
+
+        int row = 0;
+
+        row = FillPitcherGroup(PitcherPosition.SP, "SP", starters, row);
+        row = FillPitcherGroup(PitcherPosition.RP, "RP", relievers, row);
+        row = FillPitcherGroup(PitcherPosition.CP, "CP", closers, row);
+
+        for (int i = row; i < _rows.Count; i++)
+            _rows[i].SetVisible(false);
+    }
+
+    private int FillPitcherGroup(PitcherPosition position, string label, int[] slots, int rowIndex)
+    {
+        for (int i = 0; i < slots.Length && rowIndex < _rows.Count; i++, rowIndex++)
+        {
+            int slotIndex = i;
+
+            _rows[rowIndex].SetVisible(true);
+            _rows[rowIndex].SetSimpleSlot($"{label} {i + 1}", slots[i],
+                () => PickPitcher(position, slotIndex), () => ClearPitcher(position, slotIndex));
+        }
+
+        return rowIndex;
+    }
+
+    private void PickHitter(HitterPosition slot)
+    {
+        _onPickCard?.Invoke($"{slot} 자리에 넣을 야수", 1,
+            info => IsHitterAllowed(info, slot),
+            ids => AssignHitter(slot, ids[0]));
+    }
+
+    private void PickBench(int benchIndex)
+    {
+        _onPickCard?.Invoke($"벤치 {benchIndex + 1}에 넣을 야수", 1,
+            info => info.IsHitter && !LineUpManager.Instance.IsCardAssigned(info.InstanceId),
+            ids => AssignBench(benchIndex, ids[0]));
+    }
+
+    private void PickPitcher(PitcherPosition position, int slotIndex)
+    {
+        _onPickCard?.Invoke($"{position} {slotIndex + 1}에 넣을 투수", 1,
+            info => IsPitcherAllowed(info, position),
+            ids => AssignPitcher(position, slotIndex, ids[0]));
+    }
+
+    //DH는 아무 야수나 가능하고 나머지는 포지션이 같아야 한다
+    private static bool IsHitterAllowed(CardDisplayInfo info, HitterPosition slot)
+    {
+        if (!info.IsHitter || LineUpManager.Instance.IsCardAssigned(info.InstanceId))
+            return false;
+
+        if (slot == HitterPosition.DH)
+            return true;
+
+        return HitterPositionParser.TryParse(info.Position, out HitterPosition cardSlot) && cardSlot == slot;
+    }
+
+    private static bool IsPitcherAllowed(CardDisplayInfo info, PitcherPosition position)
+    {
+        if (info.IsHitter || LineUpManager.Instance.IsCardAssigned(info.InstanceId))
+            return false;
+
+        return PitcherPositionParser.TryParse(info.Position, out PitcherPosition cardPosition)
+            && cardPosition == position;
+    }
+
+    private void AssignHitter(HitterPosition slot, int instanceId)
+    {
+        (int occupied, int _) = LineUpManager.Instance.GetHitterSlot(slot);
+
+        if (occupied != LineUpManager.EmptySlot)
+            LineUpManager.Instance.RemoveHitter(slot);
+
+        int order = FindFreeBattingOrder();
+
+        if (order == LineUpManager.EmptySlot)
+        {
+            _onNotify?.Invoke("빈 타순이 없습니다", false);
+            Refresh();
+            return;
+        }
+
+        if (!LineUpManager.Instance.AssignHitter(slot, instanceId, order))
+            _onNotify?.Invoke("배치하지 못했습니다 (포지션·타순 확인)", false);
+
+        Refresh();
+    }
+
+    private void AssignBench(int benchIndex, int instanceId)
+    {
+        if (LineUpManager.Instance.GetBenchInstanceIds()[benchIndex] != LineUpManager.EmptySlot)
+            LineUpManager.Instance.RemoveBench(benchIndex);
+
+        if (!LineUpManager.Instance.AssignBench(benchIndex, instanceId))
+            _onNotify?.Invoke("벤치에 배치하지 못했습니다", false);
+
+        Refresh();
+    }
+
+    private void AssignPitcher(PitcherPosition position, int slotIndex, int instanceId)
+    {
+        if (LineUpManager.Instance.GetPitcherInstanceIds(position)[slotIndex] != LineUpManager.EmptySlot)
+            LineUpManager.Instance.RemovePitcher(position, slotIndex);
+
+        if (!LineUpManager.Instance.AssignPitcher(position, slotIndex, instanceId))
+            _onNotify?.Invoke("보직이 맞지 않습니다", false);
+
+        Refresh();
+    }
+
+    private void ClearHitter(HitterPosition slot)
+    {
+        LineUpManager.Instance.RemoveHitter(slot);
+        Refresh();
+    }
+
+    private void ClearBench(int benchIndex)
+    {
+        LineUpManager.Instance.RemoveBench(benchIndex);
+        Refresh();
+    }
+
+    private void ClearPitcher(PitcherPosition position, int slotIndex)
+    {
+        LineUpManager.Instance.RemovePitcher(position, slotIndex);
+        Refresh();
+    }
+
+    private void ChangeOrder(HitterPosition slot, int order)
+    {
+        if (!LineUpManager.Instance.SetBattingOrder(slot, order))
+            _onNotify?.Invoke($"{order}번 타순은 이미 사용 중입니다", false);
+
+        Refresh();
+    }
+
+    //아직 아무도 쓰지 않은 타순 중 가장 작은 번호
+    private static int FindFreeBattingOrder()
+    {
+        bool[] taken = new bool[LineUpManager.HitterSlotCount + 1];
+
+        foreach (HitterPosition slot in HitterSlots)
+        {
+            (int instanceId, int order) = LineUpManager.Instance.GetHitterSlot(slot);
+
+            if (instanceId != LineUpManager.EmptySlot && order >= 1 && order <= LineUpManager.HitterSlotCount)
+                taken[order] = true;
+        }
+
+        for (int order = 1; order <= LineUpManager.HitterSlotCount; order++)
+        {
+            if (!taken[order])
+                return order;
+        }
+
+        return LineUpManager.EmptySlot;
+    }
+
+    private void AutoFill()
+    {
+        if (LineUpAutoFill.Fill())
+        {
+            _onNotify?.Invoke("라인업을 자동으로 채웠습니다", true);
+            Refresh();
+            return;
+        }
+
+        _onNotify?.Invoke("보유 카드가 부족해 다 채우지 못했습니다", false);
+        Refresh();
+    }
+
+    private void ClearAll()
+    {
+        LineUpManager.Instance.ClearAll();
+        Refresh();
+    }
+
+    private void SelectTab(Tab tab)
+    {
+        _tab = tab;
+        Refresh();
+    }
+
+    private void OnBackClicked()
+    {
+        _onBack?.Invoke();
+    }
+
+    private static void SetTabSelected(Button button, bool selected)
+    {
+        Image background = button.GetComponent<Image>();
+
+        background.color = selected ? UiPalette.ButtonPrimary : UiPalette.BgRow;
+        background.sprite = UiSprites.Get(selected ? UiSprites.TabOn : UiSprites.ButtonNormal);
+
+        TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
+
+        if (label != null)
+            label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
+    }
+
+    //슬롯 1칸. 야수 행에만 타순 조절이 붙는다
+    private class SlotRow
+    {
+        private readonly RectTransform _root;
+        private readonly TextMeshProUGUI _slotLabel;
+        private readonly TextMeshProUGUI _orderText;
+        private readonly Button _orderDownButton;
+        private readonly Button _orderUpButton;
+        private readonly Button _pickButton;
+        private readonly TextMeshProUGUI _pickLabel;
+        private readonly Button _clearButton;
+
+        private Action _onPick;
+        private Action _onClear;
+        private Action<int> _onOrderChanged;
+        private int _battingOrder;
+
+        public SlotRow(Transform parent, int index)
+        {
+            _root = UiBuilder.CreateRect(parent, "SlotRow");
+            UiBuilder.PlaceRow(_root, index * (RowHeight + RowGap), RowHeight);
+
+            Image background = UiBuilder.CreateImage(_root, "Background", UiPalette.BgRow,
+                UiSprites.RowNormal, Image.Type.Sliced);
+            UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
+
+            _slotLabel = UiBuilder.CreateText(_root, "Slot", 36f, UiPalette.Text2, TextAlignmentOptions.Center);
+            UiBuilder.Place(_slotLabel.rectTransform, 8f, 28f, 120f, 48f);
+
+            _orderDownButton = UiBuilder.CreateButton(_root, "OrderDown", "◀", 28f, false, DecreaseOrder);
+            UiBuilder.Place(_orderDownButton.GetComponent<RectTransform>(), 136f, 22f, 56f, 60f);
+
+            _orderText = UiBuilder.CreateText(_root, "Order", 34f, UiPalette.AccentGold, TextAlignmentOptions.Center);
+            UiBuilder.Place(_orderText.rectTransform, 196f, 28f, 56f, 48f);
+
+            _orderUpButton = UiBuilder.CreateButton(_root, "OrderUp", "▶", 28f, false, IncreaseOrder);
+            UiBuilder.Place(_orderUpButton.GetComponent<RectTransform>(), 256f, 22f, 56f, 60f);
+
+            _pickButton = UiBuilder.CreateButton(_root, "Pick", string.Empty, 32f, false, OnPickClicked, out _pickLabel);
+            UiBuilder.Place(_pickButton.GetComponent<RectTransform>(), 324f, 14f, 540f, 76f);
+
+            _clearButton = UiBuilder.CreateButton(_root, "Clear", "비우기", 28f, false, OnClearClicked);
+            UiBuilder.PlaceRight(_clearButton.GetComponent<RectTransform>(), 12f, 14f, 140f, 76f);
+        }
+
+        public void SetVisible(bool visible)
+        {
+            _root.gameObject.SetActive(visible);
+        }
+
+        /// <summary>
+        /// 야수 슬롯 (타순 조절 포함)
+        /// </summary>
+        public void SetHitterSlot(string label, int instanceId, int battingOrder,
+            Action onPick, Action onClear, Action<int> onOrderChanged)
+        {
+            SetSlot(label, instanceId, onPick, onClear);
+
+            _battingOrder = battingOrder;
+            _onOrderChanged = onOrderChanged;
+
+            bool filled = instanceId != LineUpManager.EmptySlot;
+
+            _orderText.gameObject.SetActive(filled);
+            _orderDownButton.gameObject.SetActive(filled);
+            _orderUpButton.gameObject.SetActive(filled);
+            _orderText.text = battingOrder.ToString();
+        }
+
+        /// <summary>
+        /// 벤치 · 투수 슬롯 (타순 없음)
+        /// </summary>
+        public void SetSimpleSlot(string label, int instanceId, Action onPick, Action onClear)
+        {
+            SetSlot(label, instanceId, onPick, onClear);
+
+            _onOrderChanged = null;
+            _orderText.gameObject.SetActive(false);
+            _orderDownButton.gameObject.SetActive(false);
+            _orderUpButton.gameObject.SetActive(false);
+        }
+
+        private void SetSlot(string label, int instanceId, Action onPick, Action onClear)
+        {
+            _slotLabel.text = label;
+            _onPick = onPick;
+            _onClear = onClear;
+
+            bool filled = false;
+
+            if (instanceId != LineUpManager.EmptySlot
+                && CardDisplayInfo.TryCreate(instanceId, out CardDisplayInfo info))
+            {
+                filled = true;
+                _pickLabel.text = $"{PlayerLabelFormat.NameWithYear(info.Name, info.Year)}   OVR {info.FinalOvr}";
+                _pickLabel.color = CardVisualLookup.GetTypeColor(info.CardType);
+            }
+            else
+            {
+                _pickLabel.text = "비어 있음 — 눌러서 배치";
+                _pickLabel.color = UiPalette.TextOff;
+            }
+
+            _clearButton.gameObject.SetActive(filled);
+        }
+
+        private void DecreaseOrder()
+        {
+            if (_battingOrder > 1)
+                _onOrderChanged?.Invoke(_battingOrder - 1);
+        }
+
+        private void IncreaseOrder()
+        {
+            if (_battingOrder < LineUpManager.HitterSlotCount)
+                _onOrderChanged?.Invoke(_battingOrder + 1);
+        }
+
+        private void OnPickClicked()
+        {
+            _onPick?.Invoke();
+        }
+
+        private void OnClearClicked()
+        {
+            _onClear?.Invoke();
+        }
+    }
+}

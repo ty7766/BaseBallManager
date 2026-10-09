@@ -14,8 +14,9 @@
 | 6 경기 시뮬레이션 엔진 / 7 인터럽트·수동 교체 | ✅ |
 | 8 리그 시스템 (일정·순위표·진행·포스트시즌·저장) | ✅ |
 | 10 골든글러브 제작 / 재화 / 분해 / 카드 조합 | ✅ |
-| **9 경기 UI** | ✅ **구현 완료** (세션 52) — 화면 7장 · 애셋 69종 임포트 설정 · 씬 배치까지. 남은 것은 팀 로고 10종(🔒 작성자) |
-| **11 튜토리얼** | ⏭️ 미착수 (최종 작업) |
+| **9 경기 UI** | ✅ **구현 완료** (세션 52) |
+| **UI 전체 (로비 · 수급 · 육성 · 가을야구)** | ✅ **구현 완료** (세션 53) — 화면 19장. 2-7 참고 |
+| **11 튜토리얼** | ⏭️ 미착수 (최종 작업). 새 게임 → 뽑기권 지급 → 안내 토스트까지는 흐름에 들어가 있다 |
 
 **현재 트랙: 전체 코드 검수·리팩토링** (세션 41 착수, 브랜치 `refactoring/Code-Structure-Refactoring`)
 
@@ -251,9 +252,66 @@
 | 항목 | 담당 |
 |---|---|
 | 팀 로고 10종 (`Resources/UI/Team/logo_<팀명>.png`) | 🔒 작성자. **실제 구단 로고를 로컬에 넣는다** (명세 3-3 · 커밋 제외) |
-| 카드 베이스 3종 · 인벤토리/뽑기/강화 화면 | 로드맵 9 범위 밖. 경기 UI만 구현했다 |
-| 포스트시즌 화면 | 정규시즌 루프만 UI에 연결했다. `StartPostSeason`은 코드로만 존재 |
+| ~~카드 베이스 3종 · 인벤토리/뽑기/강화 화면~~ | ✅ 세션 53에서 전 화면 구현 (2-7). 카드 베이스 PNG만 넣으면 카드가 완성된다 |
+| ~~포스트시즌 화면~~ | ✅ 세션 53 `PostSeasonScreen` |
 | 실기기 폰트 | OS 폰트 의존이라 모바일 빌드 전에 Pretendard TTF를 프로젝트에 넣어야 한다 |
+
+---
+
+### 2-7. UI 전체 구현 (세션 53 완료)
+
+**앱 실행 → 타이틀 → 팀 선택 → 로비 → (뽑기 · 라인업 · 육성) → 리그 → 경기 관전 → 가을야구까지 전부 화면이 있다.**
+화면 19장 · 위젯 16종 · 코어 12종. 전부 `UiBuilder` 좌표 조립 방식이고 프리팹은 쓰지 않는다.
+
+| 분류 | 화면 | 데이터 출처 |
+|---|---|---|
+| 시작 | `TitleScreen` · `TeamSelectScreen` | `GameFlowManager` |
+| 허브 | `LobbyScreen` (메뉴 11칸 + 재화 줄) | `PlayerDataManager` · `CurrencyManager` · `LineUpManager` |
+| 리그 | `LeagueScreen` · `PostSeasonScreen` | `LeagueManager` · `PostSeasonRunner` |
+| 경기 | `PreGameScreen` · `LiveGameScreen` · `PauseSubstitutionScreen` · `PostGameScreen` | 2-6 |
+| 수급 | `GachaScreen` · `InventoryScreen` | `GachaManager` · `InventoryManager.GetFiltered` |
+| 편성 | `LineUpScreen` (야수 9 · 벤치 5 · 투수 11) | `LineUpManager` · `LineUpAutoFill` |
+| 육성 | `EnhanceScreen` · `TrainScreen` · `CombineScreen` · `DismantleScreen` · `GoldenGloveCraftScreen` | 각 매니저 |
+| 오버레이 | `CardDetailScreen` · `CardPickerScreen` | `CardDisplayInfo` |
+
+**공용 구조 (중복을 없앤 곳)**
+
+- `CardDisplayInfo` — instanceId 하나로 마스터 + 인스턴스 + 최종 스탯을 모은 **읽기 전용 구조체**.
+  모든 카드 UI가 이것만 본다. 화면이 `CardStatsCalculator`를 직접 부르지 않는다
+- `CardPickerScreen` — 강화 · 훈련 · 조합 · 분해 · 라인업이 **같은 선택 모달**을 쓴다.
+  고를 수 있는 카드 판정만 `Func<CardDisplayInfo, bool>`로 주입한다
+- `CardActionScreen` — 육성·경제 화면 5장의 공통 틀(제목 · 재화 줄 · 본문 · 로비 버튼)
+- `CardView`(상세·사진 포함) / `CardCellView`(그리드·사진 없음) **2단 분리** —
+  카드 1장이 사진 768×960을 물고 있어, 200장 그리드에 전체 카드를 깔면 메모리가 터진다.
+  그리드는 축약 타일, 상세만 전체 카드. 사진은 `PlayerPhotoProvider`가 **12장 상한 LRU**로 들고 있다가 화면을 떠날 때 내린다
+- `ToastView` — 매니저가 bool만 돌려주므로 성공·실패를 알릴 창구가 필요했다. 흐름 제어기가 `Update`에서 깎는다
+
+**바뀐 기존 코드**
+
+| 파일 | 변경 | 이유 |
+|---|---|---|
+| `GachaResult` | `InstanceId` 추가 (+ 4인자 생성자) | 뽑기 화면이 **방금 뽑은 카드**를 그려야 한다. 기존엔 `AddCard`의 반환값을 버려 화면이 결과를 특정할 수 없었다 |
+| `GachaManager` | `PityLimit` 노출 · Roll1/Roll10이 instanceId를 담아 반환 | 천장 `45 / 50` 표기 · 위와 같음 |
+| `LeagueScreen` | 로비 버튼 · 가을야구 버튼 추가 | 로비 중심 흐름으로 재편 |
+
+**검증** — 하니스 **PASS 87 / FAIL 0** (기존 35 + 포스트시즌 15 + 관전 22 + **화면 데이터 경로 30 신설**).
+화면 데이터 경로 30건은 실제 CSV로 표시 정보 · 필터 · 뽑기 instanceId · 강화(전용 카드) · 훈련 · 돌파 ·
+분해(미리보기/보상/카드 소멸) · 조합 · 제작 비용 · 라인업 슬롯·타순 거절 · 색 변환까지 확인한다.
+컴파일은 `net9.0` + `netstandard2.1`(C# 9) 양쪽 통과.
+
+**Desktop ↔ CLI 분업은 문서로 고정했다** — `Design/handoff/디자인_요청서.md`
+(단계별 담당 · 화면별 데이터 출처 · 넣으면 바로 반영되는 애셋 경로 · 요청 문구 틀).
+
+**남은 것**
+
+| 항목 | 담당 | 없을 때 |
+|---|---|---|
+| 실제 구단 로고 10종 | 🔒 작성자 | 팀 컬러 + 이니셜로 대체 |
+| 선수 CSV 업데이트 (시그·골글) | 🔒 작성자 | 시그 뽑기 빈 결과 · 골글 제작 실패 유지 |
+| 누끼 사진 | 🔒 작성자 | 카드 상세의 사진 자리만 빈다 |
+| 카드 베이스 3종 PNG | 🔒 작성자 (보유분) | 팀색 반투명 패널로 대체 |
+| 뽑기·강화 연출 · 카드 3D 플립 | Claude (후순위) | 즉시 전환으로 동작 |
+| 로드맵 11 튜토리얼 | 최종 | — |
 
 ### 2-5. 미적용 개선 후보 (작성자 판단 대기)
 
@@ -307,7 +365,7 @@ CSV에서 cardId를 재배치하면 **모든 SO가 예외·로그·컴파일 에
   - `JsonUtility`는 셰임에서 리플렉션 기반으로 재현했다 (공개 필드만 직렬화하는 Unity 규칙)
   - 세션 48 추가: **투수 교체 팀 판별** · **인터럽트 교체 3종**(벤치 중복·체력 리셋·강판 재투입) · **실책 진루** ·
     **투수 이닝 = 타석 아웃 + 도루자 아웃** · **세이브 부분 실패 롤백** · **포스트시즌 보상 15건**(도달 단계·중복 수령·세이브 왕복)
-- **UI 셰임 추가** (세션 52): `UnityUiShim.cs` — `Vector2/3/4` · `Color` · `RectTransform` · `Canvas` · `CanvasScaler` ·
+- **UI 셰임 추가** (세션 52, 세션 53에 `Resources.UnloadAsset` 등 보강): `UnityUiShim.cs` — `Vector2/3/4` · `Color` · `RectTransform` · `Canvas` · `CanvasScaler` ·
   `Image` · `Button` · `ScrollRect` · `EventSystem` · `InputSystemUIInputModule` · `TMP_Text` 등 최소 표면.
   UI 코드도 Unity를 켜지 않고 컴파일 검증한다
 - **컴파일 검증 하니스** (세션 46 신설): 스크래치패드에 `UnityShim.cs`(UnityEngine 최소 셰임) + `harness.csproj`를 두고
@@ -587,3 +645,4 @@ Core                  SingletonBehaviour
 | 48 (09-26) | **3회차 전수 검수 — 실측 기반.** 🔴 `PitcherChangeEvaluator` 공수 판별 반전 3회차 재발(이닝 경계 교체의 20%가 오판, 마무리 오투입 19.6%→0%) · 인터럽트 교체 3종(벤치 카드 중복 투입 · 같은 슬롯 재지정으로 체력 리셋 · 강판 투수 재투입) · `BaseRunningCalculator` 실책 진루가 밀어내기로 축소(기획서 8.3 위반) · `PlayerSaveService` 부분 적용 롤백. 🟠 `LocalFileStorage` 비원자적 교체(Delete→Move 창) · 도루자 아웃이 투수 이닝에서 누락(경기 27%) · `CombineManager` 씬 배치. 🟡 BOM 없는 `.cs` 5개 · `AssignHitter` 점유 슬롯 덮어쓰기 · `AiRosterManager` 딕셔너리 열거 순서 의존 · 병살/희생플라이 3아웃 가드. 신규: **포스트시즌 보상**(라운드별 절대값 인스펙터 · 중복 수령 차단 · 세이브 왕복) · `LeagueManager.SetInterruptHandler` 주입 경로. 검증: CSV 325장 · AI 로스터 SO 10팀 오류 0 · 일정 공정성 · 하니스 50건 전건 통과 |
 | 51 (09-27, Desktop) | **로드맵 9 디자인 착수.** 사진: 원본 = 경기·미디어 사진, **인물 × 연도** 단위(작성자 확정) → `build_photos.py` 재작성 — YuNet 눈·입 + 2차 정밀 검출(해상도·15° 기울기와 무관하게 얼굴 크기 편차 1.1%) · BiRefNet-portrait 누끼(출력 영역만) · 관중 조각 제거 · 배경색 번짐 제거 · 이어하기 · `review.html` 검수 시트. 디자인: Claude 캔버스 시안 v0 7보드(경기 전 · 경기 중 · 일시정지 2 · 경기 후 · 컴포넌트 시트 · 카드 레이어) — 남색(노말 카드)+금색(골글 카드) 톤, 문자중계 강조 4단계, 등급 = OVR 타일 색 + 별 개수. **→ 작성자 피드백으로 v1**: 버튼 흰색·각진 모서리(노란 버튼 금지), 배경 무늬 제거, 금색은 홈런·득점·골글에만, AWAY/HOME 영문, 이닝 ▲(초)/▼(말), 아웃 점 2개, '중계', OVR = 배경 없이 카드 색 숫자(노말 3·4·5성은 색 통일, 별 개수로만 구분), 경기 전 라인업 원정 좌·홈 우 동시 표시, 이름 표기 `이름 '연도`, 결과 헤더 FINAL + WIN/LOSE/DRAW, 카드 앞면 = OVR 숫자·포지션·엠블럼·강화 육각형·사다리꼴 이름 띠만 / 뒷면 = 상세 스탯·강화·훈련·돌파(탭하면 뒤집힘), 강화 +1~+9 단계별 틴트 + +10 홀로. **→ v2**: 별은 등급 수만큼만(빈 별 없음) · 행의 시그/골글 태그 삭제(색으로만 구분) · MY TEAM 금색 · 이닝 숫자 92 · 연도·포지션·별·교체 미리보기 확대 · 카드 글자 전반 확대(OVR 270 · 이름 142 · 로고 180 · 강화 육각형 264) · 별은 카드 위 중앙 · 이름 명판을 종류별로(노말 청사진 HUD / 시그 붓터치 / 골글 금테+월계수 트로피) · 강화 테두리 3단(+1~3 흰 · +4~6 은 · +7~9 금), +9 블랙골드, +10 홀로 톤다운. **→ 카드 v3**: 강화 +1~+9를 한 모양(단색 + 단계 테두리 + 흰 글자)으로 통일하고 저채도로(+9 특수 처리 삭제), 강화 글자 88→100 · 이름 명판 삭제 → 테두리 없는 타원 그림자(종류별 색) · 포지션 92→108. **→ 작성자 승인, 디자인 v1 확정.** 명세 6장(색 토큰 · 서체 · 컴포넌트 · 화면 · 카드 좌표 · 강화 색) 신설, 1~3장의 어긋난 지침 정정, 3-1 애셋 목록 89→68종 개정(`out_dot` 2개 · `stamp_*` · `icon_pos_*` · `scoreboard_bg` · `bg_app` 등 삭제, `card_name_shadow` · `badge_enhance(_holo)` · `icon_inning` · `tag_outline` 등 추가). **→ PNG 애셋 69종 납품**: `Design/ui_assets/render_assets.py`(SVG → 헤드리스 Edge, 투명 배경) → `Assets/UI Assets/{Card 14, Match 35, Currency 12, Common 8}` · `manifest.json`(크기 · 9-슬라이스 테두리 · Image Type · 틴트) · `contact_sheet.png`. 강화 배지는 바탕 · 테두리 · 안쪽 선 3장으로 분리(한 장으로는 두 색 틴트 불가). 재화 아이콘 12종 · 로딩 스피너 8프레임은 이때 새로 디자인. 9-슬라이스는 늘림 시뮬레이션으로 검증 |
 | 52 (10-09) | **로드맵 9 경기 UI 구현 완료.** 화면 7장(타이틀 · 팀 선택 · 리그 · 경기 전 · 경기 중 · 일시정지 · 경기 후) · 위젯 10종 · 코어 9종을 코드 조립 방식으로 신설(2-6). 애셋 69종을 `Resources/UI/`로 옮기고 `manifest.json` 규격을 `.meta`에 직접 기록(PPU · 9-슬라이스 20종). `TMP Essential Resources` 추출 + OS 폰트 런타임 TMP 자산. 씬에 `UI`(`GameUiBootstrap`) 배치 → ▶ 한 번으로 플레이 가능. 관전 지원을 위해 `LeagueRunner`를 `BeginPlayerGame`/`CommitPlayerGame`으로 분리. 🔴 교체 모드가 리그 시작 시점에 고정되던 버그 수정(판정을 `LiveGameController`로 이전). 검증 PASS 57 / FAIL 0 |
+| 53 (10-09) | **UI 전체 구현 — 앱 실행부터 플레이 전반까지.** 화면 19장(타이틀 · 팀선택 · 로비 · 리그 · 가을야구 · 경기 4 · 뽑기 · 인벤토리 · 라인업 · 강화 · 훈련 · 조합 · 분해 · 골글제작 · 카드상세 · 카드선택) · 위젯 16종 · 코어 12종(2-7). 공용화: `CardDisplayInfo`(카드 1장 표시 정보 집약) · `CardPickerScreen`(5개 화면 공용 선택 모달) · `CardActionScreen`(육성 화면 공통 틀) · `CardView`/`CardCellView` 2단 분리 + `PlayerPhotoProvider` 12장 LRU. 🔴 `GachaResult.InstanceId` 신설 — 뽑기 화면이 방금 뽑은 카드를 특정할 수 없던 구멍. `Design/handoff/디자인_요청서.md`로 Desktop↔CLI 분업 고정. 검증 PASS 87 / FAIL 0 |

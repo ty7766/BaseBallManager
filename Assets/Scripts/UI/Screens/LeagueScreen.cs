@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -15,6 +15,8 @@ public class LeagueScreen : UiScreen
     private readonly Action _onToggleMode;
     private readonly Action _onSave;
     private readonly Action _onClaimRewards;
+    private readonly Action _onBackToLobby;
+    private readonly Action _onOpenPostSeason;
 
     private TextMeshProUGUI _tierText;
     private TextMeshProUGUI _progressText;
@@ -25,13 +27,17 @@ public class LeagueScreen : UiScreen
     private Button _startButton;
     private Button _claimButton;
     private Button _modeButton;
+    private Button _postSeasonButton;
 
-    public LeagueScreen(Action onStartGame, Action onToggleMode, Action onSave, Action onClaimRewards)
+    public LeagueScreen(Action onStartGame, Action onToggleMode, Action onSave, Action onClaimRewards,
+        Action onBackToLobby, Action onOpenPostSeason)
     {
         _onStartGame = onStartGame;
         _onToggleMode = onToggleMode;
         _onSave = onSave;
         _onClaimRewards = onClaimRewards;
+        _onBackToLobby = onBackToLobby;
+        _onOpenPostSeason = onOpenPostSeason;
     }
 
     protected override string ScreenName => "LeagueScreen";
@@ -40,8 +46,10 @@ public class LeagueScreen : UiScreen
     /// 순위표·다음 경기·모드를 현재 상태로 갱신한다
     /// </summary>
     public void Refresh(LeagueSeason season, LeagueStandingRow[] ranking, LeagueGame? nextGame,
-        string playerTeamName, SubstitutionMode substitutionMode)
+        string playerTeamName, SubstitutionMode substitutionMode, bool hasPostSeason)
     {
+        _postSeasonButton.gameObject.SetActive(hasPostSeason);
+
         if (season == null)
         {
             _noticeText.text = "진행 중인 리그가 없습니다";
@@ -134,6 +142,26 @@ public class LeagueScreen : UiScreen
         startRect.offsetMin = new Vector2(24f, 92f);
         startRect.offsetMax = new Vector2(-12f, 168f);
 
+        _postSeasonButton = UiBuilder.CreateButton(Root, "PostSeasonButton", "가을야구", 32f, false,
+            OnPostSeasonClicked);
+        RectTransform postSeasonRect = _postSeasonButton.GetComponent<RectTransform>();
+
+        postSeasonRect.anchorMin = new Vector2(0f, 0f);
+        postSeasonRect.anchorMax = new Vector2(0.5f, 0f);
+        postSeasonRect.pivot = new Vector2(0f, 0f);
+        postSeasonRect.offsetMin = new Vector2(24f, 276f);
+        postSeasonRect.offsetMax = new Vector2(-12f, 352f);
+        _postSeasonButton.gameObject.SetActive(false);
+
+        Button lobbyButton = UiBuilder.CreateButton(Root, "LobbyButton", "로비로", 32f, false, OnBackClicked);
+        RectTransform lobbyRect = lobbyButton.GetComponent<RectTransform>();
+
+        lobbyRect.anchorMin = new Vector2(0.5f, 0f);
+        lobbyRect.anchorMax = new Vector2(1f, 0f);
+        lobbyRect.pivot = new Vector2(0f, 0f);
+        lobbyRect.offsetMin = new Vector2(12f, 276f);
+        lobbyRect.offsetMax = new Vector2(-24f, 352f);
+
         _claimButton = UiBuilder.CreateButton(Root, "ClaimButton", "시즌 보상 받기", 38f, true, OnClaimClicked);
         RectTransform claimRect = _claimButton.GetComponent<RectTransform>();
 
@@ -191,5 +219,15 @@ public class LeagueScreen : UiScreen
     private void OnClaimClicked()
     {
         _onClaimRewards?.Invoke();
+    }
+
+    private void OnBackClicked()
+    {
+        _onBackToLobby?.Invoke();
+    }
+
+    private void OnPostSeasonClicked()
+    {
+        _onOpenPostSeason?.Invoke();
     }
 }

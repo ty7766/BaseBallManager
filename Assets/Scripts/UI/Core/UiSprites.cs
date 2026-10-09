@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -39,6 +39,9 @@ public static class UiSprites
     public const string IconInning = "Match/icon_inning";
     public const string IconBack = "Match/icon_back";
     public const string IconStar = "Card/icon_star";
+    public const string CardSlotEmpty = "Card/card_slot_empty";
+    public const string IconLock = "Card/icon_lock";
+    public const string Spinner = "Common/spinner_00";
 
     private const string ResourceRoot = "UI/";
 
