@@ -39,20 +39,19 @@ public class TeamEmblemView
     /// </summary>
     public void SetTeam(string teamName)
     {
-        Color teamColor = UiPalette.GetTeamColor(teamName);
-
-        _plate.color = UiPalette.WithAlpha(teamColor, 0.85f);
-
         Sprite logo = UiSprites.Get(LogoResourcePrefix + teamName);
 
         if (logo != null)
         {
+            //실제 로고는 자체 색을 가지므로 판을 중립색으로 두어야 로고가 읽힌다
+            _plate.color = UiPalette.WithAlpha(UiPalette.BgRow, 0.95f);
             _logo.sprite = logo;
             _logo.gameObject.SetActive(true);
             _initialText.gameObject.SetActive(false);
             return;
         }
 
+        _plate.color = UiPalette.WithAlpha(UiPalette.GetTeamColor(teamName), 0.85f);
         _logo.gameObject.SetActive(false);
         _initialText.gameObject.SetActive(true);
         _initialText.text = GetInitial(teamName);
