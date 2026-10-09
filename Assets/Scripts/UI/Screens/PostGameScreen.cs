@@ -76,6 +76,7 @@ public class PostGameScreen : UiScreen
         _lineScore.SetBoxScore(boxScore, awayTeamName, homeTeamName);
 
         RefreshTables();
+        PlayResultEffect(playerRuns, opponentRuns);
     }
 
     protected override void Build()
@@ -241,6 +242,19 @@ public class PostGameScreen : UiScreen
 
         if (label != null)
             label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
+    }
+
+    //결과 글자가 튀어오르고, 이겼으면 파티클이 터진다
+    private void PlayResultEffect(int playerRuns, int opponentRuns)
+    {
+        UiEffects.Pop(_resultText.transform, 0.5f, 0.42f);
+        UiEffects.Pop(_scoreText.transform, 0.78f, 0.36f, 0.1f);
+
+        if (playerRuns <= opponentRuns)
+            return;
+
+        UiEffects.Flash(_resultText, UiPalette.Text1, 0.8f);
+        UiEffects.Burst(_resultText.rectTransform, UiEffectKind.HomeRun);
     }
 
     private static string GetResultLabel(int playerRuns, int opponentRuns)

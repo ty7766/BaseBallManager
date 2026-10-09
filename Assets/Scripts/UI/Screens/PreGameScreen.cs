@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -66,6 +66,23 @@ public class PreGameScreen : UiScreen
 
         FillLineup(_awayRows, context.AwayLineup, !isPlayerHome);
         FillLineup(_homeRows, context.HomeLineup, isPlayerHome);
+
+        PlayEntranceEffect();
+    }
+
+    //양 팀 심볼이 튀어오르고 라인업이 위에서부터 차례로 뜬다
+    private void PlayEntranceEffect()
+    {
+        UiEffects.Pop(_awayEmblem.Root, 0.6f, 0.34f);
+        UiEffects.Pop(_homeEmblem.Root, 0.6f, 0.34f, 0.08f);
+
+        for (int i = 0; i < _awayRows.Length; i++)
+        {
+            float delay = i * 0.035f;
+
+            UiEffects.Pop(_awayRows[i].Root, 0.94f, 0.22f, delay);
+            UiEffects.Pop(_homeRows[i].Root, 0.94f, 0.22f, delay);
+        }
     }
 
     protected override void Build()

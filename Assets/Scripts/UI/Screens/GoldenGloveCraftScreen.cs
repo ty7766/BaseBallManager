@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -128,6 +128,11 @@ public class GoldenGloveCraftScreen : CardActionScreen
         }
 
         _resultText.text = $"{result.TeamName}  {result.Name} 획득!";
+
+        UiEffects.Pop(_resultText.transform, 0.68f, 0.36f);
+        UiEffects.Flash(_resultText, UiPalette.Text1, 0.7f);
+        UiEffects.Burst(_resultText.rectTransform, UiEffectKind.Craft);
+
         Notify($"{result.Name}을(를) 제작했습니다", true);
         Refresh();
     }

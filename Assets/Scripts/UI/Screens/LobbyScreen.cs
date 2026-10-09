@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,6 +18,7 @@ public class LobbyScreen : UiScreen
         "골든글러브 제작", "저장", "빠른 시작 (자동 뽑기 + 라인업)"
     };
 
+    private const int MenuLabelCount = 11;
     private const int MenuColumns = 2;
     private const float MenuWidth = 500f;
     private const float MenuHeight = 148f;
@@ -28,6 +30,7 @@ public class LobbyScreen : UiScreen
     private TextMeshProUGUI _lineupText;
     private CurrencyBarView _currencyBar;
     private Button _leagueButton;
+    private readonly List<Button> _menuButtons = new List<Button>(MenuLabelCount);
 
     public LobbyScreen(Action[] menuActions)
     {
@@ -89,6 +92,8 @@ public class LobbyScreen : UiScreen
                 MenuTop + row * (MenuHeight + MenuGap),
                 MenuWidth, MenuHeight);
 
+            _menuButtons.Add(button);
+
             if (i == 0)
                 _leagueButton = button;
         }
@@ -97,6 +102,9 @@ public class LobbyScreen : UiScreen
     protected override void OnShown()
     {
         Refresh();
+
+        for (int i = 0; i < _menuButtons.Count; i++)
+            UiEffects.Pop(_menuButtons[i].transform, 0.9f, 0.22f, i * 0.03f);
     }
 
     private void OnMenuClicked(int index)

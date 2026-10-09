@@ -14,6 +14,7 @@ public class BaseDiamondView
     private readonly Image _first;
     private readonly Image _second;
     private readonly Image _third;
+    private readonly Image _runnerDot;
 
     public BaseDiamondView(Transform parent, float size)
     {
@@ -29,6 +30,11 @@ public class BaseDiamondView
 
         Image home = UiBuilder.CreateImage(_root, "Home", UiPalette.TextOff, UiSprites.BaseHome);
         UiBuilder.Place(home.rectTransform, center, edge, BaseSize, BaseSize);
+
+        _runnerDot = UiBuilder.CreateImage(_root, "RunnerDot", UiPalette.StatePitching,
+            UiSprites.BaseDiamondOccupied);
+        UiBuilder.Place(_runnerDot.rectTransform, center, center, BaseSize * 0.55f, BaseSize * 0.55f);
+        _runnerDot.gameObject.SetActive(false);
     }
 
     /// <summary>
@@ -42,6 +48,55 @@ public class BaseDiamondView
         SetOccupied(_first, state.FirstBase != GameState.NoRunner);
         SetOccupied(_second, state.SecondBase != GameState.NoRunner);
         SetOccupied(_third, state.ThirdBase != GameState.NoRunner);
+    }
+
+    /// <summary>
+    /// 도루 연출. 주자 점이 출발 베이스에서 도착 베이스로 움직인다
+    /// </summary>
+    public void PlaySteal(int fromBase, bool isSuccess)
+    {
+        RectTransform origin = GetBaseRect(fromBase);
+        RectTransform destination = GetBaseRect(fromBase + 1);
+
+        if (origin == null || destination == null)
+            return;
+
+        Vector2 start = origin.anchoredPosition;
+        Vector2 end = destination.anchoredPosition;
+
+        _runnerDot.gameObject.SetActive(true);
+        _runnerDot.color = isSuccess ? UiPalette.StatePitching : UiPalette.StateOut;
+        _runnerDot.rectTransform.anchoredPosition = start;
+
+        UiAnimator.Play(0.45f,
+            t => _runnerDot.rectTransform.anchoredPosition =
+                new Vector2(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t),
+            () => OnStealAnimationEnded(destination, isSuccess),
+            UiEase.OutCubic);
+    }
+
+    //도착 뒤 처리. 성공이면 도착 베이스가 튀고 파티클이 터진다
+    private void OnStealAnimationEnded(RectTransform destination, bool isSuccess)
+    {
+        _runnerDot.gameObject.SetActive(false);
+
+        if (!isSuccess)
+            return;
+
+        UiEffects.Pop(destination, 0.7f, 0.26f);
+        UiEffects.Burst(destination, UiEffectKind.Steal);
+    }
+
+    //1 = 1루 · 2 = 2루 · 3 = 3루
+    private RectTransform GetBaseRect(int baseNumber)
+    {
+        return baseNumber switch
+        {
+            1 => _first.rectTransform,
+            2 => _second.rectTransform,
+            3 => _third.rectTransform,
+            _ => null
+        };
     }
 
     private Image CreateBase(string name, float x, float y)

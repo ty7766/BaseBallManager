@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -177,6 +177,7 @@ public class GachaScreen : UiScreen
     private void ShowResults(int rolledCount)
     {
         _resultGrid.SetCards(_resultInstanceIds);
+        _resultGrid.PlayRevealSequence();
         _resultText.text = $"결과  {_resultInstanceIds.Count}장" +
                            (_resultInstanceIds.Count < rolledCount ? "  (인벤토리가 꽉 차 일부를 받지 못했습니다)" : string.Empty);
 

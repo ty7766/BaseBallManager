@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,6 +12,7 @@ public class AppFlowController : MonoBehaviour
     private GamePlaybackDriver _driver;
     private LiveGameController _interruptController;
     private ToastView _toast;
+    private UiEffectLayer _effectLayer;
 
     private TitleScreen _titleScreen;
     private TeamSelectScreen _teamSelectScreen;
@@ -57,6 +58,9 @@ public class AppFlowController : MonoBehaviour
 
         _toast = new ToastView(canvasRoot);
 
+        _effectLayer = new UiEffectLayer(canvasRoot);
+        UiEffects.Layer = _effectLayer;
+
         _driver.BatterLogAdded += OnBatterLogAdded;
         _driver.StealLogAdded += OnStealLogAdded;
         _driver.Paused += OnPlaybackPaused;
@@ -67,7 +71,10 @@ public class AppFlowController : MonoBehaviour
 
     private void Update()
     {
-        _toast?.Tick(Time.unscaledDeltaTime);
+        float deltaSeconds = Time.unscaledDeltaTime;
+
+        UiAnimator.Tick(deltaSeconds);
+        _toast?.Tick(deltaSeconds);
     }
 
     private void OnDestroy()

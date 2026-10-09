@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -143,6 +143,7 @@ public class EnhanceScreen : CardActionScreen
                 return;
             }
 
+            PlaySuccessEffect();
             Notify("강화했습니다", true);
             Refresh();
         });
@@ -160,8 +161,17 @@ public class EnhanceScreen : CardActionScreen
             return;
         }
 
+        PlaySuccessEffect();
         Notify("강화했습니다", true);
         Refresh();
+    }
+
+    //강화 성공 연출 — 대상 줄이 번쩍이고 파티클이 터진다
+    private void PlaySuccessEffect()
+    {
+        UiEffects.Flash(_targetText, UiPalette.StateReserved, 0.6f);
+        UiEffects.Pop(_targetText.transform, 0.9f, 0.3f);
+        UiEffects.Burst(_targetText.rectTransform, UiEffectKind.Enhance);
     }
 
     private static string GetEnhanceCardLabel(CurrencyType type)

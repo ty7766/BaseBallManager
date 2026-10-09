@@ -22,6 +22,8 @@ public class LiveGameScreen : UiScreen
     private StaminaBarView _staminaBar;
     private PlayLogView _playLog;
     private Button _pauseButton;
+    private Image _pauseIcon;
+    private UiTween _pauseSpinTween;
     private TextMeshProUGUI _pauseLabel;
     private TextMeshProUGUI _pauseHintText;
     private TextMeshProUGUI _modeText;
@@ -102,6 +104,9 @@ public class LiveGameScreen : UiScreen
     public void AppendStealLog(SimulationStealLog log)
     {
         _playLog.AppendStealLog(log);
+
+        if (log != null)
+            _diamond.PlaySteal(log.FromBase, log.IsSuccess);
     }
 
     /// <summary>
@@ -111,6 +116,13 @@ public class LiveGameScreen : UiScreen
     {
         _pauseButton.interactable = isManualMode && !isPauseRequested;
         _modeText.text = isManualMode ? "수동 교체" : "자동 교체";
+
+        UiAnimator.Cancel(_pauseSpinTween);
+        _pauseSpinTween = null;
+        _pauseIcon.gameObject.SetActive(isPauseRequested);
+
+        if (isPauseRequested)
+            _pauseSpinTween = UiEffects.SpinForever(_pauseIcon, "Common/spinner_");
 
         if (!isManualMode)
         {
@@ -173,6 +185,11 @@ public class LiveGameScreen : UiScreen
         _pauseButton = UiBuilder.CreateButton(footer, "PauseButton", "일시정지", 38f, false,
             OnPauseClicked, out _pauseLabel);
         UiBuilder.PlaceRight(_pauseButton.GetComponent<RectTransform>(), 0f, 8f, 320f, 104f);
+
+        _pauseIcon = UiBuilder.CreateImage(_pauseButton.transform, "PauseIcon",
+            UiPalette.StateReserved, UiSprites.Spinner);
+        UiBuilder.Place(_pauseIcon.rectTransform, 16f, 30f, 44f, 44f);
+        _pauseIcon.gameObject.SetActive(false);
     }
 
     private void OnPauseClicked()

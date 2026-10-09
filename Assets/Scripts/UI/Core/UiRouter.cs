@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -44,6 +44,8 @@ public class UiRouter
             Debug.LogError("[UiRouter]: 등록되지 않은 화면을 띄우려 했습니다");
             return;
         }
+
+        UiEffects.Layer?.Clear();
 
         foreach (UiScreen registered in _screens)
         {

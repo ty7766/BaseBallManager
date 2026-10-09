@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
@@ -6,12 +6,16 @@ using UnityEngine.UI;
 /// </summary>
 public abstract class UiScreen
 {
+    private const float FadeInSeconds = 0.16f;
+
     /// <summary>
     /// 화면의 루트. Mount 전에는 null
     /// </summary>
     public RectTransform Root { get; private set; }
 
     public bool IsMounted => Root != null;
+
+    private CanvasGroup _fadeGroup;
 
     /// <summary>
     /// 캔버스 아래에 화면을 조립한다. 두 번 불러도 한 번만 만든다
@@ -23,6 +27,8 @@ public abstract class UiScreen
 
         Root = UiBuilder.CreateRect(parent, ScreenName);
         UiBuilder.Stretch(Root, 0f, 0f, 0f, 0f);
+
+        _fadeGroup = Root.gameObject.AddComponent<CanvasGroup>();
 
         Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgApp);
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
@@ -41,8 +47,11 @@ public abstract class UiScreen
 
         Root.gameObject.SetActive(visible);
 
-        if (visible)
-            OnShown();
+        if (!visible)
+            return;
+
+        OnShown();
+        UiEffects.FadeIn(_fadeGroup, FadeInSeconds);
     }
 
     /// <summary>

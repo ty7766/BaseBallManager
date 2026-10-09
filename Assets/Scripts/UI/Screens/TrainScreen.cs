@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -161,8 +161,16 @@ public class TrainScreen : CardActionScreen
             return;
         }
 
-        Notify("훈련했습니다", true);
         Refresh();
+
+        for (int i = 0; i < StatCount; i++)
+        {
+            UiEffects.Flash(_statTexts[i], UiPalette.StaminaHigh, 0.5f, i * 0.06f);
+            UiEffects.Pop(_statTexts[i].transform, 0.94f, 0.26f, i * 0.06f);
+        }
+
+        UiEffects.Burst(_targetText.rectTransform, UiEffectKind.Enhance);
+        Notify("훈련했습니다", true);
     }
 
     private void Breakthrough()
@@ -176,6 +184,9 @@ public class TrainScreen : CardActionScreen
             Refresh();
             return;
         }
+
+        UiEffects.Flash(_breakthroughText, UiPalette.AccentGold, 0.7f);
+        UiEffects.Burst(_breakthroughText.rectTransform, UiEffectKind.GradeUp);
 
         Notify("훈련 상한을 늘렸습니다", true);
         Refresh();

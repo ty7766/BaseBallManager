@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,6 +33,7 @@ public class CardCellView
     private readonly Button _button;
 
     private Action<int> _onClick;
+    private bool _isHighlight;
 
     public CardCellView(Transform parent)
     {
@@ -123,7 +124,26 @@ public class CardCellView
         }
 
         _lockIcon.gameObject.SetActive(info.IsLocked);
+        _isHighlight = info.CardGrade == CardGrade.Star5 || info.CardType != CardType.Normal;
+
         SetSelected(false);
+    }
+
+    /// <summary>
+    /// 뽑기 결과가 하나씩 열리는 연출. 5성·시그·골글은 파티클이 함께 터진다
+    /// </summary>
+    public void PlayReveal(float delay)
+    {
+        UiEffects.Pop(_root, 0.5f, 0.3f, delay);
+
+        if (!_isHighlight)
+            return;
+
+        UiAnimator.Play(0.01f, null, () =>
+        {
+            UiEffects.Flash(_background, UiPalette.WithAlpha(_ovrText.color, 0.5f), 0.5f);
+            UiEffects.Burst(_root, UiEffectKind.Reveal);
+        }, UiEase.Linear, delay);
     }
 
     /// <summary>

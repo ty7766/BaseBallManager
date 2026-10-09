@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -256,6 +256,22 @@ public class CardView
         _showBack = showBack;
         _front.gameObject.SetActive(!showBack);
         _back.gameObject.SetActive(showBack);
+    }
+
+    /// <summary>
+    /// 눌렸을 때 뒤집히는 연출. 가운데에서 앞뒤가 바뀐다
+    /// </summary>
+    public void PlayFlip(bool showBack)
+    {
+        UiEffects.Flip(_root, () => SetFlipped(showBack));
+    }
+
+    /// <summary>
+    /// 등장 연출 (상세 보기 · 뽑기 결과)
+    /// </summary>
+    public void PlayAppear(float delay = 0f)
+    {
+        UiEffects.Pop(_root, 0.82f, 0.3f, delay);
     }
 
     /// <summary>

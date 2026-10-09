@@ -21,6 +21,7 @@ public class PostSeasonScreen : UiScreen
     private readonly Image[] _seriesBackgrounds = new Image[MaxSeriesRows];
     private Button _nextGameButton;
     private Button _claimButton;
+    private bool _championEffectPlayed;
 
     public PostSeasonScreen(Action onBack, Action<string, bool> onNotify)
     {
@@ -85,6 +86,8 @@ public class PostSeasonScreen : UiScreen
         _nextGameButton.interactable = !postSeason.IsFinished;
         _claimButton.gameObject.SetActive(postSeason.IsFinished);
         _claimButton.interactable = postSeason.IsFinished && !postSeason.RewardsGranted;
+
+        PlayChampionEffectOnce(postSeason, playerTeamName);
     }
 
     protected override void Build()
@@ -195,6 +198,23 @@ public class PostSeasonScreen : UiScreen
         return $"{GetRoundName(series.Round)}   {series.HigherSeedTeamName} " +
                $"{series.HigherSeedWins} - {series.LowerSeedWins} {lower}" +
                $"   ({series.WinsToClinch}선승){winner}{marker}";
+    }
+
+    //우승이 확정된 뒤 한 번만 터진다
+    private void PlayChampionEffectOnce(PostSeasonRunner postSeason, string playerTeamName)
+    {
+        if (_championEffectPlayed || !postSeason.IsFinished || string.IsNullOrEmpty(postSeason.ChampionTeamName))
+            return;
+
+        _championEffectPlayed = true;
+
+        UiEffects.Pop(_championText.transform, 0.6f, 0.4f);
+
+        if (postSeason.ChampionTeamName != playerTeamName)
+            return;
+
+        UiEffects.Flash(_championText, UiPalette.Text1, 0.9f);
+        UiEffects.Burst(_championText.rectTransform, UiEffectKind.Champion);
     }
 
     //PostSeasonSeries 에는 참가 여부 질의가 없어 이름으로 비교한다

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -124,6 +124,14 @@ public class CombineScreen : CardActionScreen
             _resultText.text = $"{PlayerLabelFormat.NameWithYear(info.Name, info.Year)}  ·  {gradeText}";
         else
             _resultText.text = gradeText;
+
+        UiEffects.Pop(_resultText.transform, 0.7f, 0.34f);
+
+        if (result.IsUpgraded)
+        {
+            UiEffects.Flash(_resultText, UiPalette.CardSignature, 0.7f);
+            UiEffects.Burst(_resultText.rectTransform, UiEffectKind.GradeUp);
+        }
 
         Notify(result.IsUpgraded ? "승급했습니다" : "조합했습니다", true);
         Refresh();

@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,10 +12,12 @@ public class ToastView
     public RectTransform Root => _root;
 
     private readonly RectTransform _root;
+    private readonly CanvasGroup _group;
     private readonly Image _background;
     private readonly TextMeshProUGUI _messageText;
 
     private float _remainingSeconds;
+    private bool _hiding;
 
     public ToastView(Transform parent)
     {
@@ -26,6 +28,8 @@ public class ToastView
         _root.pivot = new Vector2(0.5f, 0f);
         _root.anchoredPosition = new Vector2(0f, 300f);
         _root.sizeDelta = new Vector2(900f, 96f);
+
+        _group = _root.gameObject.AddComponent<CanvasGroup>();
 
         _background = UiBuilder.CreateImage(_root, "Background", UiPalette.BgSelected,
             UiSprites.PanelSmall, Image.Type.Sliced);
@@ -50,8 +54,11 @@ public class ToastView
         _background.color = success ? UiPalette.BgSelected : UiPalette.WithAlpha(UiPalette.StateOut, 0.18f);
 
         _remainingSeconds = ShowSeconds;
+        _hiding = false;
         _root.gameObject.SetActive(true);
         _root.SetAsLastSibling();
+
+        UiEffects.SlideUp(_root, _group, 40f, 0.24f);
     }
 
     /// <summary>
@@ -59,12 +66,15 @@ public class ToastView
     /// </summary>
     public void Tick(float deltaSeconds)
     {
-        if (_remainingSeconds <= 0f)
+        if (_remainingSeconds <= 0f || _hiding)
             return;
 
         _remainingSeconds -= deltaSeconds;
 
-        if (_remainingSeconds <= 0f)
-            _root.gameObject.SetActive(false);
+        if (_remainingSeconds > 0f)
+            return;
+
+        _hiding = true;
+        UiEffects.FadeOutAndHide(_group);
     }
 }

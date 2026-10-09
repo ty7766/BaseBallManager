@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -42,6 +42,7 @@ public class CardDetailScreen : UiScreen
 
         _cardView.SetFlipped(false);
         _cardView.SetCard(info);
+        _cardView.PlayAppear();
 
         RefreshLockLabel(info.IsLocked);
     }
@@ -83,7 +84,7 @@ public class CardDetailScreen : UiScreen
     private void Flip()
     {
         _showBack = !_showBack;
-        _cardView.SetFlipped(_showBack);
+        _cardView.PlayFlip(_showBack);
         _hintText.text = _showBack ? "다시 누르면 앞면으로 돌아갑니다" : "카드를 누르면 뒷면이 보입니다";
     }
 

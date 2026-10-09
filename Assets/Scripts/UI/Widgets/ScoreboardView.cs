@@ -28,6 +28,9 @@ public class ScoreboardView
     private readonly TextMeshProUGUI _homeMyTeamTag;
     private readonly Image[] _outDots = new Image[OutDotCount];
 
+    private int _lastAwayScore = -1;
+    private int _lastHomeScore = -1;
+
     public ScoreboardView(Transform parent)
     {
         _root = UiBuilder.CreateRect(parent, "Scoreboard");
@@ -105,6 +108,17 @@ public class ScoreboardView
 
         _awayMyTeamTag.gameObject.SetActive(!isPlayerHome);
         _homeMyTeamTag.gameObject.SetActive(isPlayerHome);
+
+        _lastAwayScore = -1;
+        _lastHomeScore = -1;
+    }
+
+    //점수가 오른 쪽만 튀어오르고 금색으로 번쩍인다
+    private static void PlayScoreEffect(TextMeshProUGUI scoreText)
+    {
+        UiEffects.Pop(scoreText.transform, 0.68f, 0.34f);
+        UiEffects.Flash(scoreText, UiPalette.AccentGold, 0.5f);
+        UiEffects.Burst(scoreText.rectTransform, UiEffectKind.Score);
     }
 
     /// <summary>
@@ -114,6 +128,15 @@ public class ScoreboardView
     {
         if (state == null)
             return;
+
+        if (_lastAwayScore >= 0 && state.AwayScore > _lastAwayScore)
+            PlayScoreEffect(_awayScoreText);
+
+        if (_lastHomeScore >= 0 && state.HomeScore > _lastHomeScore)
+            PlayScoreEffect(_homeScoreText);
+
+        _lastAwayScore = state.AwayScore;
+        _lastHomeScore = state.HomeScore;
 
         _awayScoreText.text = state.AwayScore.ToString();
         _homeScoreText.text = state.HomeScore.ToString();

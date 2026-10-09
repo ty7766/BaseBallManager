@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -89,6 +89,15 @@ public class CardGridView
 
         _content.sizeDelta = new Vector2(0f, rows * (CardCellView.CellHeight + RowGap));
         _emptyText.gameObject.SetActive(used == 0);
+    }
+
+    /// <summary>
+    /// 깔려 있는 카드를 앞에서부터 차례로 열어 보인다
+    /// </summary>
+    public void PlayRevealSequence(float stepSeconds = 0.08f)
+    {
+        for (int i = 0; i < Count; i++)
+            _cells[i].PlayReveal(i * stepSeconds);
     }
 
     /// <summary>

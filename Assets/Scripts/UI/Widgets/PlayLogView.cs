@@ -191,6 +191,7 @@ public class PlayLogView
     //중계 행 하나. 헤더 · 타석 · 도루 세 모양을 부분 토글로 공유한다
     private class LogRow
     {
+        private readonly CanvasGroup _group;
         private readonly Image _background;
         private readonly Image _inningChip;
         private readonly TextMeshProUGUI _inningText;
@@ -201,6 +202,7 @@ public class PlayLogView
         public LogRow(RectTransform parent)
         {
             Root = UiBuilder.CreateRect(parent, "LogRow");
+            _group = Root.gameObject.AddComponent<CanvasGroup>();
 
             _background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgRow,
                 UiSprites.RowNormal, Image.Type.Sliced);
@@ -245,6 +247,8 @@ public class PlayLogView
             _sentenceText.fontSize = 30f;
             _sentenceText.color = UiPalette.Text2;
             _sentenceText.fontStyle = FontStyles.Normal;
+
+            UiEffects.SlideUp(Root, _group, 20f, 0.18f);
         }
 
         /// <summary>
@@ -267,6 +271,21 @@ public class PlayLogView
 
             _scoreBadge.gameObject.SetActive(log.RunsScored > 0);
             _scoreText.text = $"+{log.RunsScored}점";
+
+            UiEffects.SlideUp(Root, _group, 26f, 0.22f);
+
+            if (isHomeRun)
+            {
+                UiEffects.Flash(_background, UiPalette.AccentGold, 0.6f);
+                UiEffects.Burst(Root, UiEffectKind.HomeRun);
+                return;
+            }
+
+            if (log.RunsScored <= 0)
+                return;
+
+            UiEffects.Pop(_scoreBadge.transform, 0.5f, 0.32f);
+            UiEffects.Burst(_scoreBadge.rectTransform, UiEffectKind.Score);
         }
 
         /// <summary>
@@ -284,6 +303,11 @@ public class PlayLogView
             _background.color = UiPalette.WithAlpha(UiPalette.BgRow, 0.6f);
 
             _scoreBadge.gameObject.SetActive(false);
+
+            UiEffects.SlideUp(Root, _group, 22f, 0.2f);
+
+            if (log.IsSuccess)
+                UiEffects.Burst(Root, UiEffectKind.Steal);
         }
 
         private void SetCommon(int inning, bool isTopInning, Color inningChipColor)
