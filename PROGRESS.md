@@ -51,6 +51,46 @@
 
 ## 2. 다음 할 일
 
+### 2-0-A. 🔜 다음 세션 시작점 (세션 54 종료 시점)
+
+**브랜치 `feature/game-ui` · 워킹 트리 깨끗 · 커밋 5개 (develop 기준)**
+`dc10ad6` 세로 고정 → `e2a3adc` 디자인 v1 → `d27070b` 경기 UI → `5f5d7ec` 실제 로고 방침 →
+`04fa7f0` UI 전체 19화면 → `ce5f874` 연출
+
+#### ① 가장 먼저 — Unity ▶ 로 눈으로 확인 (작성자)
+
+Claude 세션에는 Unity MCP가 없어 **화면을 본 검증만 빠져 있다.** 로직·컴파일·데이터 경로는 PASS 101/0.
+
+1. Unity를 연다 → `Assets/Resources/UI` · `Assets/TextMesh Pro` · `Assets/Resources/UI/Fx` 임포트가 돌아간다
+2. `Assets/Scenes/SampleScene` 에서 ▶ — 루트 `UI` 오브젝트(`GameUiBootstrap`)가 캔버스를 만든다
+3. 정상 콘솔 로그: `'맑은 고딕' 폰트로 UI 글자를 그립니다` / `'UI/Team/logo_기아' 스프라이트를 찾지 못했습니다`(로고 미납품)
+4. 순회: 타이틀 → 새 게임 → 팀 선택 → 로비 → **빠른 시작** → 리그 입장 → 경기 전 → 경기 중(관전) → 경기 후 → 로비
+5. 어긋난 좌표·과한 연출을 적어서 알려주면 수치만 고친다 (연출 세기는 `UiParticleSettings.Get` 프리셋)
+
+#### ② 🔒 작성자 작업 3가지 + 보유분 1가지
+
+| 넣을 곳 | 없을 때 |
+|---|---|
+| `Assets/Resources/UI/Team/logo_<팀명>.png` 10종 | 팀 컬러 + 이니셜로 대체 |
+| `Assets/Resources/Data/*.csv` 시그·골글 추가 | 시그 뽑기 빈 결과 · 골글 제작 실패 유지 |
+| `Assets/Resources/Photos/<photoKey>.png` 768×960 | 카드 상세의 사진 자리만 빔 |
+| `Assets/Resources/UI/Card/card_base_normal` · `_signature` · `_goldenglove` (보유분) | 팀색 반투명 패널 |
+
+#### ③ 그다음 코드 작업 후보 (우선순위 순)
+
+1. **화면 좌표 보정** — ①의 피드백 반영. 가장 먼저 올 작업
+2. **A3 `StatBaseline` 재측정** — CSV 시그·골글이 들어오면 `Tools/BaseBallManager/StatBaseline 드리프트 측정` 실행 후 상수 조정 (2-1)
+3. **로드맵 11 튜토리얼** — 새 게임 직후 안내 흐름. 현재는 토스트 1줄뿐
+4. 가을야구 사다리 대진표 그래픽 · 인벤토리 정렬/일괄 분해 (요청서 2장의 디자인 요청 목록)
+
+#### ④ 검증 하니스 복구
+
+스크래치패드는 세션마다 새로 만들어지므로 하니스를 복사해 와야 한다. 3-3 참고.
+`UnityShim.cs` + `UnityUiShim.cs` + `harness.csproj` + `apicheck/` + `Program.cs~Program3.cs` 구성이고,
+`dotnet build` → `dotnet run -c Release` 로 PASS 101 / FAIL 0 이 나와야 한다.
+
+---
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.
