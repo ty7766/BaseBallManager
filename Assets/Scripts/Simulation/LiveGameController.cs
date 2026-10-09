@@ -15,6 +15,16 @@ public class LiveGameController : MonoBehaviour, IGameInterruptHandler
     private static readonly InterruptDecision EmptyDecision =
         new InterruptDecision(NoPitcherSubstitution, System.Array.Empty<HitterSubstitution>());
 
+    /// <summary>
+    /// 예약된 대타 교체 수 (일시정지 화면의 미리보기용)
+    /// </summary>
+    public int PendingHitterSubstitutionCount => _pendingHitterSubs.Count;
+
+    /// <summary>
+    /// 예약된 투수 교체 슬롯. 없으면 NoPitcherSubstitution
+    /// </summary>
+    public int PendingPitcherSlot => _pendingPitcherSlot;
+
     private readonly List<HitterSubstitution> _pendingHitterSubs = new List<HitterSubstitution>();
     private int _pendingPitcherSlot = NoPitcherSubstitution;
 
@@ -23,6 +33,12 @@ public class LiveGameController : MonoBehaviour, IGameInterruptHandler
     /// </summary>
     public InterruptDecision OnAtBatEnded(GameState state, SimulationContext context)
     {
+        if (IsAutoMode())
+        {
+            ClearReservations();
+            return EmptyDecision;
+        }
+
         if (_pendingHitterSubs.Count == 0 && _pendingPitcherSlot == NoPitcherSubstitution)
             return EmptyDecision;
 
@@ -33,6 +49,15 @@ public class LiveGameController : MonoBehaviour, IGameInterruptHandler
         _pendingPitcherSlot = NoPitcherSubstitution;
 
         return decision;
+    }
+
+    /// <summary>
+    /// 예약된 교체를 모두 취소한다 (그냥 재개 · 자동 모드)
+    /// </summary>
+    public void ClearReservations()
+    {
+        _pendingHitterSubs.Clear();
+        _pendingPitcherSlot = NoPitcherSubstitution;
     }
 
     /// <summary>
@@ -70,6 +95,13 @@ public class LiveGameController : MonoBehaviour, IGameInterruptHandler
         _pendingHitterSubs.Add(new HitterSubstitution(battingOrderIndex, benchIndex));
 
         return true;
+    }
+
+    //자동 교체 모드면 창구를 닫는다. 모드는 경기 중에도 바뀔 수 있어 매 타석 확인한다
+    private bool IsAutoMode()
+    {
+        return PlayerDataManager.Instance == null
+            || PlayerDataManager.Instance.CurrentSubstitutionMode == SubstitutionMode.Auto;
     }
 
     /// <summary>

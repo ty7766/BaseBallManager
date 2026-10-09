@@ -45,6 +45,14 @@ public class GamePlaybackDriver : MonoBehaviour
     private WaitForSeconds _atBatDelay;
 
     /// <summary>
+    /// 타석 간격을 바꾼다. 다음 Play부터 적용된다
+    /// </summary>
+    public void SetSecondsPerAtBat(float seconds)
+    {
+        _secondsPerAtBat = Mathf.Max(0f, seconds);
+    }
+
+    /// <summary>
     /// 관전 시작. 이미 진행 중이거나 끝난 경기면 거절한다
     /// </summary>
     public bool Play(GameSession session)

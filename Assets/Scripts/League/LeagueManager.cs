@@ -9,6 +9,11 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
     public LeagueSeason CurrentSeason => _runner == null ? null : _runner.Season;
 
     /// <summary>
+    /// 현재 진행 중인 리그의 티어. 시작된 리그가 없으면 Basic1
+    /// </summary>
+    public LeagueTier CurrentTier => _currentTier;
+
+    /// <summary>
     /// 다음에 치를 플레이어 경기. 시작된 리그가 없거나 시즌이 끝났으면 null
     /// </summary>
     public LeagueGame? NextPlayerGame => _runner?.Season.CurrentDay?.PlayerGame;
@@ -57,20 +62,6 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
 
     //수동 교체 모드의 인터럽트 창구. UI가 없으면 null이라 자동 진행만 한다
     private IGameInterruptHandler _interruptHandler;
-
-    //자동 모드에서는 일시정지 자체가 없으므로 창구를 끊는다
-    private IGameInterruptHandler ActiveInterruptHandler
-    {
-        get
-        {
-            if (PlayerDataManager.Instance == null)
-                return null;
-
-            return PlayerDataManager.Instance.CurrentSubstitutionMode == SubstitutionMode.Manual
-                ? _interruptHandler
-                : null;
-        }
-    }
 
     protected override void OnSingletonAwake()
     {
@@ -150,7 +141,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
 
         LeagueSeason season = new LeagueSeason(schedule, new LeagueStandings(allTeamNames));
 
-        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold, ActiveInterruptHandler);
+        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold, _interruptHandler);
         _currentTier = tier;
         PostSeason = null;
 
@@ -172,7 +163,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
             return false;
         }
 
-        PostSeason = PostSeasonRunner.Create(_runner.Season, _runner.ContextFactory, _pullThreshold, ActiveInterruptHandler);
+        PostSeason = PostSeasonRunner.Create(_runner.Season, _runner.ContextFactory, _pullThreshold, _interruptHandler);
 
         return PostSeason != null;
     }
@@ -242,7 +233,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
         LeagueGameContextFactory contextFactory =
             new LeagueGameContextFactory(AiRosterManager.Instance.Rosters, saveData.PlayerTeamName);
 
-        PostSeason = PostSeasonRunner.Restore(saveData, contextFactory, _pullThreshold, ActiveInterruptHandler);
+        PostSeason = PostSeasonRunner.Restore(saveData, contextFactory, _pullThreshold, _interruptHandler);
 
         if (PostSeason == null)
             return false;
@@ -275,6 +266,53 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
         }
 
         LeagueDayResult result = _runner.SimulateNextGame();
+
+        if (result != null)
+            _rewardService.GrantPerGameRewards(_currentTier);
+
+        return result;
+    }
+
+    /// <summary>
+    /// 다음 내 경기의 시뮬 입력만 미리 받는다 (경기 전 화면이 라인업을 그릴 때 쓴다)
+    /// </summary>
+    public SimulationContext PeekNextPlayerGameContext()
+    {
+        if (_runner == null)
+        {
+            Debug.LogError("[LeagueManager]: 시작된 리그가 없습니다");
+            return null;
+        }
+
+        return _runner.BuildNextPlayerGameContext();
+    }
+
+    /// <summary>
+    /// 내 경기를 관전 모드로 연다. 끝난 뒤 CommitPlayerGame으로 확정해야 하루가 넘어간다
+    /// </summary>
+    public GameSession BeginPlayerGame()
+    {
+        if (_runner == null)
+        {
+            Debug.LogError("[LeagueManager]: 시작된 리그가 없습니다");
+            return null;
+        }
+
+        return _runner.BeginPlayerGame();
+    }
+
+    /// <summary>
+    /// 관전한 내 경기 결과를 확정한다. 같은 날 AI 경기와 경기당 보상까지 함께 처리된다
+    /// </summary>
+    public LeagueDayResult CommitPlayerGame(GameResult playerGameResult)
+    {
+        if (_runner == null)
+        {
+            Debug.LogError("[LeagueManager]: 시작된 리그가 없습니다");
+            return null;
+        }
+
+        LeagueDayResult result = _runner.CommitPlayerGame(playerGameResult);
 
         if (result != null)
             _rewardService.GrantPerGameRewards(_currentTier);
@@ -326,7 +364,7 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
         if (!PlayerDataManager.Instance.SetPlayerTeam(season.PlayerTeamName))
             return false;
 
-        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold, ActiveInterruptHandler);
+        _runner = new LeagueRunner(season, AiRosterManager.Instance.Rosters, _pullThreshold, _interruptHandler);
         _currentTier = season.Tier;
         PostSeason = null;
 
