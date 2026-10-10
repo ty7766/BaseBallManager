@@ -13,7 +13,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 엔진 | Unity 6 (6000.0.49f1) · uGUI + TextMeshPro |
+| 엔진 | Unity 6 (6000.3.6f1) · uGUI + TextMeshPro |
 | 렌더링 | 2D |
 | 플랫폼 | 모바일 |
 | **방향** | **세로 (Portrait) 고정** — `ProjectSettings` 적용 완료 |
