@@ -36,15 +36,15 @@ public class GoldenGloveCraftScreen : CardActionScreen
     {
         base.Refresh();
 
-        SetTabSelected(_randomTabButton, _craftType == GoldenGloveCraftType.Random);
-        SetTabSelected(_teamTabButton, _craftType == GoldenGloveCraftType.TeamSelect);
+        UiTabStyle.Apply(_randomTabButton, _craftType == GoldenGloveCraftType.Random);
+        UiTabStyle.Apply(_teamTabButton, _craftType == GoldenGloveCraftType.TeamSelect);
 
         bool teamMode = _craftType == GoldenGloveCraftType.TeamSelect;
 
         _teamGrid.gameObject.SetActive(teamMode);
 
         for (int i = 0; i < _teamButtons.Length; i++)
-            SetTabSelected(_teamButtons[i], teamMode && TeamNames[i] == _selectedTeamName);
+            UiTabStyle.Apply(_teamButtons[i], teamMode && TeamNames[i] == _selectedTeamName);
 
         if (GoldenGloveCraftManager.Instance == null)
             return;
@@ -194,16 +194,4 @@ public class GoldenGloveCraftScreen : CardActionScreen
         };
     }
 
-    private static void SetTabSelected(Button button, bool selected)
-    {
-        Image background = button.GetComponent<Image>();
-
-        background.color = selected ? UiPalette.ButtonPrimary : UiPalette.BgRow;
-        background.sprite = UiSprites.Get(selected ? UiSprites.TabOn : UiSprites.ButtonNormal);
-
-        TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
-
-        if (label != null)
-            label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
-    }
 }

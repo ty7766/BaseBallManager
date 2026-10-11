@@ -42,11 +42,38 @@ public static class UiFontAssetBuilder
         Directory.CreateDirectory(AssetFolder);
 
         AssetDatabase.CreateAsset(created, AssetPath);
+        AttachSubAssets(created);
         AssetDatabase.SaveAssets();
 
         Debug.Log($"[UiFontAssetBuilder]: '{AssetPath}' 를 만들었습니다");
 
         return AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetPath);
+    }
+
+    //아틀라스 텍스처와 머티리얼은 메모리상 객체다. 서브 에셋으로 함께 저장해야 참조가 살아남는다
+    private static void AttachSubAssets(TMP_FontAsset fontAsset)
+    {
+        Texture2D[] atlases = fontAsset.atlasTextures;
+
+        if (atlases != null)
+        {
+            for (int i = 0; i < atlases.Length; i++)
+            {
+                if (atlases[i] == null)
+                    continue;
+
+                atlases[i].name = $"{fontAsset.name} Atlas {i}";
+
+                AssetDatabase.AddObjectToAsset(atlases[i], fontAsset);
+            }
+        }
+
+        if (fontAsset.material == null)
+            return;
+
+        fontAsset.material.name = $"{fontAsset.name} Material";
+
+        AssetDatabase.AddObjectToAsset(fontAsset.material, fontAsset);
     }
 
     //후보 패밀리를 차례로 시도한다. 동적 OS 아틀라스라 글리프는 런타임에 채워진다

@@ -72,9 +72,9 @@ public class LineUpScreen : UiScreenBehaviour
         _stateText.text = complete ? "라인업 완성" : "비어 있는 슬롯이 있습니다";
         _stateText.color = complete ? UiPalette.StatePitching : UiPalette.StateOut;
 
-        SetTabSelected(_hitterTabButton, _tab == Tab.Hitter);
-        SetTabSelected(_benchTabButton, _tab == Tab.Bench);
-        SetTabSelected(_pitcherTabButton, _tab == Tab.Pitcher);
+        UiTabStyle.Apply(_hitterTabButton, _tab == Tab.Hitter);
+        UiTabStyle.Apply(_benchTabButton, _tab == Tab.Bench);
+        UiTabStyle.Apply(_pitcherTabButton, _tab == Tab.Pitcher);
 
         switch (_tab)
         {
@@ -388,19 +388,6 @@ public class LineUpScreen : UiScreenBehaviour
     private void OnBackClicked()
     {
         _onBack?.Invoke();
-    }
-
-    private static void SetTabSelected(Button button, bool selected)
-    {
-        Image background = button.GetComponent<Image>();
-
-        background.color = selected ? UiPalette.ButtonPrimary : UiPalette.BgRow;
-        background.sprite = UiSprites.Get(selected ? UiSprites.TabOn : UiSprites.ButtonNormal);
-
-        TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
-
-        if (label != null)
-            label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
     }
 
     //슬롯 1칸. 야수 행에만 타순 조절이 붙는다

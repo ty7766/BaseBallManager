@@ -56,8 +56,8 @@ public class GachaScreen : UiScreenBehaviour
         _rollOnceButton.interactable = tickets >= 1;
         _rollTenButton.interactable = tickets >= TenRollCount;
 
-        SetTabSelected(_normalTabButton, _gachaType == GachaType.Normal);
-        SetTabSelected(_signatureTabButton, _gachaType == GachaType.Signature);
+        UiTabStyle.Apply(_normalTabButton, _gachaType == GachaType.Normal);
+        UiTabStyle.Apply(_signatureTabButton, _gachaType == GachaType.Signature);
 
         if (GachaManager.Instance == null)
             return;
@@ -217,16 +217,4 @@ public class GachaScreen : UiScreenBehaviour
         _onBack?.Invoke();
     }
 
-    private static void SetTabSelected(Button button, bool selected)
-    {
-        Image background = button.GetComponent<Image>();
-
-        background.color = selected ? UiPalette.ButtonPrimary : UiPalette.BgRow;
-        background.sprite = UiSprites.Get(selected ? UiSprites.TabOn : UiSprites.ButtonNormal);
-
-        TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
-
-        if (label != null)
-            label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
-    }
 }

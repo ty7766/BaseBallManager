@@ -49,14 +49,10 @@ public class LineScoreView : UiWidgetBehaviour
             UiSprites.PanelSmall, Image.Type.Sliced);
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
-        _inningHeaderRow = UiBuilder.CreateRect(Root, "InningHeaderRow");
-        UiBuilder.Place(_inningHeaderRow, 0f, 8f, UiBuilder.DesignSize.x, RowHeight);
-
-        _awayRow = UiBuilder.CreateRect(Root, "AwayRow");
-        UiBuilder.Place(_awayRow, 0f, 8f + RowHeight, UiBuilder.DesignSize.x, RowHeight);
-
-        _homeRow = UiBuilder.CreateRect(Root, "HomeRow");
-        UiBuilder.Place(_homeRow, 0f, 8f + RowHeight * 2f, UiBuilder.DesignSize.x, RowHeight);
+        //행은 표의 폭을 그대로 따라간다. 고정 폭으로 두면 R·H·E 칸이 표 밖으로 밀려 잘린다
+        _inningHeaderRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "InningHeaderRow"), 8f, RowHeight);
+        _awayRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "AwayRow"), 8f + RowHeight, RowHeight);
+        _homeRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "HomeRow"), 8f + RowHeight * 2f, RowHeight);
 
         _awayLabel = UiBuilder.CreateText(_awayRow, "AwayLabel", 32f, UiPalette.Text1);
         UiBuilder.Place(_awayLabel.rectTransform, 16f, 10f, LabelWidth - 24f, 36f);

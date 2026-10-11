@@ -214,6 +214,7 @@ public class PlayLogView : UiWidgetBehaviour
 
         public LogRow(RectTransform parent)
         {
+            Root = UiBuilder.CreateRect(parent, "LogRow");
             _group = Root.gameObject.AddComponent<CanvasGroup>();
 
             _background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgRow,

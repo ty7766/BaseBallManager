@@ -145,10 +145,10 @@ public class PostGameScreen : UiScreenBehaviour
         _hitterTable.Root.gameObject.SetActive(!_showPitchers);
         _pitcherTable.Root.gameObject.SetActive(_showPitchers);
 
-        SetTabSelected(_hitterTabButton, !_showPitchers);
-        SetTabSelected(_pitcherTabButton, _showPitchers);
-        SetTabSelected(_awayTabButton, !_showHome);
-        SetTabSelected(_homeTabButton, _showHome);
+        UiTabStyle.Apply(_hitterTabButton, !_showPitchers);
+        UiTabStyle.Apply(_pitcherTabButton, _showPitchers);
+        UiTabStyle.Apply(_awayTabButton, !_showHome);
+        UiTabStyle.Apply(_homeTabButton, _showHome);
 
         if (_showPitchers)
         {
@@ -239,19 +239,6 @@ public class PostGameScreen : UiScreenBehaviour
     private void OnReturnClicked()
     {
         _onReturn?.Invoke();
-    }
-
-    private static void SetTabSelected(Button button, bool selected)
-    {
-        Image background = button.GetComponent<Image>();
-
-        background.sprite = UiSprites.Get(selected ? UiSprites.TabOn : UiSprites.ButtonNormal);
-        background.color = selected ? UiPalette.ButtonPrimary : UiPalette.BgRow;
-
-        TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
-
-        if (label != null)
-            label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
     }
 
     //결과 글자가 튀어오르고, 이겼으면 파티클이 터진다
