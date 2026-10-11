@@ -88,14 +88,16 @@ public class GoldenGloveCraftScreen : CardActionScreen
         UiBuilder.PlaceRow(costTitle.rectTransform, 352f, 44f, 8f);
         costTitle.text = "제작 비용";
 
-        _costText = UiBuilder.CreateText(Body, "Cost", 32f, UiPalette.Text2);
-        UiBuilder.PlaceRow(_costText.rectTransform, 400f, 48f, 8f);
+        _costText = UiBuilder.CreateText(Body, "Cost", 30f, UiPalette.Text2);
+        UiBuilder.PlaceRow(_costText.rectTransform, 396f, 150f, 8f);
+        _costText.textWrappingMode = TextWrappingModes.Normal;
+        _costText.alignment = TextAlignmentOptions.TopLeft;
 
         _craftButton = UiBuilder.CreateButton(Body, "CraftButton", "제작", 36f, true, Craft);
-        UiBuilder.PlaceRow(_craftButton.GetComponent<RectTransform>(), 464f, 110f);
+        UiBuilder.PlaceRow(_craftButton.GetComponent<RectTransform>(), 556f, 110f);
 
         _resultText = UiBuilder.CreateText(Body, "Result", 34f, UiPalette.CardGoldenGlove);
-        UiBuilder.PlaceRow(_resultText.rectTransform, 594f, 120f, 8f);
+        UiBuilder.PlaceRow(_resultText.rectTransform, 686f, 120f, 8f);
         _resultText.textWrappingMode = TextWrappingModes.Normal;
     }
 
@@ -149,9 +151,9 @@ public class GoldenGloveCraftScreen : CardActionScreen
             int owned = CurrencyManager.Instance == null ? 0 : CurrencyManager.Instance.GetAmount(costs[i].Type);
 
             if (i > 0)
-                text += "   ·   ";
+                text += "\n";
 
-            text += $"{GetCurrencyLabel(costs[i].Type)} {costs[i].Amount} (보유 {owned})";
+            text += $"{GetCurrencyLabel(costs[i].Type)}  {costs[i].Amount:N0}  (보유 {owned:N0})";
         }
 
         return text;

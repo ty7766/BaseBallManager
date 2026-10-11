@@ -41,7 +41,6 @@ public class CardGridView
         _emptyText = UiBuilder.CreateText(_root, "Empty", 34f, UiPalette.Text3, TextAlignmentOptions.Center);
         UiBuilder.Stretch(_emptyText.rectTransform, 0f, 0f, 0f, 0f);
         _emptyText.text = "카드가 없습니다";
-        _emptyText.gameObject.SetActive(false);
     }
 
     /// <summary>
