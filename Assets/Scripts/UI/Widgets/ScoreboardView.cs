@@ -5,7 +5,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 경기 중 화면 최상단 스코어보드 (명세 1-3 · 6-4). 높이 264
 /// </summary>
-public class ScoreboardView
+public class ScoreboardView : UiWidgetBehaviour
 {
     /// <summary>
     /// 스코어보드 높이 (명세 6-5)
@@ -14,78 +14,87 @@ public class ScoreboardView
 
     private const int OutDotCount = 2;
 
-    public RectTransform Root => _root;
-
-    private readonly RectTransform _root;
-    private readonly TextMeshProUGUI _awayNameText;
-    private readonly TextMeshProUGUI _homeNameText;
-    private readonly TextMeshProUGUI _awayScoreText;
-    private readonly TextMeshProUGUI _homeScoreText;
-    private readonly TextMeshProUGUI _inningText;
-    private readonly TextMeshProUGUI _awayAttackTag;
-    private readonly TextMeshProUGUI _homeAttackTag;
-    private readonly TextMeshProUGUI _awayMyTeamTag;
-    private readonly TextMeshProUGUI _homeMyTeamTag;
-    private readonly Image[] _outDots = new Image[OutDotCount];
+    [SerializeField] private TextMeshProUGUI _awayNameText;
+    [SerializeField] private TextMeshProUGUI _homeNameText;
+    [SerializeField] private TextMeshProUGUI _awayScoreText;
+    [SerializeField] private TextMeshProUGUI _homeScoreText;
+    [SerializeField] private TextMeshProUGUI _inningText;
+    [SerializeField] private TextMeshProUGUI _awayAttackTag;
+    [SerializeField] private TextMeshProUGUI _homeAttackTag;
+    [SerializeField] private TextMeshProUGUI _awayMyTeamTag;
+    [SerializeField] private TextMeshProUGUI _homeMyTeamTag;
+    [SerializeField] private Image[] _outDots = new Image[OutDotCount];
 
     private int _lastAwayScore = -1;
     private int _lastHomeScore = -1;
 
-    public ScoreboardView(Transform parent)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static ScoreboardView Bake(Transform parent)
     {
-        _root = UiBuilder.CreateRect(parent, "Scoreboard");
-        UiBuilder.Place(_root, 0f, 0f, UiBuilder.DesignSize.x, BoardHeight);
+        ScoreboardView view = CreateNode<ScoreboardView>(parent, "Scoreboard");
 
-        Image background = UiBuilder.CreateImage(_root, "Background", UiPalette.BgPanel,
+        view.BuildWidget(parent);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    private void BuildWidget(Transform parent)
+    {
+        UiBuilder.Place(Root, 0f, 0f, UiBuilder.DesignSize.x, BoardHeight);
+
+        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgPanel,
             UiSprites.PanelLarge, Image.Type.Sliced);
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
-        _awayNameText = UiBuilder.CreateText(_root, "AwayName", 44f, UiPalette.Text1, TextAlignmentOptions.MidlineLeft);
+        _awayNameText = UiBuilder.CreateText(Root, "AwayName", 44f, UiPalette.Text1, TextAlignmentOptions.MidlineLeft);
         UiBuilder.Place(_awayNameText.rectTransform, 28f, 22f, 250f, 50f);
 
-        _homeNameText = UiBuilder.CreateText(_root, "HomeName", 44f, UiPalette.Text1, TextAlignmentOptions.Right);
+        _homeNameText = UiBuilder.CreateText(Root, "HomeName", 44f, UiPalette.Text1, TextAlignmentOptions.Right);
         UiBuilder.Place(_homeNameText.rectTransform, 802f, 22f, 250f, 50f);
 
-        TextMeshProUGUI awayTag = UiBuilder.CreateLabel(_root, "AwayTag", "AWAY", 26f, UiPalette.Text3);
+        TextMeshProUGUI awayTag = UiBuilder.CreateLabel(Root, "AwayTag", "AWAY", 26f, UiPalette.Text3);
         UiBuilder.Place(awayTag.rectTransform, 28f, 74f, 120f, 30f);
 
-        TextMeshProUGUI homeTag = UiBuilder.CreateLabel(_root, "HomeTag", "HOME", 26f, UiPalette.Text3,
+        TextMeshProUGUI homeTag = UiBuilder.CreateLabel(Root, "HomeTag", "HOME", 26f, UiPalette.Text3,
             TextAlignmentOptions.Right);
         UiBuilder.Place(homeTag.rectTransform, 932f, 74f, 120f, 30f);
 
-        _awayMyTeamTag = UiBuilder.CreateLabel(_root, "AwayMyTeam", "MY TEAM", 24f, UiPalette.AccentGold);
+        _awayMyTeamTag = UiBuilder.CreateLabel(Root, "AwayMyTeam", "MY TEAM", 24f, UiPalette.AccentGold);
         UiBuilder.Place(_awayMyTeamTag.rectTransform, 150f, 74f, 180f, 30f);
         _awayMyTeamTag.gameObject.SetActive(false);
 
-        _homeMyTeamTag = UiBuilder.CreateLabel(_root, "HomeMyTeam", "MY TEAM", 24f, UiPalette.AccentGold,
+        _homeMyTeamTag = UiBuilder.CreateLabel(Root, "HomeMyTeam", "MY TEAM", 24f, UiPalette.AccentGold,
             TextAlignmentOptions.Right);
         UiBuilder.Place(_homeMyTeamTag.rectTransform, 750f, 74f, 180f, 30f);
         _homeMyTeamTag.gameObject.SetActive(false);
 
-        _awayScoreText = UiBuilder.CreateText(_root, "AwayScore", 150f, UiPalette.Text1, TextAlignmentOptions.Right);
+        _awayScoreText = UiBuilder.CreateText(Root, "AwayScore", 150f, UiPalette.Text1, TextAlignmentOptions.Right);
         UiBuilder.Place(_awayScoreText.rectTransform, 300f, 24f, 190f, 160f);
 
-        TextMeshProUGUI dash = UiBuilder.CreateText(_root, "Dash", 70f, UiPalette.Text3, TextAlignmentOptions.Center);
+        TextMeshProUGUI dash = UiBuilder.CreateText(Root, "Dash", 70f, UiPalette.Text3, TextAlignmentOptions.Center);
         UiBuilder.Place(dash.rectTransform, 496f, 60f, 88f, 90f);
         dash.text = "-";
 
-        _homeScoreText = UiBuilder.CreateText(_root, "HomeScore", 150f, UiPalette.Text1, TextAlignmentOptions.MidlineLeft);
+        _homeScoreText = UiBuilder.CreateText(Root, "HomeScore", 150f, UiPalette.Text1, TextAlignmentOptions.MidlineLeft);
         UiBuilder.Place(_homeScoreText.rectTransform, 590f, 24f, 190f, 160f);
 
-        _inningText = UiBuilder.CreateText(_root, "Inning", 92f, UiPalette.Text1, TextAlignmentOptions.Center);
+        _inningText = UiBuilder.CreateText(Root, "Inning", 92f, UiPalette.Text1, TextAlignmentOptions.Center);
         UiBuilder.Place(_inningText.rectTransform, 390f, 158f, 300f, 96f);
 
-        _awayAttackTag = UiBuilder.CreateText(_root, "AwayAttack", 28f, UiPalette.AccentGold, TextAlignmentOptions.MidlineLeft);
+        _awayAttackTag = UiBuilder.CreateText(Root, "AwayAttack", 28f, UiPalette.AccentGold, TextAlignmentOptions.MidlineLeft);
         UiBuilder.Place(_awayAttackTag.rectTransform, 28f, 180f, 120f, 36f);
         _awayAttackTag.text = "공격";
         _awayAttackTag.gameObject.SetActive(false);
 
-        _homeAttackTag = UiBuilder.CreateText(_root, "HomeAttack", 28f, UiPalette.AccentGold, TextAlignmentOptions.Right);
+        _homeAttackTag = UiBuilder.CreateText(Root, "HomeAttack", 28f, UiPalette.AccentGold, TextAlignmentOptions.Right);
         UiBuilder.Place(_homeAttackTag.rectTransform, 932f, 180f, 120f, 36f);
         _homeAttackTag.text = "공격";
         _homeAttackTag.gameObject.SetActive(false);
 
-        RectTransform outRow = UiBuilder.CreateRect(_root, "Outs");
+        RectTransform outRow = UiBuilder.CreateRect(Root, "Outs");
         UiBuilder.Place(outRow, 760f, 190f, 160f, 40f);
 
         TextMeshProUGUI outLabel = UiBuilder.CreateLabel(outRow, "OutLabel", "OUT", 24f, UiPalette.Text3);

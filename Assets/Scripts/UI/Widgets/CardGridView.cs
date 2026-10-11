@@ -7,38 +7,46 @@ using UnityEngine.UI;
 /// <summary>
 /// 카드 타일을 3열로 깔고 스크롤한다. 인벤토리·뽑기 결과·카드 선택 모달이 공유한다
 /// </summary>
-public class CardGridView
+public class CardGridView : UiWidgetBehaviour
 {
     private const int DefaultColumns = 3;
     private const float ColumnGap = 16f;
     private const float RowGap = 16f;
-
-    public RectTransform Root => _root;
 
     /// <summary>
     /// 현재 깔려 있는 카드 수
     /// </summary>
     public int Count { get; private set; }
 
-    private readonly RectTransform _root;
-    private readonly RectTransform _content;
-    private readonly TextMeshProUGUI _emptyText;
+    [SerializeField] private RectTransform _content;
+    [SerializeField] private TextMeshProUGUI _emptyText;
     private readonly List<CardCellView> _cells = new List<CardCellView>(32);
     private readonly HashSet<int> _selected = new HashSet<int>();
-    private readonly int _columns;
+    [SerializeField] private int _columns;
 
     private Action<int> _onCardClicked;
 
-    public CardGridView(Transform parent, int columns = DefaultColumns)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static CardGridView Bake(Transform parent, int columns = DefaultColumns)
+    {
+        CardGridView view = CreateNode<CardGridView>(parent, "CardGrid");
+
+        view.BuildWidget(parent, columns);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    private void BuildWidget(Transform parent, int columns = DefaultColumns)
     {
         _columns = Mathf.Max(1, columns);
 
-        _root = UiBuilder.CreateRect(parent, "CardGrid");
-
-        ScrollRect scroll = UiBuilder.CreateVerticalScroll(_root, "GridScroll", out _content);
+        ScrollRect scroll = UiBuilder.CreateVerticalScroll(Root, "GridScroll", out _content);
         UiBuilder.Stretch(scroll.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
 
-        _emptyText = UiBuilder.CreateText(_root, "Empty", 34f, UiPalette.Text3, TextAlignmentOptions.Center);
+        _emptyText = UiBuilder.CreateText(Root, "Empty", 34f, UiPalette.Text3, TextAlignmentOptions.Center);
         UiBuilder.Stretch(_emptyText.rectTransform, 0f, 0f, 0f, 0f);
         _emptyText.text = "카드가 없습니다";
     }

@@ -7,37 +7,38 @@ using UnityEngine.UI;
 /// <summary>
 /// 뽑기 화면. 일반 · 시그니쳐를 1회 또는 10연차로 돌리고 결과를 그린다
 /// </summary>
-public class GachaScreen : UiScreen
+public class GachaScreen : UiScreenBehaviour
 {
     private const int TenRollCount = 10;
 
-    private readonly Action _onBack;
-    private readonly Action<int> _onCardSelected;
-    private readonly Action<string, bool> _onNotify;
+    private Action _onBack;
+    private Action<int> _onCardSelected;
+    private Action<string, bool> _onNotify;
 
-    private CurrencyBarView _currencyBar;
-    private Button _normalTabButton;
-    private Button _signatureTabButton;
-    private Button _rollOnceButton;
-    private Button _rollTenButton;
-    private TextMeshProUGUI _rollOnceLabel;
-    private TextMeshProUGUI _rollTenLabel;
-    private TextMeshProUGUI _pityText;
-    private TextMeshProUGUI _resultText;
-    private CardGridView _resultGrid;
+    [SerializeField] private CurrencyBarView _currencyBar;
+    [SerializeField] private Button _normalTabButton;
+    [SerializeField] private Button _signatureTabButton;
+    [SerializeField] private Button _rollOnceButton;
+    [SerializeField] private Button _rollTenButton;
+    [SerializeField] private TextMeshProUGUI _rollOnceLabel;
+    [SerializeField] private TextMeshProUGUI _rollTenLabel;
+    [SerializeField] private TextMeshProUGUI _pityText;
+    [SerializeField] private TextMeshProUGUI _resultText;
+    [SerializeField] private CardGridView _resultGrid;
 
-    private readonly List<int> _resultInstanceIds = new List<int>(TenRollCount);
+    private List<int> _resultInstanceIds = new List<int>(TenRollCount);
 
     private GachaType _gachaType = GachaType.Normal;
 
-    public GachaScreen(Action onBack, Action<int> onCardSelected, Action<string, bool> onNotify)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onBack, Action<int> onCardSelected, Action<string, bool> onNotify)
     {
         _onBack = onBack;
         _onCardSelected = onCardSelected;
         _onNotify = onNotify;
     }
-
-    protected override string ScreenName => "GachaScreen";
 
     /// <summary>
     /// 보유 뽑기권 · 천장 카운터를 다시 읽는다
@@ -55,8 +56,8 @@ public class GachaScreen : UiScreen
         _rollOnceButton.interactable = tickets >= 1;
         _rollTenButton.interactable = tickets >= TenRollCount;
 
-        SetTabSelected(_normalTabButton, _gachaType == GachaType.Normal);
-        SetTabSelected(_signatureTabButton, _gachaType == GachaType.Signature);
+        UiTabStyle.Apply(_normalTabButton, _gachaType == GachaType.Normal);
+        UiTabStyle.Apply(_signatureTabButton, _gachaType == GachaType.Signature);
 
         if (GachaManager.Instance == null)
             return;
@@ -69,13 +70,22 @@ public class GachaScreen : UiScreen
                          $"   ·   보유 {GetTicketLabel()} {tickets}장";
     }
 
+    protected override void BindEvents()
+    {
+        Bind(_normalTabButton, () => SelectType(GachaType.Normal));
+        Bind(_signatureTabButton, () => SelectType(GachaType.Signature));
+        Bind(_rollOnceButton, RollOnce);
+        Bind(_rollTenButton, RollTen);
+        BindButton("BackButton", OnBackClicked);
+    }
+
     protected override void Build()
     {
         TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
         UiBuilder.Place(title.rectTransform, 32f, 32f, 500f, 60f);
         title.text = "뽑기";
 
-        _currencyBar = new CurrencyBarView(Root);
+        _currencyBar = CurrencyBarView.Bake(Root);
         UiBuilder.Place(_currencyBar.Root, 24f, 100f, 1032f, CurrencyBarView.BarHeight);
 
         _normalTabButton = UiBuilder.CreateButton(Root, "NormalTab", "일반 뽑기", 36f, true,
@@ -101,7 +111,7 @@ public class GachaScreen : UiScreen
         UiBuilder.Place(_resultText.rectTransform, 32f, 536f, 1016f, 44f);
         _resultText.text = "결과";
 
-        _resultGrid = new CardGridView(Root);
+        _resultGrid = CardGridView.Bake(Root);
         UiBuilder.Stretch(_resultGrid.Root, 32f, 588f, 32f, 200f);
         _resultGrid.SetClickHandler(OnResultClicked);
         _resultGrid.SetEmptyMessage("아직 뽑지 않았습니다");
@@ -207,16 +217,4 @@ public class GachaScreen : UiScreen
         _onBack?.Invoke();
     }
 
-    private static void SetTabSelected(Button button, bool selected)
-    {
-        Image background = button.GetComponent<Image>();
-
-        background.color = selected ? UiPalette.ButtonPrimary : UiPalette.BgRow;
-        background.sprite = UiSprites.Get(selected ? UiSprites.TabOn : UiSprites.ButtonNormal);
-
-        TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
-
-        if (label != null)
-            label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
-    }
 }

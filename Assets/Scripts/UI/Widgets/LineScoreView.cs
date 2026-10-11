@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 이닝별 득점 + R·H·E 표 (명세 ③). 연장이면 칸 폭을 줄여 가로 스크롤 없이 담는다
 /// </summary>
-public class LineScoreView
+public class LineScoreView : UiWidgetBehaviour
 {
     private const float LabelWidth = 150f;
     private const float SummaryCellWidth = 72f;
@@ -14,41 +14,45 @@ public class LineScoreView
     private const float RowHeight = 56f;
     private const int SummaryColumnCount = 3;
 
-    public RectTransform Root => _root;
-
     /// <summary>
     /// 표 전체 높이 (경기 후 화면 배치용)
     /// </summary>
     public static float TotalHeight => RowHeight * 3f + 16f;
 
-    private readonly RectTransform _root;
-    private readonly RectTransform _inningHeaderRow;
-    private readonly RectTransform _awayRow;
-    private readonly RectTransform _homeRow;
-    private readonly TextMeshProUGUI _awayLabel;
-    private readonly TextMeshProUGUI _homeLabel;
+    [SerializeField] private RectTransform _inningHeaderRow;
+    [SerializeField] private RectTransform _awayRow;
+    [SerializeField] private RectTransform _homeRow;
+    [SerializeField] private TextMeshProUGUI _awayLabel;
+    [SerializeField] private TextMeshProUGUI _homeLabel;
     private readonly List<TextMeshProUGUI> _inningHeaders = new List<TextMeshProUGUI>(11);
     private readonly List<TextMeshProUGUI> _awayCells = new List<TextMeshProUGUI>(11);
     private readonly List<TextMeshProUGUI> _homeCells = new List<TextMeshProUGUI>(11);
-    private readonly TextMeshProUGUI[] _awaySummary = new TextMeshProUGUI[SummaryColumnCount];
-    private readonly TextMeshProUGUI[] _homeSummary = new TextMeshProUGUI[SummaryColumnCount];
+    [SerializeField] private TextMeshProUGUI[] _awaySummary = new TextMeshProUGUI[SummaryColumnCount];
+    [SerializeField] private TextMeshProUGUI[] _homeSummary = new TextMeshProUGUI[SummaryColumnCount];
 
-    public LineScoreView(Transform parent)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static LineScoreView Bake(Transform parent)
     {
-        _root = UiBuilder.CreateRect(parent, "LineScore");
+        LineScoreView view = CreateNode<LineScoreView>(parent, "LineScore");
 
-        Image background = UiBuilder.CreateImage(_root, "Background", UiPalette.BgPanel,
+        view.BuildWidget(parent);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    private void BuildWidget(Transform parent)
+    {
+        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgPanel,
             UiSprites.PanelSmall, Image.Type.Sliced);
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
-        _inningHeaderRow = UiBuilder.CreateRect(_root, "InningHeaderRow");
-        UiBuilder.Place(_inningHeaderRow, 0f, 8f, UiBuilder.DesignSize.x, RowHeight);
-
-        _awayRow = UiBuilder.CreateRect(_root, "AwayRow");
-        UiBuilder.Place(_awayRow, 0f, 8f + RowHeight, UiBuilder.DesignSize.x, RowHeight);
-
-        _homeRow = UiBuilder.CreateRect(_root, "HomeRow");
-        UiBuilder.Place(_homeRow, 0f, 8f + RowHeight * 2f, UiBuilder.DesignSize.x, RowHeight);
+        //행은 표의 폭을 그대로 따라간다. 고정 폭으로 두면 R·H·E 칸이 표 밖으로 밀려 잘린다
+        _inningHeaderRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "InningHeaderRow"), 8f, RowHeight);
+        _awayRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "AwayRow"), 8f + RowHeight, RowHeight);
+        _homeRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "HomeRow"), 8f + RowHeight * 2f, RowHeight);
 
         _awayLabel = UiBuilder.CreateText(_awayRow, "AwayLabel", 32f, UiPalette.Text1);
         UiBuilder.Place(_awayLabel.rectTransform, 16f, 10f, LabelWidth - 24f, 36f);

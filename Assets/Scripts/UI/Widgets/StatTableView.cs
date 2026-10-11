@@ -7,34 +7,43 @@ using UnityEngine.UI;
 /// 이름 열은 고정하고 숫자 열만 가로 스크롤되는 기록 표 (명세 ③).
 /// 타자·투수 기록이 컬럼 수만 다르므로 같은 표를 재사용한다
 /// </summary>
-public class StatTableView
+public class StatTableView : UiWidgetBehaviour
 {
     private const float RowHeight = 72f;
     private const float HeaderHeight = 56f;
     private const float NumberSize = 32f;
 
-    public RectTransform Root => _root;
-
-    private readonly RectTransform _root;
-    private readonly RectTransform _nameColumn;
-    private readonly RectTransform _numberContent;
-    private readonly string[] _numericHeaders;
-    private readonly float _nameWidth;
-    private readonly float _cellWidth;
+    [SerializeField] private RectTransform _nameColumn;
+    [SerializeField] private RectTransform _numberContent;
+    [SerializeField] private string[] _numericHeaders;
+    [SerializeField] private float _nameWidth;
+    [SerializeField] private float _cellWidth;
     private readonly List<TextMeshProUGUI> _nameCells = new List<TextMeshProUGUI>(16);
     private readonly List<TextMeshProUGUI[]> _numberCells = new List<TextMeshProUGUI[]>(16);
     private readonly List<Image> _rowBackgrounds = new List<Image>(16);
 
-    public StatTableView(Transform parent, string[] numericHeaders, float nameWidth, float cellWidth,
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static StatTableView Bake(Transform parent, string[] numericHeaders, float nameWidth, float cellWidth,
+        string nameHeaderText = "선수")
+    {
+        StatTableView view = CreateNode<StatTableView>(parent, "StatTable");
+
+        view.BuildWidget(parent, numericHeaders, nameWidth, cellWidth, nameHeaderText);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    private void BuildWidget(Transform parent, string[] numericHeaders, float nameWidth, float cellWidth,
         string nameHeaderText = "선수")
     {
         _numericHeaders = numericHeaders;
         _nameWidth = nameWidth;
         _cellWidth = cellWidth;
 
-        _root = UiBuilder.CreateRect(parent, "StatTable");
-
-        _nameColumn = UiBuilder.CreateRect(_root, "NameColumn");
+        _nameColumn = UiBuilder.CreateRect(Root, "NameColumn");
         _nameColumn.anchorMin = new Vector2(0f, 0f);
         _nameColumn.anchorMax = new Vector2(0f, 1f);
         _nameColumn.pivot = new Vector2(0f, 1f);
@@ -45,7 +54,7 @@ public class StatTableView
         UiBuilder.Place(nameHeader.rectTransform, 12f, 14f, nameWidth - 16f, 32f);
         nameHeader.text = nameHeaderText;
 
-        ScrollRect scroll = UiBuilder.CreateTableScroll(_root, "NumberScroll", out _numberContent);
+        ScrollRect scroll = UiBuilder.CreateTableScroll(Root, "NumberScroll", out _numberContent);
         RectTransform scrollRect = scroll.GetComponent<RectTransform>();
 
         scrollRect.anchorMin = new Vector2(0f, 0f);

@@ -5,27 +5,36 @@ using UnityEngine.UI;
 /// <summary>
 /// 명세 1-1 B 밀도 현재 타석 칩 (120px). 2줄 표기 + 작은 OVR 라벨
 /// </summary>
-public class PlayerChipView
+public class PlayerChipView : UiWidgetBehaviour
 {
     /// <summary>
     /// 칩 높이 (명세 1-1)
     /// </summary>
     public const float ChipHeight = 120f;
 
-    public RectTransform Root => _root;
+    [SerializeField] private TextMeshProUGUI _roleText;
+    [SerializeField] private TextMeshProUGUI _nameText;
+    [SerializeField] private TextMeshProUGUI _detailText;
+    [SerializeField] private TextMeshProUGUI _ovrText;
 
-    private readonly RectTransform _root;
-    private readonly TextMeshProUGUI _roleText;
-    private readonly TextMeshProUGUI _nameText;
-    private readonly TextMeshProUGUI _detailText;
-    private readonly TextMeshProUGUI _ovrText;
-
-    public PlayerChipView(Transform parent, string roleLabel, float width, bool alignRight)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static PlayerChipView Bake(Transform parent, string roleLabel, float width, bool alignRight)
     {
-        _root = UiBuilder.CreateRect(parent, "PlayerChip");
-        UiBuilder.Place(_root, 0f, 0f, width, ChipHeight);
+        PlayerChipView view = CreateNode<PlayerChipView>(parent, "PlayerChip");
 
-        Image background = UiBuilder.CreateImage(_root, "Background", UiPalette.BgRow,
+        view.BuildWidget(parent, roleLabel, width, alignRight);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    private void BuildWidget(Transform parent, string roleLabel, float width, bool alignRight)
+    {
+        UiBuilder.Place(Root, 0f, 0f, width, ChipHeight);
+
+        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgRow,
             UiSprites.PanelSmall, Image.Type.Sliced);
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
@@ -33,17 +42,17 @@ public class PlayerChipView
         float textX = alignRight ? 16f : 120f;
         float textWidth = width - 136f;
 
-        _roleText = UiBuilder.CreateLabel(_root, "Role", roleLabel, 26f, UiPalette.Text3,
+        _roleText = UiBuilder.CreateLabel(Root, "Role", roleLabel, 26f, UiPalette.Text3,
             alignRight ? TextAlignmentOptions.Right : TextAlignmentOptions.MidlineLeft);
         UiBuilder.Place(_roleText.rectTransform, textX, 8f, textWidth, 30f);
 
-        _nameText = UiBuilder.CreateText(_root, "Name", 42f, UiPalette.Text1, align);
+        _nameText = UiBuilder.CreateText(Root, "Name", 42f, UiPalette.Text1, align);
         UiBuilder.Place(_nameText.rectTransform, textX, 36f, textWidth, 48f);
 
-        _detailText = UiBuilder.CreateText(_root, "Detail", 31f, UiPalette.Text2, align);
+        _detailText = UiBuilder.CreateText(Root, "Detail", 31f, UiPalette.Text2, align);
         UiBuilder.Place(_detailText.rectTransform, textX, 82f, textWidth, 32f);
 
-        _ovrText = UiBuilder.CreateText(_root, "Ovr", 54f, UiPalette.Text1,
+        _ovrText = UiBuilder.CreateText(Root, "Ovr", 54f, UiPalette.Text1,
             alignRight ? TextAlignmentOptions.MidlineLeft : TextAlignmentOptions.Right);
         UiBuilder.Place(_ovrText.rectTransform, alignRight ? width - 112f : 8f, 34f, 104f, 54f);
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 인벤토리·카드 선택 공용 필터 줄. 선수 타입 · 등급 · 종류 · 팀을 고른다
 /// </summary>
-public class CardFilterBarView
+public class CardFilterBarView : UiWidgetBehaviour
 {
     /// <summary>
     /// 필터 줄 높이 (2단)
@@ -39,26 +39,42 @@ public class CardFilterBarView
         null, "기아", "삼성", "LG", "한화", "두산", "SSG", "KT", "NC", "키움", "롯데"
     };
 
-    public RectTransform Root => _root;
-
     /// <summary>
     /// 현재 필터 조건. 인벤토리 조회에 그대로 넘긴다
     /// </summary>
     public CardFilter CurrentFilter { get; } = new CardFilter();
 
-    private readonly RectTransform _root;
-    private readonly Button[] _typeButtons = new Button[TypeOptions.Length];
-    private readonly Button[] _gradeButtons = new Button[GradeOptions.Length];
-    private readonly Button[] _kindButtons = new Button[KindOptions.Length];
-    private readonly TextMeshProUGUI _teamLabel;
+    [SerializeField] private Button[] _typeButtons = new Button[TypeOptions.Length];
+    [SerializeField] private Button[] _gradeButtons = new Button[GradeOptions.Length];
+    [SerializeField] private Button[] _kindButtons = new Button[KindOptions.Length];
+    [SerializeField] private TextMeshProUGUI _teamLabel;
 
     private Action _onChanged;
     private int _teamIndex;
 
-    public CardFilterBarView(Transform parent)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static CardFilterBarView Bake(Transform parent)
     {
-        _root = UiBuilder.CreateRect(parent, "CardFilterBar");
+        CardFilterBarView view = CreateNode<CardFilterBarView>(parent, "CardFilterBar");
 
+        view.BuildWidget(parent);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    protected override void BindEvents()
+    {
+        BindEach(_typeButtons, SelectPlayerType);
+        BindEach(_gradeButtons, SelectGrade);
+        BindEach(_kindButtons, SelectKind);
+        BindButton("Team", CycleTeam);
+    }
+
+    private void BuildWidget(Transform parent)
+    {
         CurrentFilter.PlayerType = PlayerTypeFilter.All;
         CurrentFilter.Grade = CardGrade.None;
         CurrentFilter.Type = CardType.None;
@@ -68,7 +84,7 @@ public class CardFilterBarView
         {
             int index = i;
 
-            _typeButtons[i] = UiBuilder.CreateButton(_root, "Type", TypeLabels[i], 30f, false,
+            _typeButtons[i] = UiBuilder.CreateButton(Root, "Type", TypeLabels[i], 30f, false,
                 () => SelectPlayerType(index));
             UiBuilder.Place(_typeButtons[i].GetComponent<RectTransform>(), i * 124f, 0f, 116f, 72f);
         }
@@ -77,7 +93,7 @@ public class CardFilterBarView
         {
             int index = i;
 
-            _gradeButtons[i] = UiBuilder.CreateButton(_root, "Grade", GradeLabels[i], 28f, false,
+            _gradeButtons[i] = UiBuilder.CreateButton(Root, "Grade", GradeLabels[i], 28f, false,
                 () => SelectGrade(index));
             UiBuilder.Place(_gradeButtons[i].GetComponent<RectTransform>(), 400f + i * 100f, 0f, 92f, 72f);
         }
@@ -86,12 +102,12 @@ public class CardFilterBarView
         {
             int index = i;
 
-            _kindButtons[i] = UiBuilder.CreateButton(_root, "Kind", KindLabels[i], 28f, false,
+            _kindButtons[i] = UiBuilder.CreateButton(Root, "Kind", KindLabels[i], 28f, false,
                 () => SelectKind(index));
             UiBuilder.Place(_kindButtons[i].GetComponent<RectTransform>(), i * 124f, 84f, 116f, 72f);
         }
 
-        Button teamButton = UiBuilder.CreateButton(_root, "Team", string.Empty, 28f, false, CycleTeam);
+        Button teamButton = UiBuilder.CreateButton(Root, "Team", string.Empty, 28f, false, CycleTeam);
         UiBuilder.Place(teamButton.GetComponent<RectTransform>(), 520f, 84f, 280f, 72f);
         _teamLabel = teamButton.GetComponentInChildren<TextMeshProUGUI>();
 

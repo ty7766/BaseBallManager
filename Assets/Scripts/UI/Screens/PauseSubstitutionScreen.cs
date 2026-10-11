@@ -6,25 +6,25 @@ using UnityEngine.UI;
 /// <summary>
 /// ④ 일시정지 화면. 공격 중이면 대타, 수비 중이면 투수를 교체한다 (명세 ④)
 /// </summary>
-public class PauseSubstitutionScreen : UiScreen
+public class PauseSubstitutionScreen : UiScreenBehaviour
 {
     private const float ColumnWidth = 500f;
     private const float ListTop = 300f;
     private const float RowGap = 6f;
     private const int PitcherOptionCount = SimulationContext.PitcherSlotCount - 1;
 
-    private readonly Action _onApply;
-    private readonly Action _onResume;
+    private Action _onApply;
+    private Action _onResume;
 
-    private TextMeshProUGUI _titleText;
-    private TextMeshProUGUI _situationText;
-    private TextMeshProUGUI _previewText;
-    private TextMeshProUGUI _leftHeaderText;
-    private TextMeshProUGUI _rightHeaderText;
-    private LineupRowView[] _orderRows;
-    private LineupRowView[] _benchRows;
-    private LineupRowView[] _pitcherRows;
-    private Button _applyButton;
+    [SerializeField] private TextMeshProUGUI _titleText;
+    [SerializeField] private TextMeshProUGUI _situationText;
+    [SerializeField] private TextMeshProUGUI _previewText;
+    [SerializeField] private TextMeshProUGUI _leftHeaderText;
+    [SerializeField] private TextMeshProUGUI _rightHeaderText;
+    [SerializeField] private LineupRowView[] _orderRows;
+    [SerializeField] private LineupRowView[] _benchRows;
+    [SerializeField] private LineupRowView[] _pitcherRows;
+    [SerializeField] private Button _applyButton;
 
     private LiveGameController _controller;
     private GameSession _session;
@@ -34,13 +34,14 @@ public class PauseSubstitutionScreen : UiScreen
     private int _selectedOrderIndex = -1;
     private int _selectedPitcherSlot = LiveGameController.NoPitcherSubstitution;
 
-    public PauseSubstitutionScreen(Action onApply, Action onResume)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onApply, Action onResume)
     {
         _onApply = onApply;
         _onResume = onResume;
     }
-
-    protected override string ScreenName => "PauseSubstitutionScreen";
 
     /// <summary>
     /// 정지 시점의 경기 상태로 화면을 구성한다. 공수에 따라 보여주는 목록이 다르다
@@ -71,6 +72,12 @@ public class PauseSubstitutionScreen : UiScreen
 
         RefreshLists();
         UpdateApplyState();
+    }
+
+    protected override void BindEvents()
+    {
+        Bind(_applyButton, OnApplyClicked);
+        BindButton("ResumeButton", OnResumeClicked);
     }
 
     protected override void Build()
@@ -108,7 +115,7 @@ public class PauseSubstitutionScreen : UiScreen
         {
             int orderIndex = i;
 
-            _orderRows[i] = new LineupRowView(leftColumn, ColumnWidth);
+            _orderRows[i] = LineupRowView.Bake(leftColumn, ColumnWidth);
             _orderRows[i].SetIndex(i, RowGap);
             _orderRows[i].SetClickHandler(() => OnOrderSelected(orderIndex));
         }
@@ -119,7 +126,7 @@ public class PauseSubstitutionScreen : UiScreen
         {
             int benchIndex = i;
 
-            _benchRows[i] = new LineupRowView(rightColumn, ColumnWidth);
+            _benchRows[i] = LineupRowView.Bake(rightColumn, ColumnWidth);
             _benchRows[i].SetIndex(i, RowGap);
             _benchRows[i].SetClickHandler(() => OnBenchSelected(benchIndex));
         }
@@ -130,7 +137,7 @@ public class PauseSubstitutionScreen : UiScreen
         {
             int pitcherSlot = i + 1;
 
-            _pitcherRows[i] = new LineupRowView(leftColumn, ColumnWidth);
+            _pitcherRows[i] = LineupRowView.Bake(leftColumn, ColumnWidth);
             _pitcherRows[i].SetIndex(i, RowGap);
             _pitcherRows[i].SetClickHandler(() => OnPitcherSelected(pitcherSlot));
         }

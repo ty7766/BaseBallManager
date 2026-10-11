@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 팀 선택 화면. 선택 가능한 10팀 중 하나를 고르고 새 게임을 시작한다
 /// </summary>
-public class TeamSelectScreen : UiScreen
+public class TeamSelectScreen : UiScreenBehaviour
 {
     private const int ColumnCount = 2;
     private const float ButtonWidth = 480f;
@@ -15,20 +15,21 @@ public class TeamSelectScreen : UiScreen
     private const float ButtonGap = 16f;
     private const float GridTop = 220f;
 
-    private readonly Action<string> _onConfirm;
-    private readonly List<Button> _teamButtons = new List<Button>(10);
-    private readonly List<string> _teamNames = new List<string>(10);
+    private Action<string> _onConfirm;
+    [SerializeField] private List<Button> _teamButtons = new List<Button>(10);
+    private List<string> _teamNames = new List<string>(10);
 
-    private TextMeshProUGUI _selectionText;
-    private Button _confirmButton;
+    [SerializeField] private TextMeshProUGUI _selectionText;
+    [SerializeField] private Button _confirmButton;
     private string _selectedTeamName;
 
-    public TeamSelectScreen(Action<string> onConfirm)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action<string> onConfirm)
     {
         _onConfirm = onConfirm;
     }
-
-    protected override string ScreenName => "TeamSelectScreen";
 
     /// <summary>
     /// 선택 가능한 팀 목록을 채운다. 화면을 띄우기 전에 한 번 호출한다
@@ -57,6 +58,11 @@ public class TeamSelectScreen : UiScreen
         }
 
         RefreshSelection();
+    }
+
+    protected override void BindEvents()
+    {
+        Bind(_confirmButton, OnConfirmClicked);
     }
 
     protected override void Build()

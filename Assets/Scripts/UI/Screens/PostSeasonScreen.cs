@@ -6,30 +6,31 @@ using UnityEngine.UI;
 /// <summary>
 /// 포스트시즌 사다리. 시리즈를 한 경기씩 진행하고 보상을 받는다
 /// </summary>
-public class PostSeasonScreen : UiScreen
+public class PostSeasonScreen : UiScreenBehaviour
 {
     private const int MaxSeriesRows = 4;
     private const float RowHeight = 140f;
     private const float RowGap = 12f;
 
-    private readonly Action _onBack;
-    private readonly Action<string, bool> _onNotify;
+    private Action _onBack;
+    private Action<string, bool> _onNotify;
 
-    private TextMeshProUGUI _stateText;
-    private TextMeshProUGUI _championText;
-    private readonly TextMeshProUGUI[] _seriesTexts = new TextMeshProUGUI[MaxSeriesRows];
-    private readonly Image[] _seriesBackgrounds = new Image[MaxSeriesRows];
-    private Button _nextGameButton;
-    private Button _claimButton;
+    [SerializeField] private TextMeshProUGUI _stateText;
+    [SerializeField] private TextMeshProUGUI _championText;
+    [SerializeField] private TextMeshProUGUI[] _seriesTexts = new TextMeshProUGUI[MaxSeriesRows];
+    [SerializeField] private Image[] _seriesBackgrounds = new Image[MaxSeriesRows];
+    [SerializeField] private Button _nextGameButton;
+    [SerializeField] private Button _claimButton;
     private bool _championEffectPlayed;
 
-    public PostSeasonScreen(Action onBack, Action<string, bool> onNotify)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onBack, Action<string, bool> onNotify)
     {
         _onBack = onBack;
         _onNotify = onNotify;
     }
-
-    protected override string ScreenName => "PostSeasonScreen";
 
     /// <summary>
     /// 대진과 진행 상황을 다시 읽는다
@@ -88,6 +89,13 @@ public class PostSeasonScreen : UiScreen
         _claimButton.interactable = postSeason.IsFinished && !postSeason.RewardsGranted;
 
         PlayChampionEffectOnce(postSeason, playerTeamName);
+    }
+
+    protected override void BindEvents()
+    {
+        Bind(_nextGameButton, SimulateNextGame);
+        Bind(_claimButton, ClaimRewards);
+        BindButton("BackButton", OnBackClicked);
     }
 
     protected override void Build()

@@ -11,23 +11,19 @@ public class TrainScreen : CardActionScreen
 {
     private const int StatCount = 4;
 
-    private TextMeshProUGUI _targetText;
-    private TextMeshProUGUI _costText;
-    private TextMeshProUGUI _breakthroughText;
-    private readonly TextMeshProUGUI[] _statTexts = new TextMeshProUGUI[StatCount];
-    private Button _trainButton;
-    private Button _breakthroughButton;
+    /// <summary>
+    /// 화면 제목
+    /// </summary>
+    protected override string Title => "훈련";
+
+    [SerializeField] private TextMeshProUGUI _targetText;
+    [SerializeField] private TextMeshProUGUI _costText;
+    [SerializeField] private TextMeshProUGUI _breakthroughText;
+    [SerializeField] private TextMeshProUGUI[] _statTexts = new TextMeshProUGUI[StatCount];
+    [SerializeField] private Button _trainButton;
+    [SerializeField] private Button _breakthroughButton;
 
     private int _targetInstanceId = InventoryManager.InvalidInstanceId;
-
-    public TrainScreen(Action onBack,
-        Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> onPickCard,
-        Action<string, bool> onNotify)
-        : base("훈련 · 돌파", onBack, onPickCard, onNotify)
-    {
-    }
-
-    protected override string ScreenName => "TrainScreen";
 
     public override void Refresh()
     {
@@ -105,6 +101,15 @@ public class TrainScreen : CardActionScreen
         _breakthroughButton.interactable = canBreakthrough
             && breakthroughCost != BreakthroughManager.InvalidCost
             && ownedBreakthroughCard >= breakthroughCost;
+    }
+
+    protected override void BindEvents()
+    {
+        base.BindEvents();
+
+        BindButton("PickTarget", PickTarget);
+        Bind(_trainButton, Train);
+        Bind(_breakthroughButton, Breakthrough);
     }
 
     protected override void BuildBody()

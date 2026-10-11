@@ -1,37 +1,41 @@
-﻿using TMPro;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 팀 심볼. 로고 애셋이 아직 없어 팀 컬러 + 이니셜로 대체한다 (명세 ① U5)
+/// 팀 심볼. 로고 애셋이 있으면 그것을, 없으면 팀 컬러 + 이니셜로 그린다 (명세 3-3)
 /// </summary>
-public class TeamEmblemView
+public class TeamEmblemView : UiWidgetBehaviour
 {
     private const string LogoResourcePrefix = "Team/logo_";
 
-    public RectTransform Root => _root;
+    [SerializeField] private Image _plate;
+    [SerializeField] private Image _logo;
+    [SerializeField] private TextMeshProUGUI _initialText;
 
-    private readonly RectTransform _root;
-    private readonly Image _plate;
-    private readonly Image _logo;
-    private readonly TextMeshProUGUI _initialText;
-
-    public TeamEmblemView(Transform parent, float size)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static TeamEmblemView Bake(Transform parent, float size)
     {
-        _root = UiBuilder.CreateRect(parent, "TeamEmblem");
-        UiBuilder.Place(_root, 0f, 0f, size, size);
+        TeamEmblemView view = CreateNode<TeamEmblemView>(parent, "TeamEmblem");
 
-        _plate = UiBuilder.CreateImage(_root, "Plate", UiPalette.BgRow, UiSprites.PanelSmall, Image.Type.Sliced);
-        UiBuilder.Stretch(_plate.rectTransform, 0f, 0f, 0f, 0f);
+        UiBuilder.Place(view.Root, 0f, 0f, size, size);
 
-        _logo = UiBuilder.CreateImage(_root, "Logo", Color.white);
-        UiBuilder.Stretch(_logo.rectTransform, size * 0.12f, size * 0.12f, size * 0.12f, size * 0.12f);
-        _logo.preserveAspect = true;
-        _logo.gameObject.SetActive(false);
+        view._plate = UiBuilder.CreateImage(view.Root, "Plate", UiPalette.BgRow,
+            UiSprites.PanelSmall, Image.Type.Sliced);
+        UiBuilder.Stretch(view._plate.rectTransform, 0f, 0f, 0f, 0f);
 
-        _initialText = UiBuilder.CreateText(_root, "Initial", size * 0.44f, UiPalette.Text1,
+        view._logo = UiBuilder.CreateImage(view.Root, "Logo", Color.white);
+        UiBuilder.Stretch(view._logo.rectTransform, size * 0.12f, size * 0.12f, size * 0.12f, size * 0.12f);
+        view._logo.preserveAspect = true;
+        view._logo.gameObject.SetActive(false);
+
+        view._initialText = UiBuilder.CreateText(view.Root, "Initial", size * 0.44f, UiPalette.Text1,
             TextAlignmentOptions.Center);
-        UiBuilder.Stretch(_initialText.rectTransform, 0f, 0f, 0f, 0f);
+        UiBuilder.Stretch(view._initialText.rectTransform, 0f, 0f, 0f, 0f);
+
+        return view;
     }
 
     /// <summary>

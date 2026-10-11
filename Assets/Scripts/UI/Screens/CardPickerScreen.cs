@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -8,29 +8,30 @@ using UnityEngine.UI;
 /// 카드 선택 모달. 강화 · 훈련 · 조합 · 분해 · 라인업이 같은 화면을 공유한다.
 /// 필요 장수가 1장이면 누르는 즉시 확정된다
 /// </summary>
-public class CardPickerScreen : UiScreen
+public class CardPickerScreen : UiScreenBehaviour
 {
-    private readonly Action _onCancel;
+    private Action _onCancel;
 
-    private TextMeshProUGUI _titleText;
-    private TextMeshProUGUI _selectionText;
-    private CardFilterBarView _filterBar;
-    private CardGridView _grid;
-    private Button _confirmButton;
+    [SerializeField] private TextMeshProUGUI _titleText;
+    [SerializeField] private TextMeshProUGUI _selectionText;
+    [SerializeField] private CardFilterBarView _filterBar;
+    [SerializeField] private CardGridView _grid;
+    [SerializeField] private Button _confirmButton;
 
-    private readonly List<int> _selectedIds = new List<int>(4);
-    private readonly List<int> _candidateIds = new List<int>(64);
+    private List<int> _selectedIds = new List<int>(4);
+    private List<int> _candidateIds = new List<int>(64);
 
     private Func<CardDisplayInfo, bool> _canSelect;
     private Action<List<int>> _onConfirm;
     private int _requiredCount = 1;
 
-    public CardPickerScreen(Action onCancel)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onCancel)
     {
         _onCancel = onCancel;
     }
-
-    protected override string ScreenName => "CardPickerScreen";
 
     /// <summary>
     /// 선택 모달을 연다. canSelect가 false인 카드는 흐리게 그리고 고를 수 없다
@@ -47,6 +48,12 @@ public class CardPickerScreen : UiScreen
         Refresh();
     }
 
+    protected override void BindEvents()
+    {
+        Bind(_confirmButton, OnConfirmClicked);
+        BindButton("CancelButton", OnCancelClicked);
+    }
+
     protected override void Build()
     {
         Image dim = UiBuilder.CreateImage(Root, "Dim", UiPalette.WithAlpha(UiPalette.BgApp, 0.96f));
@@ -59,11 +66,11 @@ public class CardPickerScreen : UiScreen
         _selectionText = UiBuilder.CreateText(Root, "Selection", 32f, UiPalette.AccentGold, TextAlignmentOptions.Right);
         UiBuilder.PlaceRight(_selectionText.rectTransform, 32f, 40f, 320f, 44f);
 
-        _filterBar = new CardFilterBarView(Root);
+        _filterBar = CardFilterBarView.Bake(Root);
         UiBuilder.Place(_filterBar.Root, 32f, 100f, 1016f, CardFilterBarView.BarHeight);
         _filterBar.SetChangedHandler(Refresh);
 
-        _grid = new CardGridView(Root);
+        _grid = CardGridView.Bake(Root);
         UiBuilder.Stretch(_grid.Root, 32f, 100f + CardFilterBarView.BarHeight + 16f, 32f, 200f);
         _grid.SetClickHandler(OnCardClicked);
         _grid.SetEmptyMessage("고를 수 있는 카드가 없습니다");

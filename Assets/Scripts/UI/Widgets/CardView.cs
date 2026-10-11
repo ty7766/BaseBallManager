@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// 카드 1장 (명세 1-2 레이어 구조 · 6-6 좌표). 누르면 앞면/뒷면이 바뀐다.
 /// 좌표는 1398×1957 기준으로 적고 생성 시 폭에 맞춰 일괄 축소한다
 /// </summary>
-public class CardView
+public class CardView : UiWidgetBehaviour
 {
     /// <summary>
     /// 카드 원본 규격 (명세 1-2)
@@ -20,70 +20,84 @@ public class CardView
     private const float StarSize = 176f;
     private const float StatBarMaxStat = 150f;
 
-    public RectTransform Root => _root;
+    [SerializeField] private RectTransform _front;
+    [SerializeField] private RectTransform _back;
+    [SerializeField] private float _scale;
 
-    private readonly RectTransform _root;
-    private readonly RectTransform _front;
-    private readonly RectTransform _back;
-    private readonly float _scale;
+    [SerializeField] private Image _frontBase;
+    [SerializeField] private Image _teamAura;
+    [SerializeField] private Image _photo;
+    [SerializeField] private Image _photoMask;
+    [SerializeField] private Image _nameShadow;
+    [SerializeField] private Image _teamLogo;
+    [SerializeField] private Image _shine;
+    [SerializeField] private Image _glow;
+    [SerializeField] private TextMeshProUGUI _ovrText;
+    [SerializeField] private TextMeshProUGUI _positionText;
+    [SerializeField] private TextMeshProUGUI _nameText;
+    [SerializeField] private Image[] _stars = new Image[MaxStars];
 
-    private readonly Image _frontBase;
-    private readonly Image _teamAura;
-    private readonly Image _photo;
-    private readonly Image _photoMask;
-    private readonly Image _nameShadow;
-    private readonly Image _teamLogo;
-    private readonly Image _shine;
-    private readonly Image _glow;
-    private readonly TextMeshProUGUI _ovrText;
-    private readonly TextMeshProUGUI _positionText;
-    private readonly TextMeshProUGUI _nameText;
-    private readonly Image[] _stars = new Image[MaxStars];
+    [SerializeField] private Image _enhanceFill;
+    [SerializeField] private Image _enhanceRim;
+    [SerializeField] private Image _enhanceLine;
+    [SerializeField] private TextMeshProUGUI _enhanceText;
 
-    private readonly Image _enhanceFill;
-    private readonly Image _enhanceRim;
-    private readonly Image _enhanceLine;
-    private readonly TextMeshProUGUI _enhanceText;
+    [SerializeField] private Image _backBase;
+    [SerializeField] private TextMeshProUGUI _backNameText;
+    [SerializeField] private TextMeshProUGUI _backDetailText;
+    [SerializeField] private TextMeshProUGUI _backOvrText;
+    [SerializeField] private TextMeshProUGUI[] _statLabels = new TextMeshProUGUI[StatCount];
+    [SerializeField] private TextMeshProUGUI[] _statValues = new TextMeshProUGUI[StatCount];
+    [SerializeField] private Image[] _statBaseBars = new Image[StatCount];
+    [SerializeField] private Image[] _statEnhanceBars = new Image[StatCount];
+    [SerializeField] private Image[] _statTrainBars = new Image[StatCount];
+    [SerializeField] private TextMeshProUGUI _growthText;
+    [SerializeField] private Image _breakthroughIcon;
 
-    private readonly Image _backBase;
-    private readonly TextMeshProUGUI _backNameText;
-    private readonly TextMeshProUGUI _backDetailText;
-    private readonly TextMeshProUGUI _backOvrText;
-    private readonly TextMeshProUGUI[] _statLabels = new TextMeshProUGUI[StatCount];
-    private readonly TextMeshProUGUI[] _statValues = new TextMeshProUGUI[StatCount];
-    private readonly Image[] _statBaseBars = new Image[StatCount];
-    private readonly Image[] _statEnhanceBars = new Image[StatCount];
-    private readonly Image[] _statTrainBars = new Image[StatCount];
-    private readonly TextMeshProUGUI _growthText;
-    private readonly Image _breakthroughIcon;
-
-    private readonly Button _button;
-    private readonly TextMeshProUGUI _emptyText;
+    [SerializeField] private Button _button;
+    [SerializeField] private TextMeshProUGUI _emptyText;
 
     private Action _onClick;
     private bool _showBack;
 
-    public CardView(Transform parent, float width)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static CardView Bake(Transform parent, float width)
+    {
+        CardView view = CreateNode<CardView>(parent, "Card");
+
+        view.BuildWidget(parent, width);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    protected override void BindEvents()
+    {
+        Bind(_button, OnClicked);
+    }
+
+    private void BuildWidget(Transform parent, float width)
     {
         _scale = width / BaseWidth;
 
-        _root = UiBuilder.CreateRect(parent, "Card");
-        UiBuilder.Place(_root, 0f, 0f, width, BaseHeight * _scale);
+        UiBuilder.Place(Root, 0f, 0f, width, BaseHeight * _scale);
 
-        Image hitArea = UiBuilder.CreateImage(_root, "HitArea", UiPalette.WithAlpha(UiPalette.BgApp, 0f));
+        Image hitArea = UiBuilder.CreateImage(Root, "HitArea", UiPalette.WithAlpha(UiPalette.BgApp, 0f));
         UiBuilder.Stretch(hitArea.rectTransform, 0f, 0f, 0f, 0f);
         hitArea.raycastTarget = true;
 
-        _button = _root.gameObject.AddComponent<Button>();
+        _button = Root.gameObject.AddComponent<Button>();
         _button.targetGraphic = hitArea;
         _button.transition = Selectable.Transition.None;
         _button.interactable = false;
         _button.onClick.AddListener(OnClicked);
 
-        _front = UiBuilder.CreateRect(_root, "Front");
+        _front = UiBuilder.CreateRect(Root, "Front");
         UiBuilder.Stretch(_front, 0f, 0f, 0f, 0f);
 
-        _back = UiBuilder.CreateRect(_root, "Back");
+        _back = UiBuilder.CreateRect(Root, "Back");
         UiBuilder.Stretch(_back, 0f, 0f, 0f, 0f);
         _back.gameObject.SetActive(false);
 
@@ -263,7 +277,7 @@ public class CardView
     /// </summary>
     public void PlayFlip(bool showBack)
     {
-        UiEffects.Flip(_root, () => SetFlipped(showBack));
+        UiEffects.Flip(Root, () => SetFlipped(showBack));
     }
 
     /// <summary>
@@ -271,7 +285,7 @@ public class CardView
     /// </summary>
     public void PlayAppear(float delay = 0f)
     {
-        UiEffects.Pop(_root, 0.82f, 0.3f, delay);
+        UiEffects.Pop(Root, 0.82f, 0.3f, delay);
     }
 
     /// <summary>
@@ -281,11 +295,6 @@ public class CardView
     {
         _onClick = onClick;
         _button.interactable = onClick != null;
-    }
-
-    public void SetVisible(bool visible)
-    {
-        _root.gameObject.SetActive(visible);
     }
 
     //카드 좌표(1398 기준)를 실제 크기로 환산해 배치한다

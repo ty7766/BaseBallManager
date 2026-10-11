@@ -89,6 +89,10 @@ public readonly struct CardDisplayInfo
     {
         info = default;
 
+        //아직 아무것도 고르지 않은 상태다. 조회 자체를 하지 않아 오류 로그를 남기지 않는다
+        if (instanceId == InventoryManager.InvalidInstanceId)
+            return false;
+
         if (InventoryManager.Instance == null || CardDataManager.Instance == null)
         {
             Debug.LogError("[CardDisplayInfo]: InventoryManager 또는 CardDataManager가 씬에 없습니다");

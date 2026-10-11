@@ -7,6 +7,11 @@ using UnityEngine;
 /// </summary>
 public static class UiFontProvider
 {
+    /// <summary>
+    /// 에디터에서 구워 둔 폰트 자산의 Resources 경로. 있으면 이것을 먼저 쓴다
+    /// </summary>
+    public const string AssetResourcePath = "UI/Fonts/UiKoreanFont";
+
     private static readonly string[] CandidateFamilies =
     {
         "Pretendard", "Malgun Gothic", "맑은 고딕", "Gulim", "Batang", "Dotum"
@@ -29,10 +34,14 @@ public static class UiFontProvider
         }
     }
 
-    //OS 폰트 패밀리를 차례로 시도한다. 성공하면 동적 아틀라스로 글리프를 그때그때 굽는다
+    //구워 둔 자산을 먼저 찾고, 없으면 OS 폰트 패밀리를 차례로 시도한다
     private static void Resolve()
     {
         _resolved = true;
+        _korean = Resources.Load<TMP_FontAsset>(AssetResourcePath);
+
+        if (_korean != null)
+            return;
 
         foreach (string family in CandidateFamilies)
         {

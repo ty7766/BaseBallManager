@@ -1,11 +1,11 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
 /// 화면 상단 재화 표시 줄. 로비와 수급·육성 화면이 공유한다
 /// </summary>
-public class CurrencyBarView
+public class CurrencyBarView : UiWidgetBehaviour
 {
     /// <summary>
     /// 줄 높이
@@ -32,16 +32,24 @@ public class CurrencyBarView
         "Currency/currency_train_card"
     };
 
-    public RectTransform Root => _root;
+    [SerializeField] private TextMeshProUGUI[] _amountTexts = new TextMeshProUGUI[ShownTypes.Length];
 
-    private readonly RectTransform _root;
-    private readonly TextMeshProUGUI[] _amountTexts = new TextMeshProUGUI[ShownTypes.Length];
-
-    public CurrencyBarView(Transform parent)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static CurrencyBarView Bake(Transform parent)
     {
-        _root = UiBuilder.CreateRect(parent, "CurrencyBar");
+        CurrencyBarView view = CreateNode<CurrencyBarView>(parent, "CurrencyBar");
 
-        Image background = UiBuilder.CreateImage(_root, "Background", UiPalette.BgPanel,
+        view.BuildWidget(parent);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    private void BuildWidget(Transform parent)
+    {
+        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgPanel,
             UiSprites.PanelSmall, Image.Type.Sliced);
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
@@ -49,7 +57,7 @@ public class CurrencyBarView
 
         for (int i = 0; i < ShownTypes.Length; i++)
         {
-            RectTransform cell = UiBuilder.CreateRect(_root, "Cell");
+            RectTransform cell = UiBuilder.CreateRect(Root, "Cell");
             UiBuilder.Place(cell, i * cellWidth, 0f, cellWidth, BarHeight);
 
             Image icon = UiBuilder.CreateImage(cell, "Icon", Color.white, IconPaths[i]);

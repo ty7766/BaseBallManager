@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -7,29 +7,30 @@ using UnityEngine.UI;
 /// <summary>
 /// 보유 카드 목록. 필터 · 상세 보기 · 용량 확장을 담당한다
 /// </summary>
-public class InventoryScreen : UiScreen
+public class InventoryScreen : UiScreenBehaviour
 {
-    private readonly Action _onBack;
-    private readonly Action<int> _onCardSelected;
-    private readonly Action<string, bool> _onNotify;
+    private Action _onBack;
+    private Action<int> _onCardSelected;
+    private Action<string, bool> _onNotify;
 
-    private TextMeshProUGUI _capacityText;
-    private TextMeshProUGUI _countText;
-    private CardFilterBarView _filterBar;
-    private CardGridView _grid;
-    private Button _expandButton;
-    private TextMeshProUGUI _expandLabel;
+    [SerializeField] private TextMeshProUGUI _capacityText;
+    [SerializeField] private TextMeshProUGUI _countText;
+    [SerializeField] private CardFilterBarView _filterBar;
+    [SerializeField] private CardGridView _grid;
+    [SerializeField] private Button _expandButton;
+    [SerializeField] private TextMeshProUGUI _expandLabel;
 
-    private readonly List<int> _visibleInstanceIds = new List<int>(64);
+    private List<int> _visibleInstanceIds = new List<int>(64);
 
-    public InventoryScreen(Action onBack, Action<int> onCardSelected, Action<string, bool> onNotify)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onBack, Action<int> onCardSelected, Action<string, bool> onNotify)
     {
         _onBack = onBack;
         _onCardSelected = onCardSelected;
         _onNotify = onNotify;
     }
-
-    protected override string ScreenName => "InventoryScreen";
 
     /// <summary>
     /// 목록과 용량을 다시 읽는다
@@ -60,6 +61,12 @@ public class InventoryScreen : UiScreen
             && CurrencyManager.Instance.CanAfford(CurrencyType.Gold, InventoryManager.Instance.ExpandGoldCost);
     }
 
+    protected override void BindEvents()
+    {
+        Bind(_expandButton, OnExpandClicked);
+        BindButton("BackButton", OnBackClicked);
+    }
+
     protected override void Build()
     {
         TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
@@ -72,11 +79,11 @@ public class InventoryScreen : UiScreen
         _countText = UiBuilder.CreateText(Root, "Count", 28f, UiPalette.Text3);
         UiBuilder.Place(_countText.rectTransform, 32f, 96f, 400f, 40f);
 
-        _filterBar = new CardFilterBarView(Root);
+        _filterBar = CardFilterBarView.Bake(Root);
         UiBuilder.Place(_filterBar.Root, 32f, 144f, 1016f, CardFilterBarView.BarHeight);
         _filterBar.SetChangedHandler(Refresh);
 
-        _grid = new CardGridView(Root);
+        _grid = CardGridView.Bake(Root);
         UiBuilder.Stretch(_grid.Root, 32f, 144f + CardFilterBarView.BarHeight + 16f, 32f, 200f);
         _grid.SetClickHandler(OnCardClicked);
         _grid.SetEmptyMessage("조건에 맞는 카드가 없습니다");

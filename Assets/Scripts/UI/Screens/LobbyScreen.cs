@@ -7,9 +7,9 @@ using UnityEngine.UI;
 /// <summary>
 /// 로비 허브. 재화를 보여주고 리그 · 라인업 · 수급 · 육성 화면으로 보낸다
 /// </summary>
-public class LobbyScreen : UiScreen
+public class LobbyScreen : UiScreenBehaviour
 {
-    private readonly Action[] _menuActions;
+    private Action[] _menuActions;
 
     private static readonly string[] MenuLabels =
     {
@@ -25,19 +25,20 @@ public class LobbyScreen : UiScreen
     private const float MenuGap = 16f;
     private const float MenuTop = 420f;
 
-    private TextMeshProUGUI _teamText;
-    private TextMeshProUGUI _tierText;
-    private TextMeshProUGUI _lineupText;
-    private CurrencyBarView _currencyBar;
-    private Button _leagueButton;
-    private readonly List<Button> _menuButtons = new List<Button>(MenuLabelCount);
+    [SerializeField] private TextMeshProUGUI _teamText;
+    [SerializeField] private TextMeshProUGUI _tierText;
+    [SerializeField] private TextMeshProUGUI _lineupText;
+    [SerializeField] private CurrencyBarView _currencyBar;
+    [SerializeField] private Button _leagueButton;
+    [SerializeField] private List<Button> _menuButtons = new List<Button>(MenuLabelCount);
 
-    public LobbyScreen(Action[] menuActions)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action[] menuActions)
     {
         _menuActions = menuActions;
     }
-
-    protected override string ScreenName => "LobbyScreen";
 
     /// <summary>
     /// 팀 · 티어 · 라인업 상태와 재화를 다시 읽는다
@@ -60,6 +61,16 @@ public class LobbyScreen : UiScreen
         _currencyBar.Refresh();
     }
 
+    protected override void BindEvents()
+    {
+        for (int i = 0; i < _menuButtons.Count; i++)
+        {
+            int index = i;
+
+            Bind(_menuButtons[i], () => OnMenuClicked(index));
+        }
+    }
+
     protected override void Build()
     {
         TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 40f, UiPalette.Text3);
@@ -75,7 +86,7 @@ public class LobbyScreen : UiScreen
         _lineupText = UiBuilder.CreateText(Root, "LineupState", 32f, UiPalette.Text2);
         UiBuilder.Place(_lineupText.rectTransform, 32f, 248f, 900f, 44f);
 
-        _currencyBar = new CurrencyBarView(Root);
+        _currencyBar = CurrencyBarView.Bake(Root);
         UiBuilder.Place(_currencyBar.Root, 24f, 310f, 1032f, CurrencyBarView.BarHeight);
 
         for (int i = 0; i < MenuLabels.Length; i++)
