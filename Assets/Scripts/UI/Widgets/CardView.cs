@@ -21,6 +21,7 @@ public class CardView : UiWidgetBehaviour
     private const float StarSize = 144f;
     private const float StatBarMaxStat = 150f;
     private const float ShineAlpha = 0.18f;
+    private const float LogoPlatePadding = 14f;
 
     [SerializeField] private RectTransform _front;
     [SerializeField] private RectTransform _back;
@@ -31,6 +32,7 @@ public class CardView : UiWidgetBehaviour
     [SerializeField] private Image _photo;
     [SerializeField] private Image _photoMask;
     [SerializeField] private Image _nameShadow;
+    [SerializeField] private Image _teamLogoPlate;
     [SerializeField] private Image _teamLogo;
     [SerializeField] private Image _shine;
     [SerializeField] private Image _glow;
@@ -113,6 +115,13 @@ public class CardView : UiWidgetBehaviour
 
         _ovrText = CreateCardText(_front, "Ovr", 270f, 90f, 60f, 300f, 320f, TextAlignmentOptions.Center);
         _positionText = CreateCardText(_front, "Position", 108f, 90f, 380f, 300f, 140f, TextAlignmentOptions.Center);
+        //구단 로고는 흰 바탕을 전제로 만들어져 어두운 베이스 위에서는 묻힌다 (KT 는 단색 검정)
+        _teamLogoPlate = CreateLayer(_front, "TeamLogoPlate", UiSprites.ButtonPrimary,
+            150f - LogoPlatePadding, 530f - LogoPlatePadding,
+            180f + LogoPlatePadding * 2f, 180f + LogoPlatePadding * 2f);
+        _teamLogoPlate.type = Image.Type.Sliced;
+        _teamLogoPlate.color = UiPalette.LogoPlate;
+
         _teamLogo = CreateLayer(_front, "TeamLogo", null, 150f, 530f, 180f, 180f);
         _teamLogo.preserveAspect = true;
 
@@ -198,10 +207,14 @@ public class CardView : UiWidgetBehaviour
         _photo.sprite = photo;
         _photo.gameObject.SetActive(photo != null);
 
-        _nameShadow.color = UiPalette.WithAlpha(typeColor, 0.45f);
+        Color inkColor = CardVisualLookup.GetInkColor(info.CardType);
+
+        //이름 뒤 타원 그림자는 종류별 진한 색이어야 흰 이름이 읽힌다 (명세 6-6)
+        _nameShadow.color = UiPalette.WithAlpha(inkColor, 0.72f);
 
         _ovrText.text = info.FinalOvr.ToString();
-        _ovrText.color = info.CardType == CardType.Normal ? UiPalette.Text1 : typeColor;
+        //노말은 어두운 베이스라 흰 숫자, 시그·골글은 밝은 베이스라 진한 새김색
+        _ovrText.color = info.CardType == CardType.Normal ? UiPalette.Text1 : inkColor;
 
         _positionText.text = info.Position;
         _positionText.color = _ovrText.color;
@@ -210,6 +223,7 @@ public class CardView : UiWidgetBehaviour
 
         _teamLogo.sprite = logo;
         _teamLogo.gameObject.SetActive(logo != null);
+        _teamLogoPlate.gameObject.SetActive(logo != null);
 
         int starCount = (int)info.CardGrade;
 
@@ -248,6 +262,7 @@ public class CardView : UiWidgetBehaviour
 
         _photo.gameObject.SetActive(false);
         _teamLogo.gameObject.SetActive(false);
+        _teamLogoPlate.gameObject.SetActive(false);
         _teamAura.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
         _photoMask.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
         _nameShadow.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);

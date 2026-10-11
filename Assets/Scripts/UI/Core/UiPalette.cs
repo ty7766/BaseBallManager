@@ -33,6 +33,11 @@ public static class UiPalette
     public static readonly Color CardSignature = Hex("#FF6FA0");   //시그니쳐
     public static readonly Color CardGoldenGlove = Hex("#F2C14E"); //골든글러브
 
+    //카드 앞면 새김색 (명세 6-6). 시그·골글 베이스는 밝은 바탕이라 위 강조색으로는 글자가 묻힌다
+    public static readonly Color CardNormalInk = Hex("#1E3A66");       //노말 남색
+    public static readonly Color CardSignatureInk = Hex("#7A1F3D");    //시그니쳐 진한 와인
+    public static readonly Color CardGoldenGloveInk = Hex("#6B4A1E");  //골든글러브 진한 청동
+
     public static readonly Color LogNormal = Hex("#DCE4EF");       //중계 평범
     public static readonly Color LogOffense = Hex("#FFA24C");      //중계 공격
     public static readonly Color LogDefense = Hex("#5EC8F2");      //중계 수비
