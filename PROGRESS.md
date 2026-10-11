@@ -16,6 +16,7 @@
 | 10 골든글러브 제작 / 재화 / 분해 / 카드 조합 | ✅ |
 | **9 경기 UI** | ✅ **구현 완료** (세션 52) |
 | **UI 전체 (로비 · 수급 · 육성 · 가을야구)** | ✅ **구현 완료** (세션 53) — 화면 19장. 2-7 참고 |
+| **UI 프리팹 전환** | ✅ **완료** (세션 56) — 화면 19장을 `Resources/UI/Screens` 에 구웠다. 2-0-C 참고 |
 | **11 튜토리얼** | ⏭️ 미착수 (최종 작업). 새 게임 → 뽑기권 지급 → 안내 토스트까지는 흐름에 들어가 있다 |
 
 **현재 트랙: 전체 코드 검수·리팩토링** (세션 41 착수, 브랜치 `refactoring/Code-Structure-Refactoring`)
@@ -133,6 +134,57 @@ Claude 세션에는 Unity MCP가 없어 **화면을 본 검증만 빠져 있다.
 
 현재 376×794 라 1080 설계 대비 1/3 로 축소된다. 얇은 한글 획이 뭉개져 **가독성 문제처럼 보이지만 뷰 크기 탓**이다.
 레이아웃 판정은 비율로 하고, 글자 굵기는 실기기/큰 Game 뷰에서 다시 본다.
+
+---
+
+### 2-0-C. 🧱 UI 프리팹 전환 (세션 56)
+
+작성자 요구 ① **"유니티답게 스프라이트로 UI 배치"** 를 반영했다.
+코드로 매번 조립하던 UI를 **Resources 프리팹**으로 굽고, 런타임은 `Instantiate` 만 한다.
+이제 인스펙터에서 좌표·색·스프라이트를 직접 만질 수 있다.
+
+#### 구조
+
+| 요소 | 역할 |
+|---|---|
+| `UiScreenBehaviour` | 화면 베이스(MonoBehaviour). `CreateRuntime<T>` 가 프리팹이 있으면 Instantiate, 없으면 코드 조립으로 **자동 폴백** |
+| `UiWidgetBehaviour` | 위젯 베이스. 생성자 → `static Bake(...)` + `BuildWidget(...)` 으로 전환 |
+| `UiEventBinder` | `Awake` 에서 버튼 클릭을 다시 묶는다 |
+| `UiRouter.Create<T>` | 화면 생성·등록을 한 번에. `UiScreen`(구 베이스)은 삭제 |
+| `UiPrefabBaker` | `Tools/BaseBallManager/UI 프리팹 모두 굽기` → `Assets/Resources/UI/Screens/*.prefab` 19장 |
+| `UiFontAssetBuilder` | `Tools/BaseBallManager/UI 폰트 자산 만들기` → `Resources/UI/Fonts/UiKoreanFont.asset` |
+| `UiTabStyle` | 4개 화면에 복사돼 있던 탭 칠하기를 한곳으로 |
+
+#### 🔴 프리팹 전환에서 배운 것 (재발 방지)
+
+- **런타임 `AddListener` 는 프리팹에 직렬화되지 않는다.** 구운 프리팹을 Instantiate 하면 버튼이 전부 죽는다.
+  `Awake → BindEvents()` 로 다시 묶는다. 코드 조립 경로는 `AddComponent` 직후라 자식이 0개이므로
+  `transform.childCount == 0` 이면 건너뛴다 — 이 가드가 없으면 **리스너가 두 번 붙는다**
+- **런타임 생성 TMP 폰트는 프리팹에 담을 수 없다.** `CreateFontAsset` 결과는 메모리 객체라
+  프리팹이 깨진 참조를 저장한다. 에디터에서 자산으로 구워 `Resources` 에 두고 `UiFontProvider` 가 먼저 찾는다.
+  이때 **아틀라스 텍스처와 머티리얼을 `AddObjectToAsset` 으로 같이 저장**해야 한다.
+  빠뜨리면 `The Font Atlas Texture ... is missing` 이 뜨고 글자가 사라진다
+- **직렬화되지 않는 타입에 `[SerializeField]` 를 붙이지 않는다.** `HashSet<int>` · `List<평범한 클래스>` ·
+  `List<T[]>` 는 저장되지 않는다. 런타임에 자라는 행 목록(`CardGridView._cells` · `PlayLogView._rows` ·
+  `StatTableView` · `LineScoreView`)은 전부 비직렬화로 두고 그때그때 만든다
+- **평범한 중첩 클래스는 프리팹에 담기지 않는다.** `LineUpScreen.SlotRow` 는 `Build()` 에서 만들면
+  프리팹에 노드만 남고 래퍼 목록은 빈 채로 돌아온다 → `EnsureRows()` 로 런타임 지연 생성
+- **일괄 변환 스크립트는 지운 줄을 반드시 눈으로 본다.** 위젯 변환기가 `_root = CreateRect(...)` 를 지우면서
+  중첩 클래스 `PlayLogView.LogRow` 의 `Root = CreateRect(...)` 까지 지웠다.
+  컴파일은 통과하고 **중계 첫 줄에서 NRE** 가 나 관전 코루틴이 조용히 죽었다
+- **코드를 고쳐 `Build()` 결과가 바뀌면 프리팹을 다시 구워야 한다.** 런타임 로직만 고쳤다면 굽기는 불필요
+
+#### 검증 (플레이 모드 실측)
+
+- 화면 19장 전부 프리팹에서 생성 · **미연결 버튼 0건 · 중복 연결 0건** (리플렉션으로 리스너 수 전수 확인)
+- 타이틀 → 팀선택 → 로비 → 리그 → 경기 전 → 경기 중 → 경기 후 → 리그 완주, 로비 8개 메뉴 전부 왕복
+- 하니스 PASS 101 / FAIL 0 · apicheck · editorcheck 오류 0
+
+#### 함께 고친 UI 결함 3건
+
+선택된 탭이 어두운 바탕에 어두운 글자라 안 읽힘(`tab_on` 스프라이트에 이미 들어 있는 색을 덧칠) ·
+라인스코어 행 폭을 1080 고정으로 잡아 E 칸이 패널 밖으로 잘림 ·
+카드 미선택 상태(-1)로 조회해 `InventoryManager` 가 매번 LogError.
 
 ---
 
@@ -781,3 +833,4 @@ Core                  SingletonBehaviour
 | 54 (10-09) | **연출 전면 투입.** 트윈 코어 신설(`UiTween` · `UiAnimator` · `UiEase` · `UiEffects`)과 UI 네이티브 파티클(`UiEffectLayer` · `UiParticleSettings` 8종 프리셋 · Image 조각 160개 풀). 화면 전환 페이드 · 중계 행 슬라이드업 · 홈런 색종이 · 득점 배지 팝 · 스코어 플래시 · 도루 주자 이동 · 예약 스피너 8프레임 · 뽑기 순차 공개 · 카드 스케일 플립 · 강화/훈련/돌파/조합/제작/우승 파티클 · 로비 스태거 · 토스트 등장퇴장 (2-8). 파티클 기본 스프라이트 3종을 생성해 `Resources/UI/Fx/`에 넣었고 같은 이름으로 덮어쓰면 외부 애셋으로 교체된다. 🔴 Unity ParticleSystem은 Overlay 캔버스 위로 안 그려져 UI 네이티브로 구현. 검증 PASS 101 / FAIL 0 |
 | 53 (10-09) | **UI 전체 구현 — 앱 실행부터 플레이 전반까지.** 화면 19장(타이틀 · 팀선택 · 로비 · 리그 · 가을야구 · 경기 4 · 뽑기 · 인벤토리 · 라인업 · 강화 · 훈련 · 조합 · 분해 · 골글제작 · 카드상세 · 카드선택) · 위젯 16종 · 코어 12종(2-7). 공용화: `CardDisplayInfo`(카드 1장 표시 정보 집약) · `CardPickerScreen`(5개 화면 공용 선택 모달) · `CardActionScreen`(육성 화면 공통 틀) · `CardView`/`CardCellView` 2단 분리 + `PlayerPhotoProvider` 12장 LRU. 🔴 `GachaResult.InstanceId` 신설 — 뽑기 화면이 방금 뽑은 카드를 특정할 수 없던 구멍. `Design/handoff/디자인_요청서.md`로 Desktop↔CLI 분업 고정. 검증 PASS 87 / FAIL 0 |
 | 55 (10-11) | **Unity MCP 연결 후 첫 실행 QA.** ▶ 실행으로 전체 흐름 완주 · 이어하기 복원 · 경기 중 연출까지 눈으로 확인하고 레이아웃 결함 7건 수정(2-0-B). 바탕화면에 있던 카드 베이스 3종(`BaseImage_SS/SG/GG`, 1398×1957)을 `Resources/UI/Card` 로 임포트 — 카드가 명세 6-6 좌표대로 렌더되는 것을 확인했다. 에디트 모드 미리보기 도구(`UiPreviewBuilder`) 신설. Unity 버전 표기를 6000.3.6f1 로 정정(초기 커밋부터 그 버전이었고 문서만 틀려 있었다). QA 파이프라인 규칙 7가지 기록 |
+| 56 (10-11) | **UI 프리팹 전환.** 화면 19장·위젯 13종을 MonoBehaviour로 바꿔 `[SerializeField]` 참조가 프리팹에 직렬화되게 하고, `UiPrefabBaker` 로 `Resources/UI/Screens` 에 구웠다. 런타임은 Instantiate만 한다(프리팹이 없으면 코드 조립으로 폴백). `UiEventBinder` 로 Awake 재바인딩 · `UiRouter.Create<T>` · 구 `UiScreen` 삭제 · `UiFontAssetBuilder`(아틀라스·머티리얼 서브에셋 포함) · `UiTabStyle` 중복 4곳 통합. 🔴 변환기가 `PlayLogView.LogRow` 의 `Root` 대입을 같이 지워 중계 첫 줄 NRE로 관전 코루틴이 죽던 것 · 선택 탭 가독성 · 라인스코어 E 칸 잘림 · 미선택(-1) 조회 LogError 수정. 플레이 모드 완주 검증, 버튼 미연결·중복 0건. 하니스 PASS 101 / FAIL 0 (2-0-C) |
