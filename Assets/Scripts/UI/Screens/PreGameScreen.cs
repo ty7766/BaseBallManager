@@ -105,11 +105,11 @@ public class PreGameScreen : UiScreen
 
         _awayNameText = UiBuilder.CreateText(matchPanel.transform, "AwayName", 44f, UiPalette.Text1,
             TextAlignmentOptions.Center);
-        UiBuilder.Place(_awayNameText.rectTransform, 20f, 156f, 160f, 48f);
+        UiBuilder.Place(_awayNameText.rectTransform, 20f, 152f, 160f, 50f);
 
         _homeNameText = UiBuilder.CreateText(matchPanel.transform, "HomeName", 44f, UiPalette.Text1,
             TextAlignmentOptions.Center);
-        UiBuilder.Place(_homeNameText.rectTransform, 852f, 156f, 160f, 48f);
+        UiBuilder.Place(_homeNameText.rectTransform, 852f, 152f, 160f, 50f);
 
         TextMeshProUGUI awayTag = UiBuilder.CreateLabel(matchPanel.transform, "AwayTag", "AWAY", 26f,
             UiPalette.Text3, TextAlignmentOptions.Center);
@@ -121,11 +121,11 @@ public class PreGameScreen : UiScreen
 
         _awayMyTeamTag = UiBuilder.CreateLabel(matchPanel.transform, "AwayMyTeam", "MY TEAM", 24f,
             UiPalette.AccentGold, TextAlignmentOptions.Center);
-        UiBuilder.Place(_awayMyTeamTag.rectTransform, 20f, 198f, 160f, 28f);
+        UiBuilder.Place(_awayMyTeamTag.rectTransform, 20f, 206f, 160f, 26f);
 
         _homeMyTeamTag = UiBuilder.CreateLabel(matchPanel.transform, "HomeMyTeam", "MY TEAM", 24f,
             UiPalette.AccentGold, TextAlignmentOptions.Center);
-        UiBuilder.Place(_homeMyTeamTag.rectTransform, 852f, 198f, 160f, 28f);
+        UiBuilder.Place(_homeMyTeamTag.rectTransform, 852f, 206f, 160f, 26f);
 
         TextMeshProUGUI versus = UiBuilder.CreateLabel(matchPanel.transform, "Versus", "VS", 60f,
             UiPalette.Text3, TextAlignmentOptions.Center);

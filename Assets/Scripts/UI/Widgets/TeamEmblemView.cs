@@ -57,12 +57,17 @@ public class TeamEmblemView
         _initialText.text = GetInitial(teamName);
     }
 
-    //한글 팀명은 첫 글자, 영문 팀명은 두 글자까지 쓴다
+    //아래에 팀명이 따로 찍히므로 엠블럼은 한 글자만 쓴다 (영문 약칭은 두 글자까지)
     private static string GetInitial(string teamName)
     {
         if (string.IsNullOrEmpty(teamName))
             return "?";
 
-        return teamName.Length <= 3 ? teamName : teamName.Substring(0, 2);
+        bool isAscii = teamName[0] < 128;
+
+        if (!isAscii)
+            return teamName.Substring(0, 1);
+
+        return teamName.Length <= 2 ? teamName : teamName.Substring(0, 2);
     }
 }

@@ -25,7 +25,8 @@ public class StatTableView
     private readonly List<TextMeshProUGUI[]> _numberCells = new List<TextMeshProUGUI[]>(16);
     private readonly List<Image> _rowBackgrounds = new List<Image>(16);
 
-    public StatTableView(Transform parent, string[] numericHeaders, float nameWidth, float cellWidth)
+    public StatTableView(Transform parent, string[] numericHeaders, float nameWidth, float cellWidth,
+        string nameHeaderText = "선수")
     {
         _numericHeaders = numericHeaders;
         _nameWidth = nameWidth;
@@ -42,7 +43,7 @@ public class StatTableView
 
         TextMeshProUGUI nameHeader = UiBuilder.CreateText(_nameColumn, "NameHeader", 28f, UiPalette.Text3);
         UiBuilder.Place(nameHeader.rectTransform, 12f, 14f, nameWidth - 16f, 32f);
-        nameHeader.text = "선수";
+        nameHeader.text = nameHeaderText;
 
         ScrollRect scroll = UiBuilder.CreateTableScroll(_root, "NumberScroll", out _numberContent);
         RectTransform scrollRect = scroll.GetComponent<RectTransform>();

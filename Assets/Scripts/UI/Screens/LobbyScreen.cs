@@ -15,7 +15,7 @@ public class LobbyScreen : UiScreen
     {
         "리그 입장", "라인업", "뽑기", "인벤토리",
         "강화", "훈련 · 돌파", "카드 조합", "카드 분해",
-        "골든글러브 제작", "저장", "빠른 시작 (자동 뽑기 + 라인업)"
+        "골든글러브 제작", "저장", "빠른 시작"
     };
 
     private const int MenuLabelCount = 11;

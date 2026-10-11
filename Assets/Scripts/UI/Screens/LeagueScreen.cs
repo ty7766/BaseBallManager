@@ -103,7 +103,7 @@ public class LeagueScreen : UiScreen
         UiBuilder.Place(standingsTitle.rectTransform, 32f, 216f, 400f, 44f);
         standingsTitle.text = "순위표";
 
-        _standingsTable = new StatTableView(Root, StandingHeaders, 280f, 120f);
+        _standingsTable = new StatTableView(Root, StandingHeaders, 280f, 120f, "팀");
         UiBuilder.Stretch(_standingsTable.Root, 24f, 268f, 24f, 320f);
 
         _modeButton = UiBuilder.CreateButton(Root, "ModeButton", "교체 모드 전환", 32f, false, OnToggleModeClicked);

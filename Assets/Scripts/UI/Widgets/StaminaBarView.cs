@@ -33,8 +33,8 @@ public class StaminaBarView
             UiSprites.StaminaTick);
         UiBuilder.Place(tick.rectTransform, width * 0.5f - 2f, 0f, 4f, height);
 
-        _valueText = UiBuilder.CreateText(_root, "Value", 26f, UiPalette.Text2, TextAlignmentOptions.Right);
-        UiBuilder.Place(_valueText.rectTransform, width - 150f, -34f, 150f, 30f);
+        _valueText = UiBuilder.CreateText(_root, "Value", 22f, UiPalette.Text2, TextAlignmentOptions.Right);
+        UiBuilder.Place(_valueText.rectTransform, width - 160f, height + 4f, 160f, 26f);
     }
 
     /// <summary>
