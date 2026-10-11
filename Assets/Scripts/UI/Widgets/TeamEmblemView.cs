@@ -47,14 +47,17 @@ public class TeamEmblemView : UiWidgetBehaviour
 
         if (logo != null)
         {
-            //실제 로고는 자체 색을 가지므로 판을 중립색으로 두어야 로고가 읽힌다
-            _plate.color = UiPalette.WithAlpha(UiPalette.BgRow, 0.95f);
+            //구단 로고는 흰 바탕을 전제로 만들어져 어두운 판 위에서는 묻힌다.
+            //panel_small 은 어두운 채움이 그림에 박혀 있어 틴트가 먹지 않으므로 흰 채움으로 바꿔 깐다
+            _plate.sprite = UiSprites.Get(UiSprites.ButtonPrimary);
+            _plate.color = UiPalette.LogoPlate;
             _logo.sprite = logo;
             _logo.gameObject.SetActive(true);
             _initialText.gameObject.SetActive(false);
             return;
         }
 
+        _plate.sprite = UiSprites.Get(UiSprites.PanelSmall);
         _plate.color = UiPalette.WithAlpha(UiPalette.GetTeamColor(teamName), 0.85f);
         _logo.gameObject.SetActive(false);
         _initialText.gameObject.SetActive(true);

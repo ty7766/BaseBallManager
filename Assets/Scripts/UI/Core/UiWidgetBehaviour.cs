@@ -13,13 +13,16 @@ public abstract class UiWidgetBehaviour : MonoBehaviour
     /// </summary>
     public RectTransform Root => (RectTransform)transform;
 
-    //프리팹에서 깨어날 때 버튼 이벤트를 다시 묶는다 (직렬화되지 않는다).
-    //코드 조립 경로는 AddComponent 직후라 자식이 없다. 그때는 BuildWidget이 직접 리스너를 건다
-    private void Awake()
+    //직렬화하지 않는다. 프리팹 인스턴스는 항상 false 로 깨어나 한 번만 묶인다
+    private bool _eventsBound;
+
+    //꺼진 채로 깔아 둔 화면 안의 위젯은 Awake 가 돌지 않으므로 처음 켜질 때 묶는다
+    private void OnEnable()
     {
-        if (transform.childCount == 0)
+        if (_eventsBound)
             return;
 
+        _eventsBound = true;
         BindEvents();
     }
 
@@ -68,7 +71,11 @@ public abstract class UiWidgetBehaviour : MonoBehaviour
     protected static T CreateNode<T>(Transform parent, string name) where T : UiWidgetBehaviour
     {
         RectTransform rect = UiBuilder.CreateRect(parent, name);
+        T widget = rect.gameObject.AddComponent<T>();
 
-        return rect.gameObject.AddComponent<T>();
+        //BuildWidget 이 리스너를 직접 건다. OnEnable 이 또 묶지 않도록 표시해 둔다
+        widget._eventsBound = true;
+
+        return widget;
     }
 }

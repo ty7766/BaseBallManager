@@ -40,6 +40,10 @@ public static class UiPalette
 
     public static readonly Color AccentGold = Hex("#F2C14E");      //+N점 · R · MY TEAM
 
+    //실제 구단 로고를 올리는 판. 구단 로고는 흰 바탕을 전제로 만들어져
+    //검정 단색(KT)부터 흰색 획(키움)까지 섞여 있어 중간 밝기를 쓴다
+    public static readonly Color LogoPlate = Hex("#5A6B86");
+
     private static readonly Color[] TeamColors =
     {
         Hex("#C8102E"), //기아

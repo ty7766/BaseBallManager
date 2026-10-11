@@ -8,12 +8,20 @@ using UnityEngine.UI;
 /// </summary>
 public class GameUiBootstrap : MonoBehaviour
 {
+    /// <summary>
+    /// 씬에 깔아 둔 캔버스의 이름. 에디터 도구와 런타임이 같은 이름을 본다
+    /// </summary>
+    public const string CanvasName = "GameCanvas";
+
+    [SerializeField, Tooltip("씬에 미리 깔아 둔 UI 캔버스. 비워 두면 실행할 때 만든다")]
+    private Canvas _sceneCanvas;
+
     [SerializeField, Tooltip("타석 하나를 보여주고 다음으로 넘어가기까지의 시간(초)")]
     private float _secondsPerAtBat = 1.2f;
 
     private void Start()
     {
-        RectTransform canvasRoot = CreateCanvas();
+        RectTransform canvasRoot = ResolveCanvas();
 
         EnsureEventSystem();
 
@@ -27,10 +35,37 @@ public class GameUiBootstrap : MonoBehaviour
         flow.Initialize(canvasRoot, driver, interruptController);
     }
 
-    //1080×1920 기준 세로 고정 캔버스. 세로가 긴 기기는 아래로 더 보인다
-    private RectTransform CreateCanvas()
+    //씬에 깔아 둔 캔버스를 쓰고, 없으면 그때 만든다
+    private RectTransform ResolveCanvas()
     {
-        GameObject canvasObject = new GameObject("GameCanvas", typeof(RectTransform));
+        if (_sceneCanvas != null)
+            return (RectTransform)_sceneCanvas.transform;
+
+        foreach (GameObject root in gameObject.scene.GetRootGameObjects())
+        {
+            if (root.name != CanvasName)
+                continue;
+
+            Canvas found = root.GetComponent<Canvas>();
+
+            if (found == null)
+                continue;
+
+            _sceneCanvas = found;
+
+            return (RectTransform)found.transform;
+        }
+
+        return CreateCanvas(CanvasName);
+    }
+
+    /// <summary>
+    /// 1080×1920 기준 세로 고정 캔버스. 세로가 긴 기기는 아래로 더 보인다.
+    /// 씬에 UI를 까는 에디터 도구도 같은 설정을 쓰도록 공유한다
+    /// </summary>
+    public static RectTransform CreateCanvas(string canvasName)
+    {
+        GameObject canvasObject = new GameObject(canvasName, typeof(RectTransform));
         Canvas canvas = canvasObject.AddComponent<Canvas>();
 
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;

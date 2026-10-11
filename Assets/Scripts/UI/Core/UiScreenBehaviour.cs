@@ -17,19 +17,22 @@ public abstract class UiScreenBehaviour : MonoBehaviour
 
     [SerializeField] private CanvasGroup _fadeGroup;
 
+    //직렬화하지 않는다. 프리팹 인스턴스는 항상 false 로 깨어나 한 번만 묶인다
+    private bool _eventsBound;
+
     /// <summary>
     /// 화면의 루트. 자기 자신이다
     /// </summary>
     public RectTransform Root => (RectTransform)transform;
 
-    //프리팹에서 깨어날 때 버튼 이벤트를 다시 묶는다.
     //런타임 AddListener 는 프리팹에 직렬화되지 않아 인스턴스마다 새로 걸어야 한다.
-    //코드 조립 경로는 AddComponent 직후라 자식이 없다. 그때는 Build가 직접 리스너를 건다
-    private void Awake()
+    //씬에 꺼진 채로 깔아 둔 화면은 Awake 가 돌지 않으므로 처음 켜질 때 묶는다
+    private void OnEnable()
     {
-        if (transform.childCount == 0)
+        if (_eventsBound)
             return;
 
+        _eventsBound = true;
         BindEvents();
     }
 
@@ -79,10 +82,15 @@ public abstract class UiScreenBehaviour : MonoBehaviour
     }
 
     /// <summary>
-    /// 화면 하나를 만든다. Resources에 구워 둔 프리팹이 있으면 그것을, 없으면 코드로 조립한다
+    /// 화면 하나를 확보한다. 씬에 이미 깔려 있으면 그것을, 없으면 구운 프리팹을, 그것도 없으면 코드로 조립한다
     /// </summary>
     public static T CreateRuntime<T>(RectTransform parent, string screenName) where T : UiScreenBehaviour
     {
+        T placed = FindPlaced<T>(parent, screenName);
+
+        if (placed != null)
+            return placed;
+
         GameObject prefab = Resources.Load<GameObject>(PrefabResourceRoot + screenName);
 
         if (prefab != null)
@@ -97,6 +105,25 @@ public abstract class UiScreenBehaviour : MonoBehaviour
         return CreateFromCode<T>(parent, screenName);
     }
 
+    //씬에 미리 깔아 둔 화면을 찾는다. 꺼져 있을 수 있으므로 비활성 자식까지 본다
+    private static T FindPlaced<T>(RectTransform parent, string screenName) where T : UiScreenBehaviour
+    {
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+
+            if (child.name != screenName)
+                continue;
+
+            T screen = child.GetComponent<T>();
+
+            if (screen != null)
+                return screen;
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// 프리팹을 거치지 않고 코드로 화면을 조립한다. 프리팹을 굽는 도구와 미리보기가 쓴다
     /// </summary>
@@ -105,6 +132,8 @@ public abstract class UiScreenBehaviour : MonoBehaviour
         RectTransform rect = UiBuilder.CreateRect(parent, screenName);
         T screen = rect.gameObject.AddComponent<T>();
 
+        //Build 가 리스너를 직접 건다. OnEnable 이 또 묶지 않도록 표시해 둔다
+        screen._eventsBound = true;
         screen.BakeHierarchy();
 
         return screen;

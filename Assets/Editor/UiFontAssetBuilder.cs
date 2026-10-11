@@ -25,6 +25,29 @@ public static class UiFontAssetBuilder
     }
 
     /// <summary>
+    /// 재생 중 구워진 글리프를 지워 자산을 원래 크기로 되돌린다.
+    /// 동적 아틀라스는 쓸수록 커져 커밋 때마다 수 MB가 바뀌므로 커밋 전에 비운다
+    /// </summary>
+    [MenuItem("Tools/BaseBallManager/UI 폰트 글리프 캐시 비우기", false, 10)]
+    public static void ClearGlyphCache()
+    {
+        TMP_FontAsset fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetPath);
+
+        if (fontAsset == null)
+        {
+            Debug.LogWarning($"[UiFontAssetBuilder]: '{AssetPath}' 가 없습니다");
+            return;
+        }
+
+        fontAsset.ClearFontAssetData(true);
+
+        EditorUtility.SetDirty(fontAsset);
+        AssetDatabase.SaveAssets();
+
+        Debug.Log("[UiFontAssetBuilder]: 폰트 글리프 캐시를 비웠습니다 (재생하면 다시 채워집니다)");
+    }
+
+    /// <summary>
     /// 폰트 자산을 보장한다. 이미 있으면 그것을 돌려준다
     /// </summary>
     public static TMP_FontAsset Ensure()
