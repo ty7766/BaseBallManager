@@ -6,37 +6,38 @@ using UnityEngine.UI;
 /// <summary>
 /// ② 경기 중 화면. 타석 결과가 한 줄씩 흐르고 조작은 일시정지뿐이다 (명세 ② · 6-5)
 /// </summary>
-public class LiveGameScreen : UiScreen
+public class LiveGameScreen : UiScreenBehaviour
 {
     private const float MatchupHeight = 196f;
     private const float FooterHeight = 120f;
     private const float ChipWidth = 420f;
     private const float DiamondSize = 160f;
 
-    private readonly Action _onPauseRequested;
+    private Action _onPauseRequested;
 
-    private ScoreboardView _scoreboard;
-    private BaseDiamondView _diamond;
-    private PlayerChipView _batterChip;
-    private PlayerChipView _pitcherChip;
-    private StaminaBarView _staminaBar;
-    private PlayLogView _playLog;
-    private Button _pauseButton;
-    private Image _pauseIcon;
+    [SerializeField] private ScoreboardView _scoreboard;
+    [SerializeField] private BaseDiamondView _diamond;
+    [SerializeField] private PlayerChipView _batterChip;
+    [SerializeField] private PlayerChipView _pitcherChip;
+    [SerializeField] private StaminaBarView _staminaBar;
+    [SerializeField] private PlayLogView _playLog;
+    [SerializeField] private Button _pauseButton;
+    [SerializeField] private Image _pauseIcon;
     private UiTween _pauseSpinTween;
-    private TextMeshProUGUI _pauseLabel;
-    private TextMeshProUGUI _pauseHintText;
-    private TextMeshProUGUI _modeText;
+    [SerializeField] private TextMeshProUGUI _pauseLabel;
+    [SerializeField] private TextMeshProUGUI _pauseHintText;
+    [SerializeField] private TextMeshProUGUI _modeText;
 
     private GameSession _session;
     private bool _isPlayerHome;
 
-    public LiveGameScreen(Action onPauseRequested)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onPauseRequested)
     {
         _onPauseRequested = onPauseRequested;
     }
-
-    protected override string ScreenName => "LiveGameScreen";
 
     /// <summary>
     /// 관전할 경기를 연결하고 중계를 비운다
@@ -147,26 +148,31 @@ public class LiveGameScreen : UiScreen
         _pauseHintText.text = string.Empty;
     }
 
+    protected override void BindEvents()
+    {
+        Bind(_pauseButton, OnPauseClicked);
+    }
+
     protected override void Build()
     {
-        _scoreboard = new ScoreboardView(Root);
+        _scoreboard = ScoreboardView.Bake(Root);
 
         RectTransform matchup = UiBuilder.CreateRect(Root, "Matchup");
         UiBuilder.Place(matchup, 0f, ScoreboardView.BoardHeight, UiBuilder.DesignSize.x, MatchupHeight);
 
-        _batterChip = new PlayerChipView(matchup, "타자", ChipWidth, false);
+        _batterChip = PlayerChipView.Bake(matchup, "타자", ChipWidth, false);
         UiBuilder.Place(_batterChip.Root, 24f, 8f, ChipWidth, PlayerChipView.ChipHeight);
 
-        _pitcherChip = new PlayerChipView(matchup, "투수", ChipWidth, true);
+        _pitcherChip = PlayerChipView.Bake(matchup, "투수", ChipWidth, true);
         UiBuilder.Place(_pitcherChip.Root, 636f, 8f, ChipWidth, PlayerChipView.ChipHeight);
 
-        _diamond = new BaseDiamondView(matchup, DiamondSize);
+        _diamond = BaseDiamondView.Bake(matchup, DiamondSize);
         UiBuilder.Place(_diamond.Root, 460f, 14f, DiamondSize, DiamondSize);
 
-        _staminaBar = new StaminaBarView(matchup, ChipWidth, 22f);
+        _staminaBar = StaminaBarView.Bake(matchup, ChipWidth, 22f);
         UiBuilder.Place(_staminaBar.Root, 636f, 142f, ChipWidth, 22f);
 
-        _playLog = new PlayLogView(Root);
+        _playLog = PlayLogView.Bake(Root);
         UiBuilder.Stretch(_playLog.Root, 24f, ScoreboardView.BoardHeight + MatchupHeight + 12f, 24f, FooterHeight + 24f);
 
         RectTransform footer = UiBuilder.CreateRect(Root, "Footer");

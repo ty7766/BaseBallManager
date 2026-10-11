@@ -6,34 +6,35 @@ using UnityEngine.UI;
 /// <summary>
 /// ① 경기 전 화면. 대진 · 상대전적 · 선발 · 양 팀 타순을 보여주고 경기를 시작한다 (명세 ①)
 /// </summary>
-public class PreGameScreen : UiScreen
+public class PreGameScreen : UiScreenBehaviour
 {
     private const float LineupColumnWidth = 520f;
     private const float LineupTop = 540f;
     private const float RowGap = 6f;
 
-    private readonly Action _onStart;
+    private Action _onStart;
 
-    private TextMeshProUGUI _tierText;
-    private TextMeshProUGUI _progressText;
-    private TextMeshProUGUI _awayNameText;
-    private TextMeshProUGUI _homeNameText;
-    private TextMeshProUGUI _headToHeadText;
-    private TextMeshProUGUI _awayMyTeamTag;
-    private TextMeshProUGUI _homeMyTeamTag;
-    private TeamEmblemView _awayEmblem;
-    private TeamEmblemView _homeEmblem;
-    private PlayerChipView _awayStarterChip;
-    private PlayerChipView _homeStarterChip;
-    private LineupRowView[] _awayRows;
-    private LineupRowView[] _homeRows;
+    [SerializeField] private TextMeshProUGUI _tierText;
+    [SerializeField] private TextMeshProUGUI _progressText;
+    [SerializeField] private TextMeshProUGUI _awayNameText;
+    [SerializeField] private TextMeshProUGUI _homeNameText;
+    [SerializeField] private TextMeshProUGUI _headToHeadText;
+    [SerializeField] private TextMeshProUGUI _awayMyTeamTag;
+    [SerializeField] private TextMeshProUGUI _homeMyTeamTag;
+    [SerializeField] private TeamEmblemView _awayEmblem;
+    [SerializeField] private TeamEmblemView _homeEmblem;
+    [SerializeField] private PlayerChipView _awayStarterChip;
+    [SerializeField] private PlayerChipView _homeStarterChip;
+    [SerializeField] private LineupRowView[] _awayRows;
+    [SerializeField] private LineupRowView[] _homeRows;
 
-    public PreGameScreen(Action onStart)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onStart)
     {
         _onStart = onStart;
     }
-
-    protected override string ScreenName => "PreGameScreen";
 
     /// <summary>
     /// 오늘 경기 정보를 채운다. 경기 시작 직전에 호출한다
@@ -85,6 +86,11 @@ public class PreGameScreen : UiScreen
         }
     }
 
+    protected override void BindEvents()
+    {
+        BindButton("StartButton", OnStartClicked);
+    }
+
     protected override void Build()
     {
         _tierText = UiBuilder.CreateText(Root, "Tier", 48f, UiPalette.Text1);
@@ -97,10 +103,10 @@ public class PreGameScreen : UiScreen
             UiSprites.PanelLarge, Image.Type.Sliced);
         UiBuilder.Place(matchPanel.rectTransform, 24f, 116f, 1032f, 230f);
 
-        _awayEmblem = new TeamEmblemView(matchPanel.transform, 120f);
+        _awayEmblem = TeamEmblemView.Bake(matchPanel.transform, 120f);
         UiBuilder.Place(_awayEmblem.Root, 40f, 28f, 120f, 120f);
 
-        _homeEmblem = new TeamEmblemView(matchPanel.transform, 120f);
+        _homeEmblem = TeamEmblemView.Bake(matchPanel.transform, 120f);
         UiBuilder.Place(_homeEmblem.Root, 872f, 28f, 120f, 120f);
 
         _awayNameText = UiBuilder.CreateText(matchPanel.transform, "AwayName", 44f, UiPalette.Text1,
@@ -135,10 +141,10 @@ public class PreGameScreen : UiScreen
             TextAlignmentOptions.Center);
         UiBuilder.Place(_headToHeadText.rectTransform, 316f, 128f, 400f, 44f);
 
-        _awayStarterChip = new PlayerChipView(Root, "선발", LineupColumnWidth, false);
+        _awayStarterChip = PlayerChipView.Bake(Root, "선발", LineupColumnWidth, false);
         UiBuilder.Place(_awayStarterChip.Root, 24f, 376f, LineupColumnWidth, PlayerChipView.ChipHeight);
 
-        _homeStarterChip = new PlayerChipView(Root, "선발", LineupColumnWidth, true);
+        _homeStarterChip = PlayerChipView.Bake(Root, "선발", LineupColumnWidth, true);
         UiBuilder.Place(_homeStarterChip.Root, 536f, 376f, LineupColumnWidth, PlayerChipView.ChipHeight);
 
         RectTransform awayColumn = UiBuilder.CreateRect(Root, "AwayLineup");
@@ -166,7 +172,7 @@ public class PreGameScreen : UiScreen
 
         for (int i = 0; i < rows.Length; i++)
         {
-            rows[i] = new LineupRowView(column, LineupColumnWidth);
+            rows[i] = LineupRowView.Bake(column, LineupColumnWidth);
             rows[i].SetIndex(i, RowGap);
         }
 

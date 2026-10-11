@@ -16,25 +16,21 @@ public class GoldenGloveCraftScreen : CardActionScreen
 
     private const int TeamColumns = 5;
 
-    private Button _randomTabButton;
-    private Button _teamTabButton;
-    private RectTransform _teamGrid;
-    private readonly Button[] _teamButtons = new Button[TeamNames.Length];
-    private TextMeshProUGUI _costText;
-    private TextMeshProUGUI _resultText;
-    private Button _craftButton;
+    /// <summary>
+    /// 화면 제목
+    /// </summary>
+    protected override string Title => "골든글러브 제작";
+
+    [SerializeField] private Button _randomTabButton;
+    [SerializeField] private Button _teamTabButton;
+    [SerializeField] private RectTransform _teamGrid;
+    [SerializeField] private Button[] _teamButtons = new Button[TeamNames.Length];
+    [SerializeField] private TextMeshProUGUI _costText;
+    [SerializeField] private TextMeshProUGUI _resultText;
+    [SerializeField] private Button _craftButton;
 
     private GoldenGloveCraftType _craftType = GoldenGloveCraftType.Random;
     private string _selectedTeamName;
-
-    public GoldenGloveCraftScreen(Action onBack,
-        Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> onPickCard,
-        Action<string, bool> onNotify)
-        : base("골든글러브 제작", onBack, onPickCard, onNotify)
-    {
-    }
-
-    protected override string ScreenName => "GoldenGloveCraftScreen";
 
     public override void Refresh()
     {
@@ -57,6 +53,16 @@ public class GoldenGloveCraftScreen : CardActionScreen
 
         _costText.text = BuildCostText(costs);
         _craftButton.interactable = CanAfford(costs) && (!teamMode || !string.IsNullOrEmpty(_selectedTeamName));
+    }
+
+    protected override void BindEvents()
+    {
+        base.BindEvents();
+
+        Bind(_randomTabButton, () => SelectType(GoldenGloveCraftType.Random));
+        Bind(_teamTabButton, () => SelectType(GoldenGloveCraftType.TeamSelect));
+        BindEach(_teamButtons, SelectTeam);
+        Bind(_craftButton, Craft);
     }
 
     protected override void BuildBody()

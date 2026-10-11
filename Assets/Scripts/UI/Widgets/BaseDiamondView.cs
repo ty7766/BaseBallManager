@@ -4,22 +4,31 @@ using UnityEngine.UI;
 /// <summary>
 /// 주자 상황 다이아몬드 (명세 1-4). 1루 우 · 2루 상 · 3루 좌 · 홈 하
 /// </summary>
-public class BaseDiamondView
+public class BaseDiamondView : UiWidgetBehaviour
 {
     private const float BaseSize = 44f;
 
-    public RectTransform Root => _root;
+    [SerializeField] private Image _first;
+    [SerializeField] private Image _second;
+    [SerializeField] private Image _third;
+    [SerializeField] private Image _runnerDot;
 
-    private readonly RectTransform _root;
-    private readonly Image _first;
-    private readonly Image _second;
-    private readonly Image _third;
-    private readonly Image _runnerDot;
-
-    public BaseDiamondView(Transform parent, float size)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static BaseDiamondView Bake(Transform parent, float size)
     {
-        _root = UiBuilder.CreateRect(parent, "BaseDiamond");
-        UiBuilder.Place(_root, 0f, 0f, size, size);
+        BaseDiamondView view = CreateNode<BaseDiamondView>(parent, "BaseDiamond");
+
+        view.BuildWidget(parent, size);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    private void BuildWidget(Transform parent, float size)
+    {
+        UiBuilder.Place(Root, 0f, 0f, size, size);
 
         float center = (size - BaseSize) * 0.5f;
         float edge = size - BaseSize;
@@ -28,10 +37,10 @@ public class BaseDiamondView
         _third = CreateBase("Third", 0f, center);
         _first = CreateBase("First", edge, center);
 
-        Image home = UiBuilder.CreateImage(_root, "Home", UiPalette.TextOff, UiSprites.BaseHome);
+        Image home = UiBuilder.CreateImage(Root, "Home", UiPalette.TextOff, UiSprites.BaseHome);
         UiBuilder.Place(home.rectTransform, center, edge, BaseSize, BaseSize);
 
-        _runnerDot = UiBuilder.CreateImage(_root, "RunnerDot", UiPalette.StatePitching,
+        _runnerDot = UiBuilder.CreateImage(Root, "RunnerDot", UiPalette.StatePitching,
             UiSprites.BaseDiamondOccupied);
         UiBuilder.Place(_runnerDot.rectTransform, center, center, BaseSize * 0.55f, BaseSize * 0.55f);
         _runnerDot.gameObject.SetActive(false);
@@ -101,7 +110,7 @@ public class BaseDiamondView
 
     private Image CreateBase(string name, float x, float y)
     {
-        Image image = UiBuilder.CreateImage(_root, name, UiPalette.LineBorder, UiSprites.BaseDiamondEmpty);
+        Image image = UiBuilder.CreateImage(Root, name, UiPalette.LineBorder, UiSprites.BaseDiamondEmpty);
 
         UiBuilder.Place(image.rectTransform, x, y, BaseSize, BaseSize);
 

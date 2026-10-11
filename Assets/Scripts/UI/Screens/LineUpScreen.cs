@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// 라인업 편성. 야수 9포지션 · 벤치 5 · 투수 SP5/RP5/CP1을 채운다.
 /// 포지션·타순·중복 검사는 LineUpManager가 하고 화면은 결과만 보여준다
 /// </summary>
-public class LineUpScreen : UiScreen
+public class LineUpScreen : UiScreenBehaviour
 {
     private const float RowHeight = 104f;
     private const float RowGap = 8f;
@@ -25,20 +25,23 @@ public class LineUpScreen : UiScreen
         "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"
     };
 
-    private readonly Action _onBack;
-    private readonly Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> _onPickCard;
-    private readonly Action<string, bool> _onNotify;
+    private Action _onBack;
+    private Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> _onPickCard;
+    private Action<string, bool> _onNotify;
 
-    private TextMeshProUGUI _stateText;
-    private Button _hitterTabButton;
-    private Button _benchTabButton;
-    private Button _pitcherTabButton;
-    private RectTransform _rowArea;
+    [SerializeField] private TextMeshProUGUI _stateText;
+    [SerializeField] private Button _hitterTabButton;
+    [SerializeField] private Button _benchTabButton;
+    [SerializeField] private Button _pitcherTabButton;
+    [SerializeField] private RectTransform _rowArea;
     private readonly List<SlotRow> _rows = new List<SlotRow>(MaxRowCount);
 
     private Tab _tab = Tab.Hitter;
 
-    public LineUpScreen(Action onBack,
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onBack,
         Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> onPickCard,
         Action<string, bool> onNotify)
     {
@@ -54,13 +57,13 @@ public class LineUpScreen : UiScreen
         Pitcher
     }
 
-    protected override string ScreenName => "LineUpScreen";
-
     /// <summary>
     /// 현재 탭의 슬롯 상태를 다시 읽는다
     /// </summary>
     public void Refresh()
     {
+        EnsureRows();
+
         if (LineUpManager.Instance == null)
             return;
 
@@ -87,6 +90,16 @@ public class LineUpScreen : UiScreen
                 RefreshPitcherRows();
                 break;
         }
+    }
+
+    protected override void BindEvents()
+    {
+        Bind(_hitterTabButton, () => SelectTab(Tab.Hitter));
+        Bind(_benchTabButton, () => SelectTab(Tab.Bench));
+        Bind(_pitcherTabButton, () => SelectTab(Tab.Pitcher));
+        BindButton("AutoFill", AutoFill);
+        BindButton("ClearAll", ClearAll);
+        BindButton("BackButton", OnBackClicked);
     }
 
     protected override void Build()
@@ -119,13 +132,6 @@ public class LineUpScreen : UiScreen
         _rowArea = UiBuilder.CreateRect(Root, "Rows");
         UiBuilder.Stretch(_rowArea, 32f, 316f, 32f, 200f);
 
-        for (int i = 0; i < MaxRowCount; i++)
-        {
-            SlotRow row = new SlotRow(_rowArea, i);
-
-            _rows.Add(row);
-        }
-
         Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
         RectTransform backRect = backButton.GetComponent<RectTransform>();
 
@@ -139,6 +145,16 @@ public class LineUpScreen : UiScreen
     protected override void OnShown()
     {
         Refresh();
+    }
+
+    //슬롯 행은 프리팹에 굽지 않고 런타임에 한 번만 만든다 (SlotRow는 직렬화되지 않는 평범한 클래스)
+    private void EnsureRows()
+    {
+        if (_rows.Count > 0)
+            return;
+
+        for (int i = 0; i < MaxRowCount; i++)
+            _rows.Add(new SlotRow(_rowArea, i));
     }
 
     private void RefreshHitterRows()

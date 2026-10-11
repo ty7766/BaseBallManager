@@ -54,7 +54,6 @@ public class AppFlowController : MonoBehaviour
         _router = new UiRouter(canvasRoot);
 
         BuildScreens();
-        RegisterScreens();
 
         _toast = new ToastView(canvasRoot);
 
@@ -88,12 +87,33 @@ public class AppFlowController : MonoBehaviour
         _driver.Finished -= OnPlaybackFinished;
     }
 
+    //화면 프리팹을 깔고 콜백을 꽂는다. 프리팹이 없으면 코드로 조립된다
     private void BuildScreens()
     {
-        _titleScreen = new TitleScreen(OnNewGameRequested, OnContinueRequested);
-        _teamSelectScreen = new TeamSelectScreen(OnTeamConfirmed);
+        _titleScreen = _router.Create<TitleScreen>("TitleScreen");
+        _teamSelectScreen = _router.Create<TeamSelectScreen>("TeamSelectScreen");
+        _lobbyScreen = _router.Create<LobbyScreen>("LobbyScreen");
+        _leagueScreen = _router.Create<LeagueScreen>("LeagueScreen");
+        _preGameScreen = _router.Create<PreGameScreen>("PreGameScreen");
+        _liveGameScreen = _router.Create<LiveGameScreen>("LiveGameScreen");
+        _postGameScreen = _router.Create<PostGameScreen>("PostGameScreen");
+        _postSeasonScreen = _router.Create<PostSeasonScreen>("PostSeasonScreen");
+        _inventoryScreen = _router.Create<InventoryScreen>("InventoryScreen");
+        _gachaScreen = _router.Create<GachaScreen>("GachaScreen");
+        _lineUpScreen = _router.Create<LineUpScreen>("LineUpScreen");
+        _enhanceScreen = _router.Create<EnhanceScreen>("EnhanceScreen");
+        _trainScreen = _router.Create<TrainScreen>("TrainScreen");
+        _combineScreen = _router.Create<CombineScreen>("CombineScreen");
+        _dismantleScreen = _router.Create<DismantleScreen>("DismantleScreen");
+        _goldenGloveCraftScreen = _router.Create<GoldenGloveCraftScreen>("GoldenGloveCraftScreen");
+        _pauseScreen = _router.Create<PauseSubstitutionScreen>("PauseSubstitutionScreen");
+        _cardPickerScreen = _router.Create<CardPickerScreen>("CardPickerScreen");
+        _cardDetailScreen = _router.Create<CardDetailScreen>("CardDetailScreen");
 
-        _lobbyScreen = new LobbyScreen(new Action[]
+        _titleScreen.Initialize(OnNewGameRequested, OnContinueRequested);
+        _teamSelectScreen.Initialize(OnTeamConfirmed);
+
+        _lobbyScreen.Initialize(new Action[]
         {
             EnterLeague,
             () => ShowScreen(_lineUpScreen),
@@ -108,51 +128,26 @@ public class AppFlowController : MonoBehaviour
             QuickStart
         });
 
-        _leagueScreen = new LeagueScreen(OnStartGameRequested, OnToggleSubstitutionMode,
+        _leagueScreen.Initialize(OnStartGameRequested, OnToggleSubstitutionMode,
             SaveAll, OnClaimSeasonRewards, ShowLobby, () => ShowScreen(_postSeasonScreen));
-        _preGameScreen = new PreGameScreen(OnPreGameStart);
-        _liveGameScreen = new LiveGameScreen(OnPauseRequested);
-        _pauseScreen = new PauseSubstitutionScreen(OnSubstitutionApplied, OnSubstitutionSkipped);
-        _postGameScreen = new PostGameScreen(OnReturnToLeague);
-        _postSeasonScreen = new PostSeasonScreen(ShowLobby, ShowToast);
+        _preGameScreen.Initialize(OnPreGameStart);
+        _liveGameScreen.Initialize(OnPauseRequested);
+        _pauseScreen.Initialize(OnSubstitutionApplied, OnSubstitutionSkipped);
+        _postGameScreen.Initialize(OnReturnToLeague);
+        _postSeasonScreen.Initialize(ShowLobby, ShowToast);
 
-        _inventoryScreen = new InventoryScreen(ShowLobby, OpenCardDetail, ShowToast);
-        _gachaScreen = new GachaScreen(ShowLobby, OpenCardDetail, ShowToast);
-        _lineUpScreen = new LineUpScreen(ShowLobby, OpenCardPicker, ShowToast);
-        _enhanceScreen = new EnhanceScreen(ShowLobby, OpenCardPicker, ShowToast);
-        _trainScreen = new TrainScreen(ShowLobby, OpenCardPicker, ShowToast);
-        _combineScreen = new CombineScreen(ShowLobby, OpenCardPicker, ShowToast);
-        _dismantleScreen = new DismantleScreen(ShowLobby, OpenCardPicker, ShowToast);
-        _goldenGloveCraftScreen = new GoldenGloveCraftScreen(ShowLobby, OpenCardPicker, ShowToast);
+        _inventoryScreen.Initialize(ShowLobby, OpenCardDetail, ShowToast);
+        _gachaScreen.Initialize(ShowLobby, OpenCardDetail, ShowToast);
+        _lineUpScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
+        _enhanceScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
+        _trainScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
+        _combineScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
+        _dismantleScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
+        _goldenGloveCraftScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
 
-        _cardPickerScreen = new CardPickerScreen(CloseCardPicker);
-        _cardDetailScreen = new CardDetailScreen(CloseCardDetail, ShowToast);
+        _cardPickerScreen.Initialize(CloseCardPicker);
+        _cardDetailScreen.Initialize(CloseCardDetail, ShowToast);
     }
-
-    private void RegisterScreens()
-    {
-        _router.Register(_titleScreen);
-        _router.Register(_teamSelectScreen);
-        _router.Register(_lobbyScreen);
-        _router.Register(_leagueScreen);
-        _router.Register(_preGameScreen);
-        _router.Register(_liveGameScreen);
-        _router.Register(_postGameScreen);
-        _router.Register(_postSeasonScreen);
-        _router.Register(_inventoryScreen);
-        _router.Register(_gachaScreen);
-        _router.Register(_lineUpScreen);
-        _router.Register(_enhanceScreen);
-        _router.Register(_trainScreen);
-        _router.Register(_combineScreen);
-        _router.Register(_dismantleScreen);
-        _router.Register(_goldenGloveCraftScreen);
-        _router.Register(_pauseScreen);
-        _router.Register(_cardPickerScreen);
-        _router.Register(_cardDetailScreen);
-    }
-
-    // ---------------------------------------------------------------- 시작 흐름
 
     private void ShowTitle()
     {
@@ -219,7 +214,7 @@ public class AppFlowController : MonoBehaviour
         _router.Show(_lobbyScreen);
     }
 
-    private void ShowScreen(UiScreen screen)
+    private void ShowScreen(UiScreenBehaviour screen)
     {
         _router.Show(screen);
     }

@@ -9,21 +9,17 @@ using UnityEngine.UI;
 /// </summary>
 public class DismantleScreen : CardActionScreen
 {
-    private TextMeshProUGUI _targetText;
-    private TextMeshProUGUI _previewText;
-    private TextMeshProUGUI _noticeText;
-    private Button _dismantleButton;
+    /// <summary>
+    /// 화면 제목
+    /// </summary>
+    protected override string Title => "분해";
+
+    [SerializeField] private TextMeshProUGUI _targetText;
+    [SerializeField] private TextMeshProUGUI _previewText;
+    [SerializeField] private TextMeshProUGUI _noticeText;
+    [SerializeField] private Button _dismantleButton;
 
     private int _targetInstanceId = InventoryManager.InvalidInstanceId;
-
-    public DismantleScreen(Action onBack,
-        Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> onPickCard,
-        Action<string, bool> onNotify)
-        : base("카드 분해", onBack, onPickCard, onNotify)
-    {
-    }
-
-    protected override string ScreenName => "DismantleScreen";
 
     public override void Refresh()
     {
@@ -70,6 +66,14 @@ public class DismantleScreen : CardActionScreen
                             $"   ·   골글 포인트 {preview.GoldenGlovePoint}";
         _previewText.color = UiPalette.Text2;
         _dismantleButton.interactable = true;
+    }
+
+    protected override void BindEvents()
+    {
+        base.BindEvents();
+
+        BindButton("PickTarget", PickTarget);
+        Bind(_dismantleButton, Dismantle);
     }
 
     protected override void BuildBody()

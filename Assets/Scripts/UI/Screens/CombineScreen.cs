@@ -11,21 +11,17 @@ public class CombineScreen : CardActionScreen
 {
     private const int MaxMaterialRows = 5;
 
-    private TextMeshProUGUI _guideText;
-    private TextMeshProUGUI _resultText;
-    private readonly TextMeshProUGUI[] _materialTexts = new TextMeshProUGUI[MaxMaterialRows];
-    private Button _combineButton;
+    /// <summary>
+    /// 화면 제목
+    /// </summary>
+    protected override string Title => "조합";
+
+    [SerializeField] private TextMeshProUGUI _guideText;
+    [SerializeField] private TextMeshProUGUI _resultText;
+    [SerializeField] private TextMeshProUGUI[] _materialTexts = new TextMeshProUGUI[MaxMaterialRows];
+    [SerializeField] private Button _combineButton;
 
     private readonly List<int> _materialIds = new List<int>(MaxMaterialRows);
-
-    public CombineScreen(Action onBack,
-        Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> onPickCard,
-        Action<string, bool> onNotify)
-        : base("카드 조합", onBack, onPickCard, onNotify)
-    {
-    }
-
-    protected override string ScreenName => "CombineScreen";
 
     public override void Refresh()
     {
@@ -58,6 +54,14 @@ public class CombineScreen : CardActionScreen
         _combineButton.interactable = required > 0
             && _materialIds.Count == required
             && CombineManager.Instance.CanCombine(_materialIds);
+    }
+
+    protected override void BindEvents()
+    {
+        base.BindEvents();
+
+        BindButton("PickMaterials", PickMaterials);
+        Bind(_combineButton, Combine);
     }
 
     protected override void BuildBody()

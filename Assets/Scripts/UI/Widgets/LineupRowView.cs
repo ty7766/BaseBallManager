@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 명세 1-1 A 밀도 라인업 행 (96px). 타순·포지션·이름·연도·별·OVR을 담는다
 /// </summary>
-public class LineupRowView
+public class LineupRowView : UiWidgetBehaviour
 {
     /// <summary>
     /// 행 높이 (명세 1-1)
@@ -16,52 +16,66 @@ public class LineupRowView
     private const int MaxStars = 5;
     private const float StarSize = 23f;
 
-    public RectTransform Root => _root;
-
-    private readonly RectTransform _root;
-    private readonly Image _background;
-    private readonly Image _border;
-    private readonly TextMeshProUGUI _slotText;
-    private readonly TextMeshProUGUI _positionText;
-    private readonly TextMeshProUGUI _nameText;
-    private readonly TextMeshProUGUI _ovrText;
-    private readonly TextMeshProUGUI _stateTagText;
-    private readonly Image[] _stars = new Image[MaxStars];
-    private readonly Button _button;
+    [SerializeField] private Image _background;
+    [SerializeField] private Image _border;
+    [SerializeField] private TextMeshProUGUI _slotText;
+    [SerializeField] private TextMeshProUGUI _positionText;
+    [SerializeField] private TextMeshProUGUI _nameText;
+    [SerializeField] private TextMeshProUGUI _ovrText;
+    [SerializeField] private TextMeshProUGUI _stateTagText;
+    [SerializeField] private Image[] _stars = new Image[MaxStars];
+    [SerializeField] private Button _button;
 
     private Action _onClick;
 
-    public LineupRowView(Transform parent, float width)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static LineupRowView Bake(Transform parent, float width)
     {
-        _root = UiBuilder.CreateRect(parent, "LineupRow");
-        UiBuilder.Place(_root, 0f, 0f, width, RowHeight);
+        LineupRowView view = CreateNode<LineupRowView>(parent, "LineupRow");
 
-        _background = UiBuilder.CreateImage(_root, "Background", UiPalette.BgRow,
+        view.BuildWidget(parent, width);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    protected override void BindEvents()
+    {
+        Bind(_button, OnClicked);
+    }
+
+    private void BuildWidget(Transform parent, float width)
+    {
+        UiBuilder.Place(Root, 0f, 0f, width, RowHeight);
+
+        _background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgRow,
             UiSprites.RowNormal, Image.Type.Sliced);
         UiBuilder.Stretch(_background.rectTransform, 0f, 0f, 0f, 0f);
         _background.raycastTarget = true;
 
-        _button = _root.gameObject.AddComponent<Button>();
+        _button = Root.gameObject.AddComponent<Button>();
         _button.targetGraphic = _background;
         _button.transition = Selectable.Transition.None;
         _button.interactable = false;
         _button.onClick.AddListener(OnClicked);
 
-        _border = UiBuilder.CreateImage(_root, "Border", UiPalette.ButtonPrimary,
+        _border = UiBuilder.CreateImage(Root, "Border", UiPalette.ButtonPrimary,
             UiSprites.TagOutline, Image.Type.Sliced);
         UiBuilder.Stretch(_border.rectTransform, 0f, 0f, 0f, 0f);
         _border.gameObject.SetActive(false);
 
-        _slotText = UiBuilder.CreateText(_root, "Slot", 38f, UiPalette.Text3, TextAlignmentOptions.Center);
+        _slotText = UiBuilder.CreateText(Root, "Slot", 38f, UiPalette.Text3, TextAlignmentOptions.Center);
         UiBuilder.Place(_slotText.rectTransform, 8f, 24f, 56f, 48f);
 
-        _positionText = UiBuilder.CreateText(_root, "Position", 31f, UiPalette.Text2, TextAlignmentOptions.Center);
+        _positionText = UiBuilder.CreateText(Root, "Position", 31f, UiPalette.Text2, TextAlignmentOptions.Center);
         UiBuilder.Place(_positionText.rectTransform, 68f, 24f, 72f, 48f);
 
-        _nameText = UiBuilder.CreateText(_root, "Name", 34f, UiPalette.Text1);
+        _nameText = UiBuilder.CreateText(Root, "Name", 34f, UiPalette.Text1);
         UiBuilder.Place(_nameText.rectTransform, 150f, 10f, width - 260f, 46f);
 
-        RectTransform starRow = UiBuilder.CreateRect(_root, "Stars");
+        RectTransform starRow = UiBuilder.CreateRect(Root, "Stars");
         UiBuilder.Place(starRow, 150f, 54f, MaxStars * (StarSize + 4f), StarSize + 6f);
 
         for (int i = 0; i < MaxStars; i++)
@@ -71,10 +85,10 @@ public class LineupRowView
             _stars[i].gameObject.SetActive(false);
         }
 
-        _ovrText = UiBuilder.CreateText(_root, "Ovr", 46f, UiPalette.Text1, TextAlignmentOptions.Right);
+        _ovrText = UiBuilder.CreateText(Root, "Ovr", 46f, UiPalette.Text1, TextAlignmentOptions.Right);
         UiBuilder.Place(_ovrText.rectTransform, width - 112f, 24f, 96f, 48f);
 
-        _stateTagText = UiBuilder.CreateText(_root, "StateTag", 26f, UiPalette.TextOff, TextAlignmentOptions.Right);
+        _stateTagText = UiBuilder.CreateText(Root, "StateTag", 26f, UiPalette.TextOff, TextAlignmentOptions.Right);
         UiBuilder.Place(_stateTagText.rectTransform, width - 112f, 60f, 96f, 30f);
         _stateTagText.gameObject.SetActive(false);
     }
@@ -93,9 +107,9 @@ public class LineupRowView
     /// </summary>
     public void SetIndex(int index, float gap = 6f)
     {
-        Vector2 size = _root.sizeDelta;
+        Vector2 size = Root.sizeDelta;
 
-        UiBuilder.Place(_root, 0f, index * (RowHeight + gap), size.x, RowHeight);
+        UiBuilder.Place(Root, 0f, index * (RowHeight + gap), size.x, RowHeight);
     }
 
     /// <summary>
@@ -159,11 +173,6 @@ public class LineupRowView
         _stateTagText.gameObject.SetActive(state == UiRowState.Used || state == UiRowState.Pitching);
         _stateTagText.text = state == UiRowState.Pitching ? "등판 중" : "교체 완료";
         _stateTagText.color = state == UiRowState.Pitching ? UiPalette.StatePitching : UiPalette.TextOff;
-    }
-
-    public void SetVisible(bool visible)
-    {
-        _root.gameObject.SetActive(visible);
     }
 
     //OVR 숫자색과 별 개수를 보유 카드 정보에서 채운다

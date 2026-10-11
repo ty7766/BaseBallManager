@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,21 +6,22 @@ using UnityEngine.UI;
 /// <summary>
 /// 타이틀 화면. 새 게임과 이어하기 진입점
 /// </summary>
-public class TitleScreen : UiScreen
+public class TitleScreen : UiScreenBehaviour
 {
-    private readonly Action _onNewGame;
-    private readonly Action _onContinue;
+    private Action _onNewGame;
+    private Action _onContinue;
 
-    private Button _continueButton;
-    private TextMeshProUGUI _noticeText;
+    [SerializeField] private Button _continueButton;
+    [SerializeField] private TextMeshProUGUI _noticeText;
 
-    public TitleScreen(Action onNewGame, Action onContinue)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onNewGame, Action onContinue)
     {
         _onNewGame = onNewGame;
         _onContinue = onContinue;
     }
-
-    protected override string ScreenName => "TitleScreen";
 
     /// <summary>
     /// 이어하기 버튼 노출 여부와 안내 문구
@@ -29,6 +30,12 @@ public class TitleScreen : UiScreen
     {
         _continueButton.gameObject.SetActive(hasSave);
         _noticeText.text = notice;
+    }
+
+    protected override void BindEvents()
+    {
+        Bind(_continueButton, OnContinueClicked);
+        BindButton("NewGameButton", OnNewGameClicked);
     }
 
     protected override void Build()

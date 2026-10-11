@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// ③ 경기 후 화면. FINAL · 라인스코어 · 타자/투수 기록 (명세 ③)
 /// </summary>
-public class PostGameScreen : UiScreen
+public class PostGameScreen : UiScreenBehaviour
 {
     private static readonly string[] HitterHeaders =
     {
@@ -23,18 +23,18 @@ public class PostGameScreen : UiScreen
     private const float TabTop = 556f;
     private const float TableTop = 636f;
 
-    private readonly Action _onReturn;
+    private Action _onReturn;
 
-    private TextMeshProUGUI _resultText;
-    private TextMeshProUGUI _scoreText;
-    private TextMeshProUGUI _detailText;
-    private LineScoreView _lineScore;
-    private StatTableView _hitterTable;
-    private StatTableView _pitcherTable;
-    private Button _hitterTabButton;
-    private Button _pitcherTabButton;
-    private Button _awayTabButton;
-    private Button _homeTabButton;
+    [SerializeField] private TextMeshProUGUI _resultText;
+    [SerializeField] private TextMeshProUGUI _scoreText;
+    [SerializeField] private TextMeshProUGUI _detailText;
+    [SerializeField] private LineScoreView _lineScore;
+    [SerializeField] private StatTableView _hitterTable;
+    [SerializeField] private StatTableView _pitcherTable;
+    [SerializeField] private Button _hitterTabButton;
+    [SerializeField] private Button _pitcherTabButton;
+    [SerializeField] private Button _awayTabButton;
+    [SerializeField] private Button _homeTabButton;
 
     private BoxScore _boxScore;
     private string _awayTeamName = string.Empty;
@@ -42,12 +42,13 @@ public class PostGameScreen : UiScreen
     private bool _showPitchers;
     private bool _showHome;
 
-    public PostGameScreen(Action onReturn)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onReturn)
     {
         _onReturn = onReturn;
     }
-
-    protected override string ScreenName => "PostGameScreen";
 
     /// <summary>
     /// 끝난 경기의 박스스코어를 채운다
@@ -79,6 +80,15 @@ public class PostGameScreen : UiScreen
         PlayResultEffect(playerRuns, opponentRuns);
     }
 
+    protected override void BindEvents()
+    {
+        Bind(_hitterTabButton, ShowHitters);
+        Bind(_pitcherTabButton, ShowPitchers);
+        Bind(_awayTabButton, ShowAway);
+        Bind(_homeTabButton, ShowHome);
+        BindButton("ReturnButton", OnReturnClicked);
+    }
+
     protected override void Build()
     {
         TextMeshProUGUI finalLabel = UiBuilder.CreateLabel(Root, "FinalLabel", "FINAL", 34f,
@@ -95,7 +105,7 @@ public class PostGameScreen : UiScreen
         _detailText = UiBuilder.CreateText(Root, "Detail", 34f, UiPalette.Text2, TextAlignmentOptions.Center);
         UiBuilder.Place(_detailText.rectTransform, 290f, 288f, 500f, 44f);
 
-        _lineScore = new LineScoreView(Root);
+        _lineScore = LineScoreView.Bake(Root);
         UiBuilder.Place(_lineScore.Root, 24f, LineScoreTop, 1032f, LineScoreView.TotalHeight);
 
         _hitterTabButton = UiBuilder.CreateButton(Root, "HitterTab", "타자 기록", 32f, true, ShowHitters);
@@ -110,10 +120,10 @@ public class PostGameScreen : UiScreen
         _homeTabButton = UiBuilder.CreateButton(Root, "HomeTab", "HOME", 30f, false, ShowHome);
         UiBuilder.Place(_homeTabButton.GetComponent<RectTransform>(), 826f, TabTop, 220f, 64f);
 
-        _hitterTable = new StatTableView(Root, HitterHeaders, 230f, 78f);
+        _hitterTable = StatTableView.Bake(Root, HitterHeaders, 230f, 78f);
         UiBuilder.Stretch(_hitterTable.Root, 24f, TableTop, 24f, 180f);
 
-        _pitcherTable = new StatTableView(Root, PitcherHeaders, 230f, 100f);
+        _pitcherTable = StatTableView.Bake(Root, PitcherHeaders, 230f, 100f);
         UiBuilder.Stretch(_pitcherTable.Root, 24f, TableTop, 24f, 180f);
 
         Button returnButton = UiBuilder.CreateButton(Root, "ReturnButton", "리그로 돌아가기", 40f, true, OnReturnClicked);

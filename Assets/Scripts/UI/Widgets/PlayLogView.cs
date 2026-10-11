@@ -7,19 +7,16 @@ using UnityEngine.UI;
 /// 타석·도루 결과가 한 줄씩 흐르는 중계 영역 (명세 1-5 · 6-4).
 /// 이닝이 바뀌면 구분 헤더를 스스로 끼워 넣는다
 /// </summary>
-public class PlayLogView
+public class PlayLogView : UiWidgetBehaviour
 {
     private const float RowHeight = 68f;
     private const float HeaderHeight = 56f;
     private const float RowGap = 4f;
     private const float SentenceSize = 38f;
 
-    public RectTransform Root => _root;
-
-    private readonly RectTransform _root;
-    private readonly ScrollRect _scroll;
-    private readonly RectTransform _content;
-    private readonly Button _jumpToLatestButton;
+    [SerializeField] private ScrollRect _scroll;
+    [SerializeField] private RectTransform _content;
+    [SerializeField] private Button _jumpToLatestButton;
     private readonly List<LogRow> _rows = new List<LogRow>(128);
 
     private string _awayTeamName = string.Empty;
@@ -31,23 +28,39 @@ public class PlayLogView
     private bool _hasLastInning;
     private bool _autoScroll = true;
 
-    public PlayLogView(Transform parent)
+    /// <summary>
+    /// 위젯을 조립한다 (프리팹 베이크 시점)
+    /// </summary>
+    public static PlayLogView Bake(Transform parent)
     {
-        _root = UiBuilder.CreateRect(parent, "PlayLog");
+        PlayLogView view = CreateNode<PlayLogView>(parent, "PlayLog");
 
-        Image background = UiBuilder.CreateImage(_root, "Background", UiPalette.BgPanel,
+        view.BuildWidget(parent);
+
+        return view;
+    }
+
+    //생성자 본문. 베이크에서 한 번만 돈다
+    protected override void BindEvents()
+    {
+        Bind(_jumpToLatestButton, JumpToLatest);
+    }
+
+    private void BuildWidget(Transform parent)
+    {
+        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgPanel,
             UiSprites.PanelLarge, Image.Type.Sliced);
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
-        TextMeshProUGUI header = UiBuilder.CreateText(_root, "Header", 32f, UiPalette.Text3);
+        TextMeshProUGUI header = UiBuilder.CreateText(Root, "Header", 32f, UiPalette.Text3);
         UiBuilder.Place(header.rectTransform, 24f, 12f, 200f, 40f);
         header.text = "중계";
 
-        _scroll = UiBuilder.CreateVerticalScroll(_root, "LogScroll", out _content);
+        _scroll = UiBuilder.CreateVerticalScroll(Root, "LogScroll", out _content);
         UiBuilder.Stretch(_scroll.GetComponent<RectTransform>(), 12f, 58f, 12f, 12f);
         _scroll.onValueChanged.AddListener(OnScrolled);
 
-        _jumpToLatestButton = UiBuilder.CreateButton(_root, "JumpToLatest", "최신으로", 28f, false, JumpToLatest);
+        _jumpToLatestButton = UiBuilder.CreateButton(Root, "JumpToLatest", "최신으로", 28f, false, JumpToLatest);
 
         RectTransform jumpRect = _jumpToLatestButton.GetComponent<RectTransform>();
 
@@ -201,7 +214,6 @@ public class PlayLogView
 
         public LogRow(RectTransform parent)
         {
-            Root = UiBuilder.CreateRect(parent, "LogRow");
             _group = Root.gameObject.AddComponent<CanvasGroup>();
 
             _background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgRow,

@@ -7,29 +7,32 @@ using UnityEngine.UI;
 /// <summary>
 /// 리그 화면. 순위표 · 다음 경기 · 교체 모드를 보여주고 경기로 넘긴다 (명세 5장)
 /// </summary>
-public class LeagueScreen : UiScreen
+public class LeagueScreen : UiScreenBehaviour
 {
     private static readonly string[] StandingHeaders = { "승", "패", "무", "승률", "게임차" };
 
-    private readonly Action _onStartGame;
-    private readonly Action _onToggleMode;
-    private readonly Action _onSave;
-    private readonly Action _onClaimRewards;
-    private readonly Action _onBackToLobby;
-    private readonly Action _onOpenPostSeason;
+    private Action _onStartGame;
+    private Action _onToggleMode;
+    private Action _onSave;
+    private Action _onClaimRewards;
+    private Action _onBackToLobby;
+    private Action _onOpenPostSeason;
 
-    private TextMeshProUGUI _tierText;
-    private TextMeshProUGUI _progressText;
-    private TextMeshProUGUI _nextGameText;
-    private TextMeshProUGUI _modeText;
-    private TextMeshProUGUI _noticeText;
-    private StatTableView _standingsTable;
-    private Button _startButton;
-    private Button _claimButton;
-    private Button _modeButton;
-    private Button _postSeasonButton;
+    [SerializeField] private TextMeshProUGUI _tierText;
+    [SerializeField] private TextMeshProUGUI _progressText;
+    [SerializeField] private TextMeshProUGUI _nextGameText;
+    [SerializeField] private TextMeshProUGUI _modeText;
+    [SerializeField] private TextMeshProUGUI _noticeText;
+    [SerializeField] private StatTableView _standingsTable;
+    [SerializeField] private Button _startButton;
+    [SerializeField] private Button _claimButton;
+    [SerializeField] private Button _modeButton;
+    [SerializeField] private Button _postSeasonButton;
 
-    public LeagueScreen(Action onStartGame, Action onToggleMode, Action onSave, Action onClaimRewards,
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onStartGame, Action onToggleMode, Action onSave, Action onClaimRewards,
         Action onBackToLobby, Action onOpenPostSeason)
     {
         _onStartGame = onStartGame;
@@ -39,8 +42,6 @@ public class LeagueScreen : UiScreen
         _onBackToLobby = onBackToLobby;
         _onOpenPostSeason = onOpenPostSeason;
     }
-
-    protected override string ScreenName => "LeagueScreen";
 
     /// <summary>
     /// 순위표·다음 경기·모드를 현재 상태로 갱신한다
@@ -85,6 +86,16 @@ public class LeagueScreen : UiScreen
         FillStandings(ranking, playerTeamName);
     }
 
+    protected override void BindEvents()
+    {
+        Bind(_modeButton, OnToggleModeClicked);
+        Bind(_startButton, OnStartClicked);
+        Bind(_postSeasonButton, OnPostSeasonClicked);
+        Bind(_claimButton, OnClaimClicked);
+        BindButton("SaveButton", OnSaveClicked);
+        BindButton("LobbyButton", OnBackClicked);
+    }
+
     protected override void Build()
     {
         _tierText = UiBuilder.CreateText(Root, "Tier", 48f, UiPalette.Text1);
@@ -103,7 +114,7 @@ public class LeagueScreen : UiScreen
         UiBuilder.Place(standingsTitle.rectTransform, 32f, 216f, 400f, 44f);
         standingsTitle.text = "순위표";
 
-        _standingsTable = new StatTableView(Root, StandingHeaders, 280f, 120f, "팀");
+        _standingsTable = StatTableView.Bake(Root, StandingHeaders, 280f, 120f, "팀");
         UiBuilder.Stretch(_standingsTable.Root, 24f, 268f, 24f, 320f);
 
         _modeButton = UiBuilder.CreateButton(Root, "ModeButton", "교체 모드 전환", 32f, false, OnToggleModeClicked);

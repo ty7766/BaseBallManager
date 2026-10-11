@@ -9,22 +9,18 @@ using UnityEngine.UI;
 /// </summary>
 public class EnhanceScreen : CardActionScreen
 {
-    private TextMeshProUGUI _targetText;
-    private TextMeshProUGUI _identicalText;
-    private TextMeshProUGUI _enhanceCardText;
-    private Button _identicalButton;
-    private Button _enhanceCardButton;
+    /// <summary>
+    /// 화면 제목
+    /// </summary>
+    protected override string Title => "강화";
+
+    [SerializeField] private TextMeshProUGUI _targetText;
+    [SerializeField] private TextMeshProUGUI _identicalText;
+    [SerializeField] private TextMeshProUGUI _enhanceCardText;
+    [SerializeField] private Button _identicalButton;
+    [SerializeField] private Button _enhanceCardButton;
 
     private int _targetInstanceId = InventoryManager.InvalidInstanceId;
-
-    public EnhanceScreen(Action onBack,
-        Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> onPickCard,
-        Action<string, bool> onNotify)
-        : base("강화", onBack, onPickCard, onNotify)
-    {
-    }
-
-    protected override string ScreenName => "EnhanceScreen";
 
     public override void Refresh()
     {
@@ -70,6 +66,15 @@ public class EnhanceScreen : CardActionScreen
 
         if (!canEnhance)
             _identicalText.text = "이 카드는 더 강화할 수 없습니다";
+    }
+
+    protected override void BindEvents()
+    {
+        base.BindEvents();
+
+        BindButton("PickTarget", PickTarget);
+        Bind(_identicalButton, PickIdenticalMaterial);
+        Bind(_enhanceCardButton, EnhanceWithCards);
     }
 
     protected override void BuildBody()

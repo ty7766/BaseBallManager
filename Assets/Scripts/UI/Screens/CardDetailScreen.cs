@@ -6,28 +6,29 @@ using UnityEngine.UI;
 /// <summary>
 /// 카드 상세 보기 오버레이. 카드를 누르면 뒤집히고, 잠금을 토글할 수 있다
 /// </summary>
-public class CardDetailScreen : UiScreen
+public class CardDetailScreen : UiScreenBehaviour
 {
     private const float CardWidth = 700f;
 
-    private readonly Action _onClose;
-    private readonly Action<string, bool> _onNotify;
+    private Action _onClose;
+    private Action<string, bool> _onNotify;
 
-    private CardView _cardView;
-    private TextMeshProUGUI _hintText;
-    private Button _lockButton;
-    private TextMeshProUGUI _lockLabel;
+    [SerializeField] private CardView _cardView;
+    [SerializeField] private TextMeshProUGUI _hintText;
+    [SerializeField] private Button _lockButton;
+    [SerializeField] private TextMeshProUGUI _lockLabel;
 
     private int _instanceId = InventoryManager.InvalidInstanceId;
     private bool _showBack;
 
-    public CardDetailScreen(Action onClose, Action<string, bool> onNotify)
+    /// <summary>
+    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
+    /// </summary>
+    public void Initialize(Action onClose, Action<string, bool> onNotify)
     {
         _onClose = onClose;
         _onNotify = onNotify;
     }
-
-    protected override string ScreenName => "CardDetailScreen";
 
     /// <summary>
     /// 카드 1장을 띄운다. 조회에 실패하면 아무것도 하지 않는다
@@ -47,13 +48,19 @@ public class CardDetailScreen : UiScreen
         RefreshLockLabel(info.IsLocked);
     }
 
+    protected override void BindEvents()
+    {
+        Bind(_lockButton, ToggleLock);
+        BindButton("CloseButton", OnCloseClicked);
+    }
+
     protected override void Build()
     {
         Image dim = UiBuilder.CreateImage(Root, "Dim", UiPalette.WithAlpha(UiPalette.BgApp, 0.94f));
         UiBuilder.Stretch(dim.rectTransform, 0f, 0f, 0f, 0f);
         dim.raycastTarget = true;
 
-        _cardView = new CardView(Root, CardWidth);
+        _cardView = CardView.Bake(Root, CardWidth);
         UiBuilder.Place(_cardView.Root, (UiBuilder.DesignSize.x - CardWidth) * 0.5f, 180f,
             CardWidth, CardWidth * CardView.BaseHeight / CardView.BaseWidth);
         _cardView.SetClickHandler(Flip);
