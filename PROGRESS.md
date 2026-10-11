@@ -188,6 +188,43 @@ Claude 세션에는 Unity MCP가 없어 **화면을 본 검증만 빠져 있다.
 
 ---
 
+### 2-0-D. 🖼️ 씬 배치 · 팀 로고 (세션 56 이어서)
+
+프리팹만 구워 둔 상태에서는 **재생해야만 UI가 생겨** 하이어라키·씬 뷰가 비어 있었다.
+구운 프리팹을 씬에 인스턴스로 깔아 에디터에서 보고 고칠 수 있게 했다.
+
+| 메뉴 | 하는 일 |
+|---|---|
+| `Tools/BaseBallManager/씬에 UI 배치` | GameCanvas + EventSystem + 화면 19장을 프리팹 인스턴스로 깐다 (첫 화면만 켜 둠) |
+| `… /씬에서 UI 걷어내기` | 캔버스째 지운다 (런타임 조립으로 되돌아감) |
+| `… /UI 폰트 글리프 캐시 비우기` | 동적 아틀라스를 비운다. **커밋 전에 돌린다** |
+
+화면 확보 순서는 **씬 배치 → Resources 프리팹 → 코드 조립** 3단 폴백이다.
+
+#### 🔴 바인딩 시점 (프리팹 전환의 후속 함정)
+
+**씬에 꺼진 채로 깔린 화면은 `Awake` 가 돌지 않는다.** 그래서 버튼 141개 중 **139개가 죽어 있었다**.
+`Awake` → `OnEnable` + `_eventsBound` 가드로 바꿔 "처음 켜질 때 한 번" 묶는다.
+코드 조립 경로(`CreateFromCode` · `CreateNode`)는 생성 시점에 가드를 세워 이중 바인딩을 막는다.
+`_eventsBound` 는 **직렬화하면 안 된다** — 프리팹에 true 로 구워지면 인스턴스가 영영 안 묶인다.
+
+#### 🔴 동적 TMP 아틀라스가 자산을 불린다
+
+재생할 때마다 글리프가 구워져 `UiKoreanFont.asset` 이 6KB → **2.4MB** 로 커진 채 커밋돼 있었다.
+커밋 전에 글리프 캐시를 비운다.
+
+#### 팀 로고 (작성자 납품 10종 반영)
+
+`Assets/Resources/UI/Team/logo_<팀명>.png` · gitignore 대상. Unity 가 알파 여백을 자동으로 트림하고
+`preserveAspect` 로 맞추므로 **원본 크기를 맞출 필요가 없다** (146px~1264px 혼재해도 동일하게 보인다).
+
+- `UiPalette.LogoPlate` `#5A6B86` 신설. 구단 로고는 흰 바탕을 전제로 만들어져 어두운 판에서 묻힌다
+- ⚠️ `panel_small` 은 어두운 채움이 **그림에 박혀 있어** 틴트로 밝힐 수 없다.
+  로고 판은 흰 채움 스프라이트(`button_primary`)로 바꿔 깔고 틴트한다
+- KT 로고는 단색 `#303030` 이라 완전히 묻혔다 → 순수 검정으로 변환 + 밝은 판으로 해결
+
+---
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.
@@ -834,3 +871,4 @@ Core                  SingletonBehaviour
 | 53 (10-09) | **UI 전체 구현 — 앱 실행부터 플레이 전반까지.** 화면 19장(타이틀 · 팀선택 · 로비 · 리그 · 가을야구 · 경기 4 · 뽑기 · 인벤토리 · 라인업 · 강화 · 훈련 · 조합 · 분해 · 골글제작 · 카드상세 · 카드선택) · 위젯 16종 · 코어 12종(2-7). 공용화: `CardDisplayInfo`(카드 1장 표시 정보 집약) · `CardPickerScreen`(5개 화면 공용 선택 모달) · `CardActionScreen`(육성 화면 공통 틀) · `CardView`/`CardCellView` 2단 분리 + `PlayerPhotoProvider` 12장 LRU. 🔴 `GachaResult.InstanceId` 신설 — 뽑기 화면이 방금 뽑은 카드를 특정할 수 없던 구멍. `Design/handoff/디자인_요청서.md`로 Desktop↔CLI 분업 고정. 검증 PASS 87 / FAIL 0 |
 | 55 (10-11) | **Unity MCP 연결 후 첫 실행 QA.** ▶ 실행으로 전체 흐름 완주 · 이어하기 복원 · 경기 중 연출까지 눈으로 확인하고 레이아웃 결함 7건 수정(2-0-B). 바탕화면에 있던 카드 베이스 3종(`BaseImage_SS/SG/GG`, 1398×1957)을 `Resources/UI/Card` 로 임포트 — 카드가 명세 6-6 좌표대로 렌더되는 것을 확인했다. 에디트 모드 미리보기 도구(`UiPreviewBuilder`) 신설. Unity 버전 표기를 6000.3.6f1 로 정정(초기 커밋부터 그 버전이었고 문서만 틀려 있었다). QA 파이프라인 규칙 7가지 기록 |
 | 56 (10-11) | **UI 프리팹 전환.** 화면 19장·위젯 13종을 MonoBehaviour로 바꿔 `[SerializeField]` 참조가 프리팹에 직렬화되게 하고, `UiPrefabBaker` 로 `Resources/UI/Screens` 에 구웠다. 런타임은 Instantiate만 한다(프리팹이 없으면 코드 조립으로 폴백). `UiEventBinder` 로 Awake 재바인딩 · `UiRouter.Create<T>` · 구 `UiScreen` 삭제 · `UiFontAssetBuilder`(아틀라스·머티리얼 서브에셋 포함) · `UiTabStyle` 중복 4곳 통합. 🔴 변환기가 `PlayLogView.LogRow` 의 `Root` 대입을 같이 지워 중계 첫 줄 NRE로 관전 코루틴이 죽던 것 · 선택 탭 가독성 · 라인스코어 E 칸 잘림 · 미선택(-1) 조회 LogError 수정. 플레이 모드 완주 검증, 버튼 미연결·중복 0건. 하니스 PASS 101 / FAIL 0 (2-0-C) |
+| 56-2 (10-11) | **씬 배치 + 팀 로고.** `UiSceneBuilder` 로 GameCanvas·EventSystem·화면 19장을 씬에 프리팹 인스턴스로 깔아 에디터에서 UI가 보이게 했다(2-0-D). 🔴 꺼진 화면은 Awake 가 안 돌아 버튼 141개 중 139개가 죽어 있던 것을 `OnEnable` + `_eventsBound` 가드로 수정. 실제 구단 로고 10종 반영 — `LogoPlate #5A6B86` 신설, `panel_small` 은 어두운 색이 그림에 박혀 틴트가 안 먹어 흰 채움 스프라이트로 교체, KT 로고 순수 검정 변환. TMP 동적 아틀라스가 자산을 2.4MB 로 불리던 것을 비우는 메뉴 추가. 버튼 미연결 0 · 중복 0, 전체 흐름 완주 |
