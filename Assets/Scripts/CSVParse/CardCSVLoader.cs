@@ -50,6 +50,8 @@ public class CardCSVLoader
 
         Dictionary<string, int> headers = ParseHeaders(headerLine);
 
+        int reservedCount = 0;
+
         for (int i = 1; i < lines.Length; i++)
         {
             string line = lines[i].Trim();
@@ -57,10 +59,31 @@ public class CardCSVLoader
             if (string.IsNullOrEmpty(line))
                 continue;
 
-            result.Add(parseRow(new CsvRow(line.Split(','), headers, resourcePath, i + 1)));
+            string[] columns = line.Split(',');
+
+            if (IsUnfilledRow(columns, headers))
+            {
+                reservedCount++;
+                continue;
+            }
+
+            result.Add(parseRow(new CsvRow(columns, headers, resourcePath, i + 1)));
         }
 
+        if (reservedCount > 0)
+            Debug.Log($"[CardCSVLoader]: {resourcePath}에서 아직 채우지 않은 {reservedCount}행을 건너뛰었습니다 (선수 이름 없음)");
+
         return result;
+    }
+
+    //cardId만 미리 끊어 두고 아직 선수를 넣지 않은 행. 이름이 비면 만들 카드가 없다.
+    //이름이 있는데 다른 칸이 비었으면 실수이므로 그대로 파서에 넘겨 예외로 드러낸다
+    private static bool IsUnfilledRow(string[] columns, Dictionary<string, int> headers)
+    {
+        if (!headers.TryGetValue("name", out int nameIndex))
+            return false;
+
+        return nameIndex >= columns.Length || string.IsNullOrWhiteSpace(columns[nameIndex]);
     }
 
     //CSV 파일 읽기. 경로가 틀리면 null
@@ -116,7 +139,7 @@ public class CardCSVLoader
     {
         "N" => CardType.Normal,
         "S" => CardType.Signature,
-        "G" => CardType.GoldenGlove,
+        "G" or "GG" => CardType.GoldenGlove,
         _ => throw new ArgumentException(row.Describe($"알 수 없는 cardType: '{value}'"))
     };
 

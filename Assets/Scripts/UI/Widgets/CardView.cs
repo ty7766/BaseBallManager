@@ -209,8 +209,10 @@ public class CardView : UiWidgetBehaviour
 
         Color inkColor = CardVisualLookup.GetInkColor(info.CardType);
 
-        //이름 뒤 타원 그림자는 종류별 진한 색이어야 흰 이름이 읽힌다 (명세 6-6)
-        _nameShadow.color = UiPalette.WithAlpha(inkColor, 0.72f);
+        //이름 뒤 타원 그림자는 종류별 진한 색이어야 흰 이름이 읽힌다 (명세 6-6).
+        //시그·골글 베이스는 밝고 무늬가 많아 노말보다 진하게 깐다
+        _nameShadow.color = UiPalette.WithAlpha(inkColor,
+            info.CardType == CardType.Normal ? 0.72f : 0.92f);
 
         _ovrText.text = info.FinalOvr.ToString();
         //노말은 어두운 베이스라 흰 숫자, 시그·골글은 밝은 베이스라 진한 새김색
