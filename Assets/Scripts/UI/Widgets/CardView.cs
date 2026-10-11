@@ -17,8 +17,10 @@ public class CardView : UiWidgetBehaviour
 
     private const int MaxStars = 5;
     private const int StatCount = 4;
-    private const float StarSize = 176f;
+    //5개를 가운데 정렬해도 오른쪽 위 강화 배지(x 1078)와 겹치지 않는 크기
+    private const float StarSize = 144f;
     private const float StatBarMaxStat = 150f;
+    private const float ShineAlpha = 0.18f;
 
     [SerializeField] private RectTransform _front;
     [SerializeField] private RectTransform _back;
@@ -132,6 +134,9 @@ public class CardView : UiWidgetBehaviour
         _nameText = CreateCardText(_front, "Name", 142f, 60f, 1560f, 1278f, 200f, TextAlignmentOptions.Center);
 
         _shine = CreateLayer(_front, "Shine", "Card/card_fx_shine_5", 0f, 0f, BaseWidth, BaseHeight);
+
+        //그림 알파가 255까지 올라가 그대로 깔면 흰 띠가 된다. 광택으로 읽히도록 낮춘다
+        _shine.color = UiPalette.WithAlpha(Color.white, ShineAlpha);
         _glow = CreateLayer(_front, "Glow", "Card/card_fx_glow_signature", -180f, -180f, BaseWidth + 360f, BaseHeight + 360f);
 
         _emptyText = CreateCardText(_front, "Empty", 120f, 60f, 880f, 1278f, 200f, TextAlignmentOptions.Center);
