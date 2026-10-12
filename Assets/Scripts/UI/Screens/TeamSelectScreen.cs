@@ -14,9 +14,12 @@ public class TeamSelectScreen : UiScreenBehaviour
     private const float ButtonHeight = 132f;
     private const float ButtonGap = 16f;
     private const float GridTop = 220f;
+    private const float EmblemSize = 100f;
+    private const float EmblemMargin = 16f;
 
     private Action<string> _onConfirm;
     [SerializeField] private List<Button> _teamButtons = new List<Button>(10);
+    [SerializeField] private List<TeamEmblemView> _teamEmblems = new List<TeamEmblemView>(10);
     private List<string> _teamNames = new List<string>(10);
 
     [SerializeField] private TextMeshProUGUI _selectionText;
@@ -54,7 +57,8 @@ public class TeamSelectScreen : UiScreenBehaviour
             Button button = EnsureButton(i);
 
             button.gameObject.SetActive(true);
-            button.GetComponentInChildren<TextMeshProUGUI>().text = _teamNames[i];
+            button.transform.Find("TeamLabel").GetComponent<TextMeshProUGUI>().text = _teamNames[i];
+            _teamEmblems[i].SetTeam(_teamNames[i]);
         }
 
         RefreshSelection();
@@ -105,14 +109,25 @@ public class TeamSelectScreen : UiScreenBehaviour
             int column = teamIndex % ColumnCount;
 
             Button button = UiBuilder.CreateButton(Root, "TeamButton", string.Empty, 40f, false,
-                () => OnTeamClicked(teamIndex));
+                () => OnTeamClicked(teamIndex), out TextMeshProUGUI label);
 
             UiBuilder.Place(button.GetComponent<RectTransform>(),
                 40f + column * (ButtonWidth + ButtonGap),
                 GridTop + row * (ButtonHeight + ButtonGap),
                 ButtonWidth, ButtonHeight);
 
+            label.name = "TeamLabel";
+
+            //엠블럼이 왼쪽을 차지하므로 글자를 그만큼 밀어 남은 칸 가운데에 둔다
+            UiBuilder.Stretch(label.rectTransform, EmblemMargin * 2f + EmblemSize, 0f, EmblemMargin, 0f);
+
+            TeamEmblemView emblem = TeamEmblemView.Bake(button.transform, EmblemSize);
+
+            UiBuilder.Place(emblem.Root, EmblemMargin, (ButtonHeight - EmblemSize) * 0.5f,
+                EmblemSize, EmblemSize);
+
             _teamButtons.Add(button);
+            _teamEmblems.Add(emblem);
         }
 
         return _teamButtons[index];
@@ -137,10 +152,10 @@ public class TeamSelectScreen : UiScreenBehaviour
             background.color = selected ? UiPalette.ButtonPrimary : UiPalette.BgRow;
             background.sprite = UiSprites.Get(selected ? UiSprites.ButtonPrimary : UiSprites.ButtonNormal);
 
-            TextMeshProUGUI label = _teamButtons[i].GetComponentInChildren<TextMeshProUGUI>();
+            TextMeshProUGUI label = _teamButtons[i].transform.Find("TeamLabel")
+                .GetComponent<TextMeshProUGUI>();
 
-            if (label != null)
-                label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text1;
+            label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text1;
         }
 
         bool hasSelection = !string.IsNullOrEmpty(_selectedTeamName);

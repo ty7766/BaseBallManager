@@ -47,10 +47,9 @@ public class TeamEmblemView : UiWidgetBehaviour
 
         if (logo != null)
         {
-            //구단 로고는 흰 바탕을 전제로 만들어져 어두운 판 위에서는 묻힌다.
-            //panel_small 은 어두운 채움이 그림에 박혀 있어 틴트가 먹지 않으므로 흰 채움으로 바꿔 깐다
-            _plate.sprite = UiSprites.Get(UiSprites.ButtonPrimary);
-            _plate.color = UiPalette.LogoPlate;
+            //로고 PNG 가 투명 배경이므로 판을 비워 로고만 보이게 한다
+            _plate.sprite = null;
+            _plate.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
             _logo.sprite = logo;
             _logo.gameObject.SetActive(true);
             _initialText.gameObject.SetActive(false);

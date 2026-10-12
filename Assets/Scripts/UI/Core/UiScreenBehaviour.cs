@@ -130,13 +130,26 @@ public abstract class UiScreenBehaviour : MonoBehaviour
     public static T CreateFromCode<T>(RectTransform parent, string screenName) where T : UiScreenBehaviour
     {
         RectTransform rect = UiBuilder.CreateRect(parent, screenName);
+
+        //끈 채로 컴포넌트를 붙인다. 켜진 상태면 자식이 없는 시점에 OnEnable 이 돌아
+        //버튼을 못 찾았다는 경고만 남긴다
+        rect.gameObject.SetActive(false);
+
         T screen = rect.gameObject.AddComponent<T>();
 
         //Build 가 리스너를 직접 건다. OnEnable 이 또 묶지 않도록 표시해 둔다
-        screen._eventsBound = true;
+        screen.MarkEventsBound();
         screen.BakeHierarchy();
 
+        rect.gameObject.SetActive(true);
+
         return screen;
+    }
+
+    //코드로 조립한 화면은 Build 가 리스너를 직접 걸므로 OnEnable 의 재바인딩을 막는다
+    private void MarkEventsBound()
+    {
+        _eventsBound = true;
     }
 
     /// <summary>

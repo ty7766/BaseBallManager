@@ -13,6 +13,7 @@ public class LineUpScreen : UiScreenBehaviour
     private const float RowHeight = 104f;
     private const float RowGap = 8f;
     private const int MaxRowCount = 11;
+    private const int HitterSlotCount = 9;
 
     private static readonly HitterPosition[] HitterSlots =
     {
@@ -25,6 +26,25 @@ public class LineUpScreen : UiScreenBehaviour
         "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"
     };
 
+    //HitterSlots 순서대로, 야구장에서 그 포지션이 서는 자리 (필드 영역 좌상단 기준)
+    private static readonly Vector2[] HitterSlotPoints =
+    {
+        new Vector2(423f, 720f),  //C   홈플레이트
+        new Vector2(816f, 560f),  //1B  오른쪽
+        new Vector2(606f, 350f),  //2B  오른쪽 중간
+        new Vector2(30f, 560f),   //3B  왼쪽
+        new Vector2(240f, 350f),  //SS  왼쪽 중간
+        new Vector2(30f, 80f),    //LF  좌익
+        new Vector2(423f, 0f),    //CF  중견
+        new Vector2(816f, 80f),   //RF  우익
+        new Vector2(30f, 900f)    //DH  수비 자리가 없어 왼쪽 아래에 뺀다
+    };
+
+    private const float SlotCardWidth = 170f;
+    private const float SlotLabelHeight = 34f;
+    private const float SlotOrderHeight = 44f;
+    private const float SlotGap = 4f;
+
     private Action _onBack;
     private Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> _onPickCard;
     private Action<string, bool> _onNotify;
@@ -34,7 +54,9 @@ public class LineUpScreen : UiScreenBehaviour
     [SerializeField] private Button _benchTabButton;
     [SerializeField] private Button _pitcherTabButton;
     [SerializeField] private RectTransform _rowArea;
+    [SerializeField] private RectTransform _fieldArea;
     private readonly List<SlotRow> _rows = new List<SlotRow>(MaxRowCount);
+    private readonly List<FieldSlot> _fieldSlots = new List<FieldSlot>(HitterSlotCount);
 
     private Tab _tab = Tab.Hitter;
 
@@ -76,20 +98,21 @@ public class LineUpScreen : UiScreenBehaviour
         UiTabStyle.Apply(_benchTabButton, _tab == Tab.Bench);
         UiTabStyle.Apply(_pitcherTabButton, _tab == Tab.Pitcher);
 
-        switch (_tab)
+        bool hitterTab = _tab == Tab.Hitter;
+
+        _fieldArea.gameObject.SetActive(hitterTab);
+        _rowArea.gameObject.SetActive(!hitterTab);
+
+        if (hitterTab)
         {
-            case Tab.Hitter:
-                RefreshHitterRows();
-                break;
-
-            case Tab.Bench:
-                RefreshBenchRows();
-                break;
-
-            default:
-                RefreshPitcherRows();
-                break;
+            RefreshHitterField();
+            return;
         }
+
+        if (_tab == Tab.Bench)
+            RefreshBenchRows();
+        else
+            RefreshPitcherRows();
     }
 
     protected override void BindEvents()
@@ -132,6 +155,9 @@ public class LineUpScreen : UiScreenBehaviour
         _rowArea = UiBuilder.CreateRect(Root, "Rows");
         UiBuilder.Stretch(_rowArea, 32f, 316f, 32f, 200f);
 
+        _fieldArea = UiBuilder.CreateRect(Root, "Field");
+        UiBuilder.Stretch(_fieldArea, 32f, 316f, 32f, 200f);
+
         Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
         RectTransform backRect = backButton.GetComponent<RectTransform>();
 
@@ -157,21 +183,30 @@ public class LineUpScreen : UiScreenBehaviour
             _rows.Add(new SlotRow(_rowArea, i));
     }
 
-    private void RefreshHitterRows()
+    //야수 칸도 프리팹에 굽지 않고 런타임에 한 번만 만든다
+    private void EnsureFieldSlots()
     {
-        for (int i = 0; i < _rows.Count; i++)
-        {
-            if (i >= HitterSlots.Length)
-            {
-                _rows[i].SetVisible(false);
-                continue;
-            }
+        if (_fieldSlots.Count > 0)
+            return;
 
+        for (int i = 0; i < HitterSlotCount; i++)
+        {
+            _fieldSlots.Add(new FieldSlot(_fieldArea, HitterSlotLabels[i],
+                HitterSlotPoints[i].x, HitterSlotPoints[i].y, SlotCardWidth));
+        }
+    }
+
+    //9포지션을 야구장 자리대로 깐다
+    private void RefreshHitterField()
+    {
+        EnsureFieldSlots();
+
+        for (int i = 0; i < _fieldSlots.Count; i++)
+        {
             HitterPosition slot = HitterSlots[i];
             (int instanceId, int battingOrder) = LineUpManager.Instance.GetHitterSlot(slot);
 
-            _rows[i].SetVisible(true);
-            _rows[i].SetHitterSlot(HitterSlotLabels[i], instanceId, battingOrder,
+            _fieldSlots[i].SetSlot(instanceId, battingOrder,
                 () => PickHitter(slot), () => ClearHitter(slot), order => ChangeOrder(slot, order));
         }
     }
@@ -388,6 +423,103 @@ public class LineUpScreen : UiScreenBehaviour
     private void OnBackClicked()
     {
         _onBack?.Invoke();
+    }
+
+    //야구장 자리에 놓이는 야수 1칸. 카드 비율 그림 + 포지션 + 타순 조절
+    private sealed class FieldSlot
+    {
+        private const float ClearSize = 46f;
+
+        private readonly CardView _card;
+        private readonly TextMeshProUGUI _orderText;
+        private readonly Button _orderDownButton;
+        private readonly Button _orderUpButton;
+        private readonly Button _clearButton;
+
+        private Action _onPick;
+        private Action _onClear;
+        private Action<int> _onOrderChanged;
+        private int _battingOrder;
+
+        public FieldSlot(Transform parent, string label, float x, float y, float width)
+        {
+            float cardHeight = width * CardView.BaseHeight / CardView.BaseWidth;
+            float height = SlotLabelHeight + SlotGap + cardHeight + SlotGap + SlotOrderHeight;
+
+            RectTransform root = UiBuilder.CreateRect(parent, "Slot" + label);
+
+            UiBuilder.Place(root, x, y, width, height);
+
+            TextMeshProUGUI positionLabel = UiBuilder.CreateText(root, "Position", 30f,
+                UiPalette.Text2, TextAlignmentOptions.Center);
+
+            UiBuilder.Place(positionLabel.rectTransform, 0f, 0f, width, SlotLabelHeight);
+            positionLabel.text = label;
+
+            float cardTop = SlotLabelHeight + SlotGap;
+
+            _card = CardView.Bake(root, width);
+            UiBuilder.Place(_card.Root, 0f, cardTop, width, cardHeight);
+
+            _clearButton = UiBuilder.CreateButton(root, "Clear", "✕", 28f, false, OnClearClicked);
+            UiBuilder.Place(_clearButton.GetComponent<RectTransform>(),
+                width - ClearSize, cardTop, ClearSize, ClearSize);
+
+            float orderTop = cardTop + cardHeight + SlotGap;
+
+            _orderDownButton = UiBuilder.CreateButton(root, "OrderDown", "◀", 26f, false, DecreaseOrder);
+            UiBuilder.Place(_orderDownButton.GetComponent<RectTransform>(), 0f, orderTop, 44f, SlotOrderHeight);
+
+            _orderText = UiBuilder.CreateText(root, "Order", 30f, UiPalette.AccentGold,
+                TextAlignmentOptions.Center);
+            UiBuilder.Place(_orderText.rectTransform, 44f, orderTop, width - 88f, SlotOrderHeight);
+
+            _orderUpButton = UiBuilder.CreateButton(root, "OrderUp", "▶", 26f, false, IncreaseOrder);
+            UiBuilder.Place(_orderUpButton.GetComponent<RectTransform>(),
+                width - 44f, orderTop, 44f, SlotOrderHeight);
+        }
+
+        /// <summary>
+        /// 이 자리에 놓인 카드와 타순을 다시 그린다
+        /// </summary>
+        public void SetSlot(int instanceId, int battingOrder, Action onPick, Action onClear,
+            Action<int> onOrderChanged)
+        {
+            _onPick = onPick;
+            _onClear = onClear;
+            _onOrderChanged = onOrderChanged;
+            _battingOrder = battingOrder;
+
+            bool filled = CardDisplayInfo.TryCreate(instanceId, out CardDisplayInfo info);
+
+            if (filled)
+                _card.SetCard(info);
+            else
+                _card.SetEmpty("비어 있음");
+
+            _card.SetClickHandler(onPick);
+
+            _clearButton.gameObject.SetActive(filled);
+            _orderDownButton.gameObject.SetActive(filled);
+            _orderUpButton.gameObject.SetActive(filled);
+
+            _orderText.text = filled ? $"{battingOrder}번" : string.Empty;
+        }
+
+        private void OnClearClicked()
+        {
+            _onClear?.Invoke();
+        }
+
+        private void DecreaseOrder()
+        {
+            _onOrderChanged?.Invoke(_battingOrder - 1);
+        }
+
+        private void IncreaseOrder()
+        {
+            _onOrderChanged?.Invoke(_battingOrder + 1);
+        }
     }
 
     //슬롯 1칸. 야수 행에만 타순 조절이 붙는다

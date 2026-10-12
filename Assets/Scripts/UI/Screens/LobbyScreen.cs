@@ -19,11 +19,14 @@ public class LobbyScreen : UiScreenBehaviour
     };
 
     private const int MenuLabelCount = 11;
-    private const int MenuColumns = 2;
-    private const float MenuWidth = 500f;
+    private const int MenuColumns = 3;
+    //1080 에서 좌우 여백 32 · 열 간격 16 을 빼고 3등분한 값
+    private const float MenuWidth = 328f;
     private const float MenuHeight = 148f;
     private const float MenuGap = 16f;
     private const float MenuTop = 420f;
+    //3열이라 칸이 좁아져 '골든글러브 제작' 이 넘치지 않도록 줄였다
+    private const float MenuFontSize = 32f;
 
     [SerializeField] private TextMeshProUGUI _teamText;
     [SerializeField] private TextMeshProUGUI _tierText;
@@ -95,7 +98,7 @@ public class LobbyScreen : UiScreenBehaviour
             int column = i % MenuColumns;
             int row = i / MenuColumns;
 
-            Button button = UiBuilder.CreateButton(Root, "Menu" + i, MenuLabels[i], 36f,
+            Button button = UiBuilder.CreateButton(Root, "Menu" + i, MenuLabels[i], MenuFontSize,
                 i == 0, () => OnMenuClicked(index));
 
             UiBuilder.Place(button.GetComponent<RectTransform>(),
