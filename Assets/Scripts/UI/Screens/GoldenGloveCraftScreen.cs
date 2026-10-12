@@ -21,6 +21,13 @@ public class GoldenGloveCraftScreen : CardActionScreen
     /// </summary>
     protected override string Title => "골든글러브 제작";
 
+    //제작은 재화로만 하므로 카드 목록을 깔지 않는다
+    protected override bool UsesCardList => false;
+
+    protected override void OnSelectionChanged(List<int> selectedIds)
+    {
+    }
+
     [SerializeField] private Button _randomTabButton;
     [SerializeField] private Button _teamTabButton;
     [SerializeField] private RectTransform _teamGrid;

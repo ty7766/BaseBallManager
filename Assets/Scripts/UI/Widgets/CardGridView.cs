@@ -9,11 +9,14 @@ using UnityEngine.UI;
 /// </summary>
 public class CardGridView : UiWidgetBehaviour
 {
-    private const int DefaultColumns = 3;
+    private const int DefaultColumns = 4;
+    //4열일 때의 칸 폭. 카드 그림은 CellWidth 기준으로 조립하고 스케일로 줄인다
+    private const float DefaultCellWidth = 242f;
     private const float ColumnGap = 16f;
     private const float RowGap = 16f;
     //화면 좌우 여백 32 를 뺀 설계 폭. 가운데 정렬 기준이다
     private const float GridWidth = 1016f;
+    private const float CenterNudgeUp = 60f;
 
     /// <summary>
     /// 현재 깔려 있는 카드 수
@@ -25,7 +28,9 @@ public class CardGridView : UiWidgetBehaviour
     private readonly List<CardCellView> _cells = new List<CardCellView>(32);
     private readonly HashSet<int> _selected = new HashSet<int>();
     [SerializeField] private int _columns;
-    [SerializeField] private float _cellWidth = CardCellView.CellWidth;
+    [SerializeField] private float _cellWidth = DefaultCellWidth;
+    //0보다 크면 이 높이 안에서 세로 가운데로 모은다 (뽑기 결과)
+    [SerializeField] private float _centerInHeight;
 
     private Action<int> _onCardClicked;
 
@@ -57,10 +62,11 @@ public class CardGridView : UiWidgetBehaviour
     /// <summary>
     /// 열 수와 칸 폭을 바꾼다 (단일 뽑기 1장 크게 · 10연 5열 등)
     /// </summary>
-    public void SetLayout(int columns, float cellWidth)
+    public void SetLayout(int columns, float cellWidth, float centerInHeight = 0f)
     {
         _columns = Mathf.Max(1, columns);
         _cellWidth = Mathf.Max(1f, cellWidth);
+        _centerInHeight = centerInHeight;
     }
 
     /// <summary>
@@ -80,10 +86,20 @@ public class CardGridView : UiWidgetBehaviour
     public void SetCards(IReadOnlyList<int> instanceIds)
     {
         int used = 0;
-        float cellWidth = _cellWidth > 0f ? _cellWidth : CardCellView.CellWidth;
+        float cellWidth = _cellWidth > 0f ? _cellWidth : DefaultCellWidth;
         float cellHeight = cellWidth * CardView.BaseHeight / CardView.BaseWidth;
         float rowWidth = _columns * (cellWidth + ColumnGap) - ColumnGap;
         float offsetX = Mathf.Max(0f, (GridWidth - rowWidth) * 0.5f);
+        float offsetY = 0f;
+
+        if (_centerInHeight > 0f && instanceIds != null && instanceIds.Count > 0)
+        {
+            int plannedRows = (instanceIds.Count + _columns - 1) / _columns;
+            float blockHeight = plannedRows * (cellHeight + RowGap) - RowGap;
+
+            //가운데에서 살짝 위로 올린다
+            offsetY = Mathf.Max(0f, (_centerInHeight - blockHeight) * 0.5f - CenterNudgeUp);
+        }
 
         if (instanceIds != null)
         {
@@ -97,7 +113,7 @@ public class CardGridView : UiWidgetBehaviour
                 cell.SetVisible(true);
                 cell.SetCard(info);
                 cell.SetGridPosition(used % _columns, used / _columns, ColumnGap, RowGap,
-                    cellWidth, offsetX);
+                    cellWidth, offsetX, offsetY);
                 cell.SetSelected(_selected.Contains(info.InstanceId));
 
                 used++;
@@ -111,7 +127,7 @@ public class CardGridView : UiWidgetBehaviour
 
         int rows = (used + _columns - 1) / _columns;
 
-        _content.sizeDelta = new Vector2(0f, rows * (cellHeight + RowGap));
+        _content.sizeDelta = new Vector2(0f, offsetY + rows * (cellHeight + RowGap));
         _emptyText.gameObject.SetActive(used == 0);
     }
 

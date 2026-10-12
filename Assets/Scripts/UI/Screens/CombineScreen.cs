@@ -16,6 +16,23 @@ public class CombineScreen : CardActionScreen
     /// </summary>
     protected override string Title => "조합";
 
+    /// <summary>
+    /// 조합은 필요한 장수만큼 고른다
+    /// </summary>
+    protected override int RequiredSelectionCount =>
+        CombineManager.Instance != null ? CombineManager.Instance.GetMaterialCount() : 1;
+
+    /// <summary>
+    /// 아래 목록에서 고른 카드를 재료로 삼는다
+    /// </summary>
+    protected override void OnSelectionChanged(List<int> selectedIds)
+    {
+        _materialIds.Clear();
+        _materialIds.AddRange(selectedIds);
+
+        Refresh();
+    }
+
     [SerializeField] private TextMeshProUGUI _guideText;
     [SerializeField] private TextMeshProUGUI _resultText;
     [SerializeField] private TextMeshProUGUI[] _materialTexts = new TextMeshProUGUI[MaxMaterialRows];
@@ -60,7 +77,6 @@ public class CombineScreen : CardActionScreen
     {
         base.BindEvents();
 
-        BindButton("PickMaterials", PickMaterials);
         Bind(_combineButton, Combine);
     }
 
@@ -69,8 +85,6 @@ public class CombineScreen : CardActionScreen
         _guideText = UiBuilder.CreateText(Body, "Guide", 32f, UiPalette.Text3);
         UiBuilder.PlaceRow(_guideText.rectTransform, 0f, 48f, 8f);
 
-        Button pickButton = UiBuilder.CreateButton(Body, "PickMaterials", "재료 선택", 34f, false, PickMaterials);
-        UiBuilder.PlaceRow(pickButton.GetComponent<RectTransform>(), 60f, 96f);
 
         for (int i = 0; i < MaxMaterialRows; i++)
         {
@@ -86,23 +100,6 @@ public class CombineScreen : CardActionScreen
         _resultText.textWrappingMode = TextWrappingModes.Normal;
     }
 
-    private void PickMaterials()
-    {
-        int required = CombineManager.Instance == null ? 0 : CombineManager.Instance.GetMaterialCount();
-
-        if (required <= 0)
-        {
-            Notify("조합 재료 수가 설정되지 않았습니다", false);
-            return;
-        }
-
-        PickCards($"조합 재료 {required}장", required, info => true, ids =>
-        {
-            _materialIds.Clear();
-            _materialIds.AddRange(ids);
-            Refresh();
-        });
-    }
 
     private void Combine()
     {

@@ -16,6 +16,18 @@ public class TrainScreen : CardActionScreen
     /// </summary>
     protected override string Title => "훈련";
 
+    /// <summary>
+    /// 아래 목록에서 고른 카드를 훈련 대상으로 삼는다
+    /// </summary>
+    protected override void OnSelectionChanged(List<int> selectedIds)
+    {
+        _targetInstanceId = selectedIds.Count > 0
+            ? selectedIds[0]
+            : InventoryManager.InvalidInstanceId;
+
+        Refresh();
+    }
+
     [SerializeField] private TextMeshProUGUI _targetText;
     [SerializeField] private TextMeshProUGUI _costText;
     [SerializeField] private TextMeshProUGUI _breakthroughText;
@@ -107,15 +119,12 @@ public class TrainScreen : CardActionScreen
     {
         base.BindEvents();
 
-        BindButton("PickTarget", PickTarget);
         Bind(_trainButton, Train);
         Bind(_breakthroughButton, Breakthrough);
     }
 
     protected override void BuildBody()
     {
-        Button pickButton = UiBuilder.CreateButton(Body, "PickTarget", "훈련할 카드 선택", 34f, false, PickTarget);
-        UiBuilder.PlaceRow(pickButton.GetComponent<RectTransform>(), 0f, 96f);
 
         _targetText = UiBuilder.CreateText(Body, "Target", 32f, UiPalette.TextOff);
         UiBuilder.PlaceRow(_targetText.rectTransform, 112f, 48f, 8f);
@@ -145,14 +154,6 @@ public class TrainScreen : CardActionScreen
         UiBuilder.PlaceRow(_breakthroughButton.GetComponent<RectTransform>(), 700f, 100f);
     }
 
-    private void PickTarget()
-    {
-        PickCard("훈련할 카드", info => true, instanceId =>
-        {
-            _targetInstanceId = instanceId;
-            Refresh();
-        });
-    }
 
     private void Train()
     {

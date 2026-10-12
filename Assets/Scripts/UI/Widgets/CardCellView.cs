@@ -56,7 +56,7 @@ public class CardCellView
     /// 그리드 안의 위치 (열·행 번호로 배치)
     /// </summary>
     public void SetGridPosition(int column, int row, float columnGap, float rowGap,
-        float width, float offsetX)
+        float width, float offsetX, float offsetY)
     {
         //카드 속 좌표는 조립할 때 굳으므로 크기는 스케일로 바꾼다
         float scale = width / CellWidth;
@@ -66,7 +66,7 @@ public class CardCellView
 
         UiBuilder.Place(_root,
             offsetX + column * (width + columnGap),
-            row * (height + rowGap),
+            offsetY + row * (height + rowGap),
             CellWidth, CellHeight);
     }
 

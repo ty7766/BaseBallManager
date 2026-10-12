@@ -12,6 +12,8 @@ public class GachaScreen : UiScreenBehaviour
     private const float SingleCardWidth = 540f;
     private const int TenRollColumns = 5;
     private const float TenRollCardWidth = 185f;
+    //결과 영역 높이 (1920 - 위 588 - 아래 200). 이 안에서 세로 가운데로 모은다
+    private const float ResultAreaHeight = 1132f;
 
     private const int TenRollCount = 10;
 
@@ -193,9 +195,9 @@ public class GachaScreen : UiScreenBehaviour
     {
         //단일은 가운데 큰 1장, 10연은 2행 5열
         if (_resultInstanceIds.Count <= 1)
-            _resultGrid.SetLayout(1, SingleCardWidth);
+            _resultGrid.SetLayout(1, SingleCardWidth, ResultAreaHeight);
         else
-            _resultGrid.SetLayout(TenRollColumns, TenRollCardWidth);
+            _resultGrid.SetLayout(TenRollColumns, TenRollCardWidth, ResultAreaHeight);
 
         _resultGrid.SetCards(_resultInstanceIds);
         _resultGrid.PlayRevealSequence();

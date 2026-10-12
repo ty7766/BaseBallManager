@@ -11,6 +11,8 @@ using UnityEngine.UI;
 public abstract class CardActionScreen : UiScreenBehaviour
 {
     private const float BodyTop = 212f;
+    //카드 목록은 화면 중간보다 조금 아래부터. 위쪽은 기능 UI 가 쓴다
+    private const float CardListTop = 1060f;
 
     /// <summary>
     /// 화면 제목. 베이크 시점에 쓰이므로 상수 문자열로 둔다
@@ -27,8 +29,35 @@ public abstract class CardActionScreen : UiScreenBehaviour
     /// </summary>
     protected CurrencyBarView CurrencyBar => _currencyBar;
 
+    /// <summary>
+    /// 화면 아래쪽 카드 목록. 카드를 쓰지 않는 화면은 UsesCardList 를 false 로 둔다
+    /// </summary>
+    protected virtual bool UsesCardList => true;
+
+    /// <summary>
+    /// 한 번에 골라야 하는 장수. 조합처럼 여러 장이면 덮어쓴다
+    /// </summary>
+    protected virtual int RequiredSelectionCount => 1;
+
+    /// <summary>
+    /// 목록에 깔 카드를 거른다
+    /// </summary>
+    protected virtual bool CanSelectCard(CardDisplayInfo info)
+    {
+        return true;
+    }
+
+    /// <summary>
+    /// 고른 카드가 바뀌었다. 화면이 자기 상태를 갱신한다
+    /// </summary>
+    protected abstract void OnSelectionChanged(List<int> selectedIds);
+
     [SerializeField] private RectTransform _body;
     [SerializeField] private CurrencyBarView _currencyBar;
+    [SerializeField] private CardGridView _cardList;
+
+    private readonly List<int> _selectedIds = new List<int>(4);
+    private readonly List<int> _candidateIds = new List<int>(64);
 
     private Action _onBack;
     private Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> _onPickCard;
@@ -52,6 +81,59 @@ public abstract class CardActionScreen : UiScreenBehaviour
     public virtual void Refresh()
     {
         _currencyBar.Refresh();
+        RefreshCardList();
+    }
+
+    /// <summary>
+    /// 고른 카드를 모두 비운다 (기능을 실행한 뒤)
+    /// </summary>
+    protected void ClearSelection()
+    {
+        _selectedIds.Clear();
+        OnSelectionChanged(_selectedIds);
+    }
+
+    //보유 카드 중 고를 수 있는 것만 깐다
+    private void RefreshCardList()
+    {
+        if (!UsesCardList || _cardList == null || InventoryManager.Instance == null)
+            return;
+
+        _candidateIds.Clear();
+
+        foreach (CardInstance card in InventoryManager.Instance.GetAllCards())
+        {
+            if (!CardDisplayInfo.TryCreate(card.InstanceId, out CardDisplayInfo info))
+                continue;
+
+            if (!CanSelectCard(info))
+                continue;
+
+            _candidateIds.Add(card.InstanceId);
+        }
+
+        _cardList.SetCards(_candidateIds);
+        _cardList.SetSelection(_selectedIds);
+    }
+
+    //단일이면 바꿔 끼우고, 여러 장이면 필요한 수까지 토글한다
+    private void OnCardListClicked(int instanceId)
+    {
+        if (RequiredSelectionCount <= 1)
+        {
+            _selectedIds.Clear();
+            _selectedIds.Add(instanceId);
+        }
+        else if (_selectedIds.Contains(instanceId))
+        {
+            _selectedIds.Remove(instanceId);
+        }
+        else if (_selectedIds.Count < RequiredSelectionCount)
+        {
+            _selectedIds.Add(instanceId);
+        }
+
+        OnSelectionChanged(_selectedIds);
     }
 
     protected sealed override void Build()
@@ -64,7 +146,20 @@ public abstract class CardActionScreen : UiScreenBehaviour
         UiBuilder.Place(_currencyBar.Root, 24f, 104f, 1032f, CurrencyBarView.BarHeight);
 
         _body = UiBuilder.CreateRect(Root, "Body");
-        UiBuilder.Stretch(_body, 32f, BodyTop, 32f, 200f);
+
+        if (UsesCardList)
+        {
+            UiBuilder.Stretch(_body, 32f, BodyTop, 32f, 1920f - CardListTop);
+
+            _cardList = CardGridView.Bake(Root);
+            UiBuilder.Stretch(_cardList.Root, 32f, CardListTop, 32f, 200f);
+            _cardList.SetClickHandler(OnCardListClicked);
+            _cardList.SetEmptyMessage("고를 수 있는 카드가 없습니다");
+        }
+        else
+        {
+            UiBuilder.Stretch(_body, 32f, BodyTop, 32f, 200f);
+        }
 
         Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
         RectTransform backRect = backButton.GetComponent<RectTransform>();
@@ -81,6 +176,9 @@ public abstract class CardActionScreen : UiScreenBehaviour
     protected override void BindEvents()
     {
         BindButton("BackButton", OnBackClicked);
+
+        if (_cardList != null)
+            _cardList.SetClickHandler(OnCardListClicked);
     }
 
     protected override void OnShown()

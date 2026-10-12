@@ -14,6 +14,18 @@ public class EnhanceScreen : CardActionScreen
     /// </summary>
     protected override string Title => "강화";
 
+    /// <summary>
+    /// 아래 목록에서 고른 카드를 강화 대상으로 삼는다
+    /// </summary>
+    protected override void OnSelectionChanged(List<int> selectedIds)
+    {
+        _targetInstanceId = selectedIds.Count > 0
+            ? selectedIds[0]
+            : InventoryManager.InvalidInstanceId;
+
+        Refresh();
+    }
+
     [SerializeField] private TextMeshProUGUI _targetText;
     [SerializeField] private TextMeshProUGUI _identicalText;
     [SerializeField] private TextMeshProUGUI _enhanceCardText;
@@ -72,15 +84,12 @@ public class EnhanceScreen : CardActionScreen
     {
         base.BindEvents();
 
-        BindButton("PickTarget", PickTarget);
         Bind(_identicalButton, PickIdenticalMaterial);
         Bind(_enhanceCardButton, EnhanceWithCards);
     }
 
     protected override void BuildBody()
     {
-        Button pickButton = UiBuilder.CreateButton(Body, "PickTarget", "강화할 카드 선택", 34f, false, PickTarget);
-        UiBuilder.PlaceRow(pickButton.GetComponent<RectTransform>(), 0f, 96f);
 
         _targetText = UiBuilder.CreateText(Body, "Target", 32f, UiPalette.TextOff);
         UiBuilder.PlaceRow(_targetText.rectTransform, 112f, 48f, 8f);
@@ -112,14 +121,6 @@ public class EnhanceScreen : CardActionScreen
         UiBuilder.PlaceRow(_enhanceCardButton.GetComponent<RectTransform>(), 540f, 96f);
     }
 
-    private void PickTarget()
-    {
-        PickCard("강화할 카드", info => true, instanceId =>
-        {
-            _targetInstanceId = instanceId;
-            Refresh();
-        });
-    }
 
     //재료는 같은 카드 목록에 있는 것만 고를 수 있다
     private void PickIdenticalMaterial()

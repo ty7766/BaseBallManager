@@ -15,11 +15,14 @@ public class LineUpScreen : UiScreenBehaviour
     private const int MaxRowCount = 11;
     private const int HitterSlotCount = 9;
     private const int BenchSlotCount = 5;
-    //야수 칸보다 작게 깔아 벤치 5장과 투수 11장이 한 화면에 들어오게 한다
+    //벤치는 DH 와 함께 6장이 한 줄에 들어가야 해 야수 칸보다 작다
     private const float SmallCardWidth = 150f;
+    //투수는 야수 칸과 같은 크기로 (한 행 5장이면 들어간다)
+    private const float PitcherCardWidth = SlotCardWidth;
+    private const float PitcherColumnGap = 24f;
     private const float BenchTop = 1090f;
     private const float FieldWidth = 1016f;
-    private const float PitcherRowStep = 280f;
+    private const float PitcherRowStep = 310f;
 
     private static readonly HitterPosition[] HitterSlots =
     {
@@ -233,15 +236,15 @@ public class LineUpScreen : UiScreenBehaviour
     //한 행을 가운데 정렬로 깐다
     private void AddPitcherRow(string label, int count, float top)
     {
-        float step = SmallCardWidth + 16f;
-        float left = (FieldWidth - (count * step - 16f)) * 0.5f;
+        float step = PitcherCardWidth + PitcherColumnGap;
+        float left = (FieldWidth - (count * step - PitcherColumnGap)) * 0.5f;
 
         for (int i = 0; i < count; i++)
         {
             string slotLabel = count == 1 ? label : $"{label} {i + 1}";
 
             _pitcherSlots.Add(new FieldSlot(_pitcherArea, slotLabel,
-                left + i * step, top, SmallCardWidth, false));
+                left + i * step, top, PitcherCardWidth, false));
         }
     }
 

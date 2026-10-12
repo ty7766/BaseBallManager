@@ -14,6 +14,26 @@ public class DismantleScreen : CardActionScreen
     /// </summary>
     protected override string Title => "분해";
 
+    /// <summary>
+    /// 잠긴 카드는 분해할 수 없어 목록에서 뺀다
+    /// </summary>
+    protected override bool CanSelectCard(CardDisplayInfo info)
+    {
+        return !info.IsLocked;
+    }
+
+    /// <summary>
+    /// 아래 목록에서 고른 카드를 분해 대상으로 삼는다
+    /// </summary>
+    protected override void OnSelectionChanged(List<int> selectedIds)
+    {
+        _targetInstanceId = selectedIds.Count > 0
+            ? selectedIds[0]
+            : InventoryManager.InvalidInstanceId;
+
+        Refresh();
+    }
+
     [SerializeField] private TextMeshProUGUI _targetText;
     [SerializeField] private TextMeshProUGUI _previewText;
     [SerializeField] private TextMeshProUGUI _noticeText;
@@ -72,14 +92,11 @@ public class DismantleScreen : CardActionScreen
     {
         base.BindEvents();
 
-        BindButton("PickTarget", PickTarget);
         Bind(_dismantleButton, Dismantle);
     }
 
     protected override void BuildBody()
     {
-        Button pickButton = UiBuilder.CreateButton(Body, "PickTarget", "분해할 카드 선택", 34f, false, PickTarget);
-        UiBuilder.PlaceRow(pickButton.GetComponent<RectTransform>(), 0f, 96f);
 
         _targetText = UiBuilder.CreateText(Body, "Target", 32f, UiPalette.TextOff);
         UiBuilder.PlaceRow(_targetText.rectTransform, 112f, 48f, 8f);
@@ -99,14 +116,6 @@ public class DismantleScreen : CardActionScreen
         _noticeText.text = "잠긴 카드와 라인업에 들어간 카드는 분해되지 않습니다";
     }
 
-    private void PickTarget()
-    {
-        PickCard("분해할 카드", info => !info.IsLocked, instanceId =>
-        {
-            _targetInstanceId = instanceId;
-            Refresh();
-        });
-    }
 
     private void Dismantle()
     {
