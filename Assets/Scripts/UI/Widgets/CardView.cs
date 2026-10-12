@@ -22,8 +22,9 @@ public class CardView : UiWidgetBehaviour
     private const float StatBarMaxStat = 150f;
     //그림 알파가 255 까지 올라가 조금만 올려도 흰 띠가 된다
     private const float ShineAlpha = 0.10f;
-    //노말 베이스가 어두워 전체를 살짝 들어 올린다
-    private const float NormalLiftAlpha = 0.16f;
+    //노말 베이스가 어두워 살짝 들어 올린다. 흰색으로 덮으면 청사진 무늬가 날아가
+    //회색으로 뿌얘지므로 카드 종류색(하늘색)으로 올린다
+    private const float NormalLiftAlpha = 0.10f;
 
     [SerializeField] private RectTransform _front;
     [SerializeField] private RectTransform _back;
@@ -209,8 +210,8 @@ public class CardView : UiWidgetBehaviour
         if (_hasBack)
             ApplyBase(_backBase, info.CardType, teamColor);
 
-        //노말 베이스만 어두워 전체를 살짝 밝힌다
-        _baseLift.color = UiPalette.WithAlpha(Color.white,
+        //노말 베이스만 어두워 살짝 밝힌다
+        _baseLift.color = UiPalette.WithAlpha(UiPalette.CardNormal,
             info.CardType == CardType.Normal ? NormalLiftAlpha : 0f);
 
         _teamAura.color = UiPalette.WithAlpha(teamColor, 0.55f);
@@ -275,7 +276,7 @@ public class CardView : UiWidgetBehaviour
         if (_hasBack)
             _back.gameObject.SetActive(false);
 
-        _baseLift.color = UiPalette.WithAlpha(Color.white, 0f);
+        _baseLift.color = UiPalette.WithAlpha(UiPalette.CardNormal, 0f);
 
         _frontBase.sprite = UiSprites.Get(UiSprites.CardSlotEmpty);
         _frontBase.color = _frontBase.sprite == null ? UiPalette.BgPanel : Color.white;

@@ -444,7 +444,7 @@ public class LineUpScreen : UiScreenBehaviour
     //야구장 자리에 놓이는 야수 1칸. 카드 비율 그림 + 포지션 + 타순 조절
     private sealed class FieldSlot
     {
-        private const float ClearSize = 46f;
+        private const float ClearSize = 40f;
 
         private readonly CardView _card;
         private readonly TextMeshProUGUI _orderText;
@@ -483,7 +483,8 @@ public class LineUpScreen : UiScreenBehaviour
             _card = CardView.Bake(root, width);
             UiBuilder.Place(_card.Root, 0f, cardTop, width, cardHeight);
 
-            _clearButton = UiBuilder.CreateButton(root, "Clear", "✕", 28f, false, OnClearClicked);
+            //한글 폰트에 ✕(U+2715) 글리프가 없어 네모로 깨진다. 기본 라틴 X 를 쓴다
+            _clearButton = UiBuilder.CreateButton(root, "Clear", "X", 26f, false, OnClearClicked);
             UiBuilder.Place(_clearButton.GetComponent<RectTransform>(),
                 width - ClearSize, cardTop, ClearSize, ClearSize);
 
