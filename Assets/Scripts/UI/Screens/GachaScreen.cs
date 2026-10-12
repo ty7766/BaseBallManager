@@ -9,6 +9,10 @@ using UnityEngine.UI;
 /// </summary>
 public class GachaScreen : UiScreenBehaviour
 {
+    private const float SingleCardWidth = 540f;
+    private const int TenRollColumns = 5;
+    private const float TenRollCardWidth = 185f;
+
     private const int TenRollCount = 10;
 
     private Action _onBack;
@@ -72,6 +76,7 @@ public class GachaScreen : UiScreenBehaviour
 
     protected override void BindEvents()
     {
+        _resultGrid.SetClickHandler(OnResultClicked);
         Bind(_normalTabButton, () => SelectType(GachaType.Normal));
         Bind(_signatureTabButton, () => SelectType(GachaType.Signature));
         Bind(_rollOnceButton, RollOnce);
@@ -186,6 +191,12 @@ public class GachaScreen : UiScreenBehaviour
 
     private void ShowResults(int rolledCount)
     {
+        //단일은 가운데 큰 1장, 10연은 2행 5열
+        if (_resultInstanceIds.Count <= 1)
+            _resultGrid.SetLayout(1, SingleCardWidth);
+        else
+            _resultGrid.SetLayout(TenRollColumns, TenRollCardWidth);
+
         _resultGrid.SetCards(_resultInstanceIds);
         _resultGrid.PlayRevealSequence();
         _resultText.text = $"결과  {_resultInstanceIds.Count}장" +

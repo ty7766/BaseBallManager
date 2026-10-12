@@ -76,6 +76,27 @@ public class PauseSubstitutionScreen : UiScreenBehaviour
 
     protected override void BindEvents()
     {
+        for (int i = 0; i < _orderRows.Length; i++)
+        {
+            int orderIndex = i;
+
+            _orderRows[i].SetClickHandler(() => OnOrderSelected(orderIndex));
+        }
+
+        for (int i = 0; i < _benchRows.Length; i++)
+        {
+            int benchIndex = i;
+
+            _benchRows[i].SetClickHandler(() => OnBenchSelected(benchIndex));
+        }
+
+        for (int i = 0; i < _pitcherRows.Length; i++)
+        {
+            int pitcherSlot = i + 1;
+
+            _pitcherRows[i].SetClickHandler(() => OnPitcherSelected(pitcherSlot));
+        }
+
         Bind(_applyButton, OnApplyClicked);
         BindButton("ResumeButton", OnResumeClicked);
     }

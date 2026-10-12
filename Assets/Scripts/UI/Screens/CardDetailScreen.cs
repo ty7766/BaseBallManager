@@ -50,6 +50,7 @@ public class CardDetailScreen : UiScreenBehaviour
 
     protected override void BindEvents()
     {
+        _cardView.SetClickHandler(Flip);
         Bind(_lockButton, ToggleLock);
         BindButton("CloseButton", OnCloseClicked);
     }

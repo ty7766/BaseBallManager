@@ -63,6 +63,8 @@ public class InventoryScreen : UiScreenBehaviour
 
     protected override void BindEvents()
     {
+        _filterBar.SetChangedHandler(Refresh);
+        _grid.SetClickHandler(OnCardClicked);
         Bind(_expandButton, OnExpandClicked);
         BindButton("BackButton", OnBackClicked);
     }

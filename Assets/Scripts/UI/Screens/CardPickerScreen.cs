@@ -50,6 +50,8 @@ public class CardPickerScreen : UiScreenBehaviour
 
     protected override void BindEvents()
     {
+        _filterBar.SetChangedHandler(Refresh);
+        _grid.SetClickHandler(OnCardClicked);
         Bind(_confirmButton, OnConfirmClicked);
         BindButton("CancelButton", OnCancelClicked);
     }

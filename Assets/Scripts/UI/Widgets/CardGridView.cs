@@ -12,6 +12,8 @@ public class CardGridView : UiWidgetBehaviour
     private const int DefaultColumns = 3;
     private const float ColumnGap = 16f;
     private const float RowGap = 16f;
+    //화면 좌우 여백 32 를 뺀 설계 폭. 가운데 정렬 기준이다
+    private const float GridWidth = 1016f;
 
     /// <summary>
     /// 현재 깔려 있는 카드 수
@@ -23,6 +25,7 @@ public class CardGridView : UiWidgetBehaviour
     private readonly List<CardCellView> _cells = new List<CardCellView>(32);
     private readonly HashSet<int> _selected = new HashSet<int>();
     [SerializeField] private int _columns;
+    [SerializeField] private float _cellWidth = CardCellView.CellWidth;
 
     private Action<int> _onCardClicked;
 
@@ -52,6 +55,15 @@ public class CardGridView : UiWidgetBehaviour
     }
 
     /// <summary>
+    /// 열 수와 칸 폭을 바꾼다 (단일 뽑기 1장 크게 · 10연 5열 등)
+    /// </summary>
+    public void SetLayout(int columns, float cellWidth)
+    {
+        _columns = Mathf.Max(1, columns);
+        _cellWidth = Mathf.Max(1f, cellWidth);
+    }
+
+    /// <summary>
     /// 카드를 눌렀을 때 instanceId를 넘긴다
     /// </summary>
     public void SetClickHandler(Action<int> onCardClicked)
@@ -68,6 +80,10 @@ public class CardGridView : UiWidgetBehaviour
     public void SetCards(IReadOnlyList<int> instanceIds)
     {
         int used = 0;
+        float cellWidth = _cellWidth > 0f ? _cellWidth : CardCellView.CellWidth;
+        float cellHeight = cellWidth * CardView.BaseHeight / CardView.BaseWidth;
+        float rowWidth = _columns * (cellWidth + ColumnGap) - ColumnGap;
+        float offsetX = Mathf.Max(0f, (GridWidth - rowWidth) * 0.5f);
 
         if (instanceIds != null)
         {
@@ -80,7 +96,8 @@ public class CardGridView : UiWidgetBehaviour
 
                 cell.SetVisible(true);
                 cell.SetCard(info);
-                cell.SetGridPosition(used % _columns, used / _columns, ColumnGap, RowGap);
+                cell.SetGridPosition(used % _columns, used / _columns, ColumnGap, RowGap,
+                    cellWidth, offsetX);
                 cell.SetSelected(_selected.Contains(info.InstanceId));
 
                 used++;
@@ -94,7 +111,7 @@ public class CardGridView : UiWidgetBehaviour
 
         int rows = (used + _columns - 1) / _columns;
 
-        _content.sizeDelta = new Vector2(0f, rows * (CardCellView.CellHeight + RowGap));
+        _content.sizeDelta = new Vector2(0f, rows * (cellHeight + RowGap));
         _emptyText.gameObject.SetActive(used == 0);
     }
 

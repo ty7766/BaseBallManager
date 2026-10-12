@@ -20,13 +20,17 @@ public class CardView : UiWidgetBehaviour
     //5개를 가운데 정렬해도 오른쪽 위 강화 배지(x 1078)와 겹치지 않는 크기
     private const float StarSize = 144f;
     private const float StatBarMaxStat = 150f;
-    private const float ShineAlpha = 0.18f;
+    //그림 알파가 255 까지 올라가 조금만 올려도 흰 띠가 된다
+    private const float ShineAlpha = 0.10f;
+    //노말 베이스가 어두워 전체를 살짝 들어 올린다
+    private const float NormalLiftAlpha = 0.16f;
 
     [SerializeField] private RectTransform _front;
     [SerializeField] private RectTransform _back;
     [SerializeField] private float _scale;
 
     [SerializeField] private Image _frontBase;
+    [SerializeField] private Image _baseLift;
     [SerializeField] private Image _teamAura;
     [SerializeField] private Image _photo;
     [SerializeField] private Image _photoMask;
@@ -61,15 +65,16 @@ public class CardView : UiWidgetBehaviour
 
     private Action _onClick;
     private bool _showBack;
+    [SerializeField] private bool _hasBack;
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
     /// </summary>
-    public static CardView Bake(Transform parent, float width)
+    public static CardView Bake(Transform parent, float width, bool withBack = true)
     {
         CardView view = CreateNode<CardView>(parent, "Card");
 
-        view.BuildWidget(parent, width);
+        view.BuildWidget(parent, width, withBack);
 
         return view;
     }
@@ -80,8 +85,9 @@ public class CardView : UiWidgetBehaviour
         Bind(_button, OnClicked);
     }
 
-    private void BuildWidget(Transform parent, float width)
+    private void BuildWidget(Transform parent, float width, bool withBack)
     {
+        _hasBack = withBack;
         _scale = width / BaseWidth;
 
         UiBuilder.Place(Root, 0f, 0f, width, BaseHeight * _scale);
@@ -99,9 +105,12 @@ public class CardView : UiWidgetBehaviour
         _front = UiBuilder.CreateRect(Root, "Front");
         UiBuilder.Stretch(_front, 0f, 0f, 0f, 0f);
 
-        _back = UiBuilder.CreateRect(Root, "Back");
-        UiBuilder.Stretch(_back, 0f, 0f, 0f, 0f);
-        _back.gameObject.SetActive(false);
+        if (_hasBack)
+        {
+            _back = UiBuilder.CreateRect(Root, "Back");
+            UiBuilder.Stretch(_back, 0f, 0f, 0f, 0f);
+            _back.gameObject.SetActive(false);
+        }
 
         // --- 앞면: 배경 -> 선수 -> 프레임 -> 텍스트 -> 효과 (명세 1-2) ---
         _teamAura = CreateLayer(_front, "TeamAura", "Card/card_team_aura", 139f, 300f, 1120f, 1120f);
@@ -109,6 +118,9 @@ public class CardView : UiWidgetBehaviour
         _photo.preserveAspect = true;
         _photoMask = CreateLayer(_front, "PhotoMask", "Card/card_mask_photo", 0f, 150f, 1398f, 1700f);
         _frontBase = CreateLayer(_front, "Base", null, 0f, 0f, BaseWidth, BaseHeight);
+        _baseLift = CreateLayer(_front, "BaseLift", null, 0f, 0f, BaseWidth, BaseHeight);
+        _baseLift.raycastTarget = false;
+
         _nameShadow = CreateLayer(_front, "NameShadow", "Card/card_name_shadow", 0f, 1480f, 1398f, 417f);
 
         _ovrText = CreateCardText(_front, "Ovr", 270f, 90f, 60f, 300f, 320f, TextAlignmentOptions.Center);
@@ -143,6 +155,9 @@ public class CardView : UiWidgetBehaviour
         _emptyText.gameObject.SetActive(false);
 
         // --- 뒷면 ---
+        if (!_hasBack)
+            return;
+
         _backBase = CreateLayer(_back, "Base", null, 0f, 0f, BaseWidth, BaseHeight);
 
         Image cover = CreateLayer(_back, "Cover", null, 0f, 0f, BaseWidth, BaseHeight);
@@ -182,13 +197,21 @@ public class CardView : UiWidgetBehaviour
     {
         _emptyText.gameObject.SetActive(false);
         _front.gameObject.SetActive(!_showBack);
-        _back.gameObject.SetActive(_showBack);
+
+        if (_hasBack)
+            _back.gameObject.SetActive(_showBack);
 
         Color typeColor = CardVisualLookup.GetTypeColor(info.CardType);
         Color teamColor = UiPalette.GetTeamColor(info.TeamName);
 
         ApplyBase(_frontBase, info.CardType, teamColor);
-        ApplyBase(_backBase, info.CardType, teamColor);
+
+        if (_hasBack)
+            ApplyBase(_backBase, info.CardType, teamColor);
+
+        //노말 베이스만 어두워 전체를 살짝 밝힌다
+        _baseLift.color = UiPalette.WithAlpha(Color.white,
+            info.CardType == CardType.Normal ? NormalLiftAlpha : 0f);
 
         _teamAura.color = UiPalette.WithAlpha(teamColor, 0.55f);
         _photoMask.color = UiPalette.WithAlpha(UiPalette.BgApp, _photoMask.sprite == null ? 0f : 0.9f);
@@ -237,7 +260,8 @@ public class CardView : UiWidgetBehaviour
         _shine.gameObject.SetActive(info.CardType == CardType.Normal && info.CardGrade == CardGrade.Star5);
         ApplyGlow(info.CardType);
 
-        FillBack(info, typeColor);
+        if (_hasBack)
+            FillBack(info, typeColor);
     }
 
     /// <summary>
@@ -247,7 +271,11 @@ public class CardView : UiWidgetBehaviour
     {
         _showBack = false;
         _front.gameObject.SetActive(true);
-        _back.gameObject.SetActive(false);
+
+        if (_hasBack)
+            _back.gameObject.SetActive(false);
+
+        _baseLift.color = UiPalette.WithAlpha(Color.white, 0f);
 
         _frontBase.sprite = UiSprites.Get(UiSprites.CardSlotEmpty);
         _frontBase.color = _frontBase.sprite == null ? UiPalette.BgPanel : Color.white;
@@ -278,6 +306,9 @@ public class CardView : UiWidgetBehaviour
     /// </summary>
     public void SetFlipped(bool showBack)
     {
+        if (!_hasBack)
+            return;
+
         _showBack = showBack;
         _front.gameObject.SetActive(!showBack);
         _back.gameObject.SetActive(showBack);
@@ -288,6 +319,9 @@ public class CardView : UiWidgetBehaviour
     /// </summary>
     public void PlayFlip(bool showBack)
     {
+        if (!_hasBack)
+            return;
+
         UiEffects.Flip(Root, () => SetFlipped(showBack));
     }
 
