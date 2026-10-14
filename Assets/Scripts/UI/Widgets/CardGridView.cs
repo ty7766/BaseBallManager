@@ -33,6 +33,7 @@ public class CardGridView : UiWidgetBehaviour
     [SerializeField] private float _centerInHeight;
 
     private Action<int> _onCardClicked;
+    private Func<CardDisplayInfo, string> _blockedReason;
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
@@ -67,6 +68,14 @@ public class CardGridView : UiWidgetBehaviour
         _columns = Mathf.Max(1, columns);
         _cellWidth = Mathf.Max(1f, cellWidth);
         _centerInHeight = centerInHeight;
+    }
+
+    /// <summary>
+    /// 고를 수 없는 카드의 사유를 돌려주는 함수. null 이나 빈 문자열이면 고를 수 있다
+    /// </summary>
+    public void SetBlockedReason(Func<CardDisplayInfo, string> blockedReason)
+    {
+        _blockedReason = blockedReason;
     }
 
     /// <summary>
@@ -115,6 +124,7 @@ public class CardGridView : UiWidgetBehaviour
                 cell.SetGridPosition(used % _columns, used / _columns, ColumnGap, RowGap,
                     cellWidth, offsetX, offsetY);
                 cell.SetSelected(_selected.Contains(info.InstanceId));
+                cell.SetBlocked(_blockedReason == null ? null : _blockedReason(info));
 
                 used++;
             }

@@ -49,13 +49,13 @@ public class TitleScreen : UiScreenBehaviour
         UiBuilder.Place(subtitle.rectTransform, 40f, 548f, 1000f, 50f);
 
         Button newGameButton = UiBuilder.CreateButton(Root, "NewGameButton", "새 게임", 44f, true, OnNewGameClicked);
-        UiBuilder.Place(newGameButton.GetComponent<RectTransform>(), 240f, 1040f, 600f, 128f);
+        UiBuilder.Place(newGameButton.GetComponent<RectTransform>(), 240f, 1200f, 600f, 128f);
 
         _continueButton = UiBuilder.CreateButton(Root, "ContinueButton", "이어하기", 44f, false, OnContinueClicked);
-        UiBuilder.Place(_continueButton.GetComponent<RectTransform>(), 240f, 1200f, 600f, 128f);
+        UiBuilder.Place(_continueButton.GetComponent<RectTransform>(), 240f, 1360f, 600f, 128f);
 
         _noticeText = UiBuilder.CreateText(Root, "Notice", 30f, UiPalette.Text3, TextAlignmentOptions.Center);
-        UiBuilder.Place(_noticeText.rectTransform, 40f, 1360f, 1000f, 120f);
+        UiBuilder.Place(_noticeText.rectTransform, 40f, 1520f, 1000f, 120f);
     }
 
     private void OnNewGameClicked()

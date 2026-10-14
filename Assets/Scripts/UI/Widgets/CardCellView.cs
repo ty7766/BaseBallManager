@@ -16,6 +16,7 @@ public class CardCellView
 
     private const float BorderThickness = 5f;
     private const float LockSize = 52f;
+    private const float BlockedDimAlpha = 0.68f;
 
     public RectTransform Root => _root;
     public int InstanceId { get; private set; }
@@ -25,6 +26,8 @@ public class CardCellView
     private readonly CanvasGroup _group;
     private readonly Image _border;
     private readonly Image _lockIcon;
+    private readonly Image _blockedDim;
+    private readonly TMPro.TextMeshProUGUI _blockedText;
 
     private Action<int> _onClick;
     private bool _isHighlight;
@@ -50,6 +53,29 @@ public class CardCellView
         UiBuilder.PlaceRight(_lockIcon.rectTransform, 10f, 10f, LockSize, LockSize);
         _lockIcon.raycastTarget = false;
         _lockIcon.gameObject.SetActive(false);
+
+        _blockedDim = UiBuilder.CreateImage(_root, "BlockedDim",
+            UiPalette.WithAlpha(Color.black, BlockedDimAlpha));
+        UiBuilder.Stretch(_blockedDim.rectTransform, 0f, 0f, 0f, 0f);
+        _blockedDim.raycastTarget = false;
+
+        _blockedText = UiBuilder.CreateText(_blockedDim.transform, "BlockedText", 40f,
+            UiPalette.Text1, TMPro.TextAlignmentOptions.Center);
+        UiBuilder.Stretch(_blockedText.rectTransform, 8f, 0f, 8f, 0f);
+
+        _blockedDim.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// 고를 수 없는 카드에 반투명 필터와 사유를 덮는다. reason 이 비면 걷어낸다
+    /// </summary>
+    public void SetBlocked(string reason)
+    {
+        bool blocked = !string.IsNullOrEmpty(reason);
+
+        _blockedDim.gameObject.SetActive(blocked);
+        _blockedText.text = reason;
+        _card.SetClickHandler(blocked || _onClick == null ? null : OnClicked);
     }
 
     /// <summary>
@@ -85,6 +111,7 @@ public class CardCellView
 
         SetSelected(false);
         SetDimmed(false);
+        SetBlocked(null);
     }
 
     /// <summary>

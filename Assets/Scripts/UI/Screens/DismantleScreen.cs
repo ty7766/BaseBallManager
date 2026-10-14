@@ -15,11 +15,17 @@ public class DismantleScreen : CardActionScreen
     protected override string Title => "분해";
 
     /// <summary>
-    /// 잠긴 카드는 분해할 수 없어 목록에서 뺀다
+    /// 분해할 수 없는 카드도 목록에 두되 이유를 덮어 보여준다
     /// </summary>
-    protected override bool CanSelectCard(CardDisplayInfo info)
+    protected override string GetBlockedReason(CardDisplayInfo info)
     {
-        return !info.IsLocked;
+        if (info.IsLocked)
+            return "잠금 카드";
+
+        if (LineUpManager.Instance != null && LineUpManager.Instance.IsCardAssigned(info.InstanceId))
+            return "라인업 카드";
+
+        return null;
     }
 
     /// <summary>

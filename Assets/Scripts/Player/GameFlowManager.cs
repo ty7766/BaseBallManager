@@ -15,6 +15,9 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
     [SerializeField, Tooltip("튜토리얼 완료 보상 일반 뽑기권")]
     private int _tutorialTicketReward = 150;
 
+    [SerializeField, Tooltip("튜토리얼 완료 시 주는 시그니쳐 뽑기권 (테스트용)")]
+    private int _tutorialSignatureTicketReward = 20;
+
     [SerializeField, Tooltip("팀별 시작 지급 시그니쳐 카드 표. 비워두면 시작 카드를 지급하지 않는다")]
     private StartingSignatureTable _startingSignatureTable;
 
@@ -81,7 +84,7 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
     }
 
     /// <summary>
-    /// 튜토리얼 완료 보상 - 일반 뽑기권 지급
+    /// 튜토리얼 완료 보상 - 일반 · 시그니쳐 뽑기권 지급
     /// </summary>
     public bool CompleteTutorial()
     {
@@ -98,6 +101,7 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
         }
 
         CurrencyManager.Instance.Add(CurrencyType.NormalTicket, _tutorialTicketReward);
+        CurrencyManager.Instance.Add(CurrencyType.SignatureTicket, _tutorialSignatureTicketReward);
         return true;
     }
 

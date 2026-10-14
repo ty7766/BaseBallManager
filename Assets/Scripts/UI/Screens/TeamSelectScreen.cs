@@ -10,12 +10,16 @@ using UnityEngine.UI;
 public class TeamSelectScreen : UiScreenBehaviour
 {
     private const int ColumnCount = 2;
-    private const float ButtonWidth = 480f;
-    private const float ButtonHeight = 132f;
-    private const float ButtonGap = 16f;
-    private const float GridTop = 220f;
-    private const float EmblemSize = 100f;
-    private const float EmblemMargin = 16f;
+    //정사각형에 가까운 칸. 10팀이 2열 5행으로 들어간다
+    private const float ButtonWidth = 360f;
+    private const float ButtonHeight = 276f;
+    private const float ColumnGap = 40f;
+    private const float RowGap = 14f;
+    private const float GridTop = 200f;
+    private const float EmblemSize = 180f;
+    private const float EmblemTop = 24f;
+    private const float LabelTop = 212f;
+    private const float LabelHeight = 48f;
 
     private Action<string> _onConfirm;
     [SerializeField] private List<Button> _teamButtons = new List<Button>(10);
@@ -108,22 +112,25 @@ public class TeamSelectScreen : UiScreenBehaviour
             int row = teamIndex / ColumnCount;
             int column = teamIndex % ColumnCount;
 
-            Button button = UiBuilder.CreateButton(Root, "TeamButton", string.Empty, 40f, false,
+            float gridWidth = ColumnCount * ButtonWidth + (ColumnCount - 1) * ColumnGap;
+            float gridLeft = (UiBuilder.DesignSize.x - gridWidth) * 0.5f;
+
+            Button button = UiBuilder.CreateButton(Root, "TeamButton", string.Empty, 42f, false,
                 () => OnTeamClicked(teamIndex), out TextMeshProUGUI label);
 
             UiBuilder.Place(button.GetComponent<RectTransform>(),
-                40f + column * (ButtonWidth + ButtonGap),
-                GridTop + row * (ButtonHeight + ButtonGap),
+                gridLeft + column * (ButtonWidth + ColumnGap),
+                GridTop + row * (ButtonHeight + RowGap),
                 ButtonWidth, ButtonHeight);
 
             label.name = "TeamLabel";
 
-            //엠블럼이 왼쪽을 차지하므로 글자를 그만큼 밀어 남은 칸 가운데에 둔다
-            UiBuilder.Stretch(label.rectTransform, EmblemMargin * 2f + EmblemSize, 0f, EmblemMargin, 0f);
+            //로고를 칸 가운데 크게 두고 팀 이름은 바로 아래에 둔다
+            UiBuilder.Place(label.rectTransform, 0f, LabelTop, ButtonWidth, LabelHeight);
 
             TeamEmblemView emblem = TeamEmblemView.Bake(button.transform, EmblemSize);
 
-            UiBuilder.Place(emblem.Root, EmblemMargin, (ButtonHeight - EmblemSize) * 0.5f,
+            UiBuilder.Place(emblem.Root, (ButtonWidth - EmblemSize) * 0.5f, EmblemTop,
                 EmblemSize, EmblemSize);
 
             _teamButtons.Add(button);

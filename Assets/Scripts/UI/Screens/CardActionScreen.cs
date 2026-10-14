@@ -48,6 +48,14 @@ public abstract class CardActionScreen : UiScreenBehaviour
     }
 
     /// <summary>
+    /// 고를 수 없는 카드의 사유. 목록에서 빼지 않고 흐리게 덮어 이유를 보여준다
+    /// </summary>
+    protected virtual string GetBlockedReason(CardDisplayInfo info)
+    {
+        return null;
+    }
+
+    /// <summary>
     /// 고른 카드가 바뀌었다. 화면이 자기 상태를 갱신한다
     /// </summary>
     protected abstract void OnSelectionChanged(List<int> selectedIds);
@@ -154,6 +162,7 @@ public abstract class CardActionScreen : UiScreenBehaviour
             _cardList = CardGridView.Bake(Root);
             UiBuilder.Stretch(_cardList.Root, 32f, CardListTop, 32f, 200f);
             _cardList.SetClickHandler(OnCardListClicked);
+            _cardList.SetBlockedReason(GetBlockedReason);
             _cardList.SetEmptyMessage("고를 수 있는 카드가 없습니다");
         }
         else
@@ -177,12 +186,18 @@ public abstract class CardActionScreen : UiScreenBehaviour
     {
         BindButton("BackButton", OnBackClicked);
 
-        if (_cardList != null)
-            _cardList.SetClickHandler(OnCardListClicked);
+        if (_cardList == null)
+            return;
+
+        _cardList.SetClickHandler(OnCardListClicked);
+        _cardList.SetBlockedReason(GetBlockedReason);
     }
 
     protected override void OnShown()
     {
+        //넣어만 두고 나갔다 오면 비운 상태로 시작한다
+        _selectedIds.Clear();
+        OnSelectionChanged(_selectedIds);
         Refresh();
     }
 

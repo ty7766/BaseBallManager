@@ -20,8 +20,11 @@ public class LineUpScreen : UiScreenBehaviour
     //투수는 야수 칸과 같은 크기로 (한 행 5장이면 들어간다)
     private const float PitcherCardWidth = SlotCardWidth;
     private const float PitcherColumnGap = 24f;
-    private const float BenchTop = 1090f;
+    private const float BenchTop = 980f;
     private const float FieldWidth = 1016f;
+    private const float FieldTop = 400f;
+    //투수는 3행뿐이라 영역 안에서 더 내려 깐다
+    private const float PitcherTopOffset = 150f;
     private const float PitcherRowStep = 310f;
 
     private static readonly HitterPosition[] HitterSlots =
@@ -38,14 +41,14 @@ public class LineUpScreen : UiScreenBehaviour
     //HitterSlots 순서대로, 야구장에서 그 포지션이 서는 자리 (필드 영역 좌상단 기준)
     private static readonly Vector2[] HitterSlotPoints =
     {
-        new Vector2(423f, 740f),  //C   홈플레이트
-        new Vector2(816f, 560f),  //1B  오른쪽
-        new Vector2(606f, 380f),  //2B  오른쪽 중간
-        new Vector2(30f, 560f),   //3B  왼쪽
-        new Vector2(240f, 380f),  //SS  왼쪽 중간
-        new Vector2(30f, 70f),    //LF  좌익
+        new Vector2(423f, 640f),  //C   홈플레이트
+        new Vector2(816f, 490f),  //1B  오른쪽
+        new Vector2(606f, 330f),  //2B  오른쪽 중간
+        new Vector2(30f, 490f),   //3B  왼쪽
+        new Vector2(240f, 330f),  //SS  왼쪽 중간
+        new Vector2(30f, 60f),    //LF  좌익
         new Vector2(423f, 0f),    //CF  중견
-        new Vector2(816f, 70f)    //RF  우익
+        new Vector2(816f, 60f)    //RF  우익
     };
 
     //DH 는 수비 자리가 없어 아래 줄 맨 왼쪽에 두고 그 오른쪽으로 벤치 5장을 잇는다
@@ -148,11 +151,12 @@ public class LineUpScreen : UiScreenBehaviour
         Button clearButton = UiBuilder.CreateButton(Root, "ClearAll", "전체 비우기", 34f, false, ClearAll);
         UiBuilder.Place(clearButton.GetComponent<RectTransform>(), 548f, 212f, 500f, 88f);
 
+        //탭 아래에 바짝 붙지 않도록 내려 깐다
         _fieldArea = UiBuilder.CreateRect(Root, "Field");
-        UiBuilder.Stretch(_fieldArea, 32f, 316f, 32f, 200f);
+        UiBuilder.Stretch(_fieldArea, 32f, FieldTop, 32f, 200f);
 
         _pitcherArea = UiBuilder.CreateRect(Root, "PitcherField");
-        UiBuilder.Stretch(_pitcherArea, 32f, 316f, 32f, 200f);
+        UiBuilder.Stretch(_pitcherArea, 32f, FieldTop, 32f, 200f);
 
         Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
         RectTransform backRect = backButton.GetComponent<RectTransform>();
@@ -228,9 +232,9 @@ public class LineUpScreen : UiScreenBehaviour
         if (_pitcherSlots.Count > 0)
             return;
 
-        AddPitcherRow("SP", 5, 0f);
-        AddPitcherRow("RP", 5, PitcherRowStep);
-        AddPitcherRow("CP", 1, PitcherRowStep * 2f);
+        AddPitcherRow("SP", 5, PitcherTopOffset);
+        AddPitcherRow("RP", 5, PitcherTopOffset + PitcherRowStep);
+        AddPitcherRow("CP", 1, PitcherTopOffset + PitcherRowStep * 2f);
     }
 
     //한 행을 가운데 정렬로 깐다
