@@ -20,7 +20,7 @@ public class LineUpScreen : UiScreenBehaviour
     //투수는 야수 칸과 같은 크기로 (한 행 5장이면 들어간다)
     private const float PitcherCardWidth = SlotCardWidth;
     private const float PitcherColumnGap = 24f;
-    private const float BenchTop = 980f;
+    private const float BenchTop = 1030f;
     private const float FieldWidth = 1016f;
     private const float FieldTop = 400f;
     //투수는 3행뿐이라 영역 안에서 더 내려 깐다
@@ -41,17 +41,17 @@ public class LineUpScreen : UiScreenBehaviour
     //HitterSlots 순서대로, 야구장에서 그 포지션이 서는 자리 (필드 영역 좌상단 기준)
     private static readonly Vector2[] HitterSlotPoints =
     {
-        new Vector2(423f, 640f),  //C   홈플레이트
+        new Vector2(300f, 670f),  //C   홈플레이트 (DH 자리를 비우려 왼쪽으로)
         new Vector2(816f, 490f),  //1B  오른쪽
         new Vector2(606f, 330f),  //2B  오른쪽 중간
         new Vector2(30f, 490f),   //3B  왼쪽
         new Vector2(240f, 330f),  //SS  왼쪽 중간
         new Vector2(30f, 60f),    //LF  좌익
         new Vector2(423f, 0f),    //CF  중견
-        new Vector2(816f, 60f)    //RF  우익
+        new Vector2(816f, 60f),   //RF  우익
+        new Vector2(640f, 670f)   //DH  수비 자리가 없어 C 오른쪽 빈 자리에
     };
 
-    //DH 는 수비 자리가 없어 아래 줄 맨 왼쪽에 두고 그 오른쪽으로 벤치 5장을 잇는다
     private const int DhSlotIndex = 8;
 
     private const float SlotCardWidth = 170f;
@@ -100,10 +100,19 @@ public class LineUpScreen : UiScreenBehaviour
         if (LineUpManager.Instance == null)
             return;
 
+        List<int> duplicated = LineUpManager.Instance.GetDuplicatedBattingOrders();
         bool complete = LineUpManager.Instance.IsLineupComplete();
 
-        _stateText.text = complete ? "라인업 완성" : "비어 있는 슬롯이 있습니다";
-        _stateText.color = complete ? UiPalette.StatePitching : UiPalette.StateOut;
+        if (duplicated.Count > 0)
+        {
+            _stateText.text = $"타순 {string.Join(" · ", duplicated)}번이 겹칩니다";
+            _stateText.color = UiPalette.StateOut;
+        }
+        else
+        {
+            _stateText.text = complete ? "라인업 완성" : "비어 있는 슬롯이 있습니다";
+            _stateText.color = complete ? UiPalette.StatePitching : UiPalette.StateOut;
+        }
 
         UiTabStyle.Apply(_hitterTabButton, _tab == Tab.Hitter);
         UiTabStyle.Apply(_pitcherTabButton, _tab == Tab.Pitcher);
@@ -180,23 +189,21 @@ public class LineUpScreen : UiScreenBehaviour
         if (_fieldSlots.Count > 0)
             return;
 
-        for (int i = 0; i < DhSlotIndex; i++)
+        //DH 까지 포함해 9자리를 야구장 좌표대로 깐다
+        for (int i = 0; i <= DhSlotIndex; i++)
         {
             _fieldSlots.Add(new FieldSlot(_fieldArea, HitterSlotLabels[i],
                 HitterSlotPoints[i].x, HitterSlotPoints[i].y, SlotCardWidth));
         }
 
-        //아래 줄 : DH 1장 + 벤치 5장을 가로로 잇는다
+        //벤치 5장은 야구장 아래에 가로 한 줄로
         float step = SmallCardWidth + 16f;
-        float left = (FieldWidth - ((BenchSlotCount + 1) * step - 16f)) * 0.5f;
-
-        _fieldSlots.Add(new FieldSlot(_fieldArea, HitterSlotLabels[DhSlotIndex],
-            left, BenchTop, SmallCardWidth));
+        float left = (FieldWidth - (BenchSlotCount * step - 16f)) * 0.5f;
 
         for (int i = 0; i < BenchSlotCount; i++)
         {
             _benchSlots.Add(new FieldSlot(_fieldArea, $"벤치 {i + 1}",
-                left + (i + 1) * step, BenchTop, SmallCardWidth, false));
+                left + i * step, BenchTop, SmallCardWidth, false));
         }
     }
 
@@ -205,13 +212,16 @@ public class LineUpScreen : UiScreenBehaviour
     {
         EnsureFieldSlots();
 
+        List<int> duplicatedOrders = LineUpManager.Instance.GetDuplicatedBattingOrders();
+
         for (int i = 0; i < _fieldSlots.Count; i++)
         {
             HitterPosition slot = HitterSlots[i];
             (int instanceId, int battingOrder) = LineUpManager.Instance.GetHitterSlot(slot);
 
             _fieldSlots[i].SetSlot(instanceId, battingOrder,
-                () => PickHitter(slot), () => ClearHitter(slot), order => ChangeOrder(slot, order));
+                () => PickHitter(slot), () => ClearHitter(slot), order => ChangeOrder(slot, order),
+                duplicatedOrders.Contains(battingOrder));
         }
 
         int[] bench = LineUpManager.Instance.GetBenchInstanceIds();
@@ -516,7 +526,7 @@ public class LineUpScreen : UiScreenBehaviour
         /// 이 자리에 놓인 카드와 타순을 다시 그린다
         /// </summary>
         public void SetSlot(int instanceId, int battingOrder, Action onPick, Action onClear,
-            Action<int> onOrderChanged)
+            Action<int> onOrderChanged, bool duplicated = false)
         {
             _onPick = onPick;
             _onClear = onClear;
@@ -540,6 +550,7 @@ public class LineUpScreen : UiScreenBehaviour
             _orderDownButton.gameObject.SetActive(filled);
             _orderUpButton.gameObject.SetActive(filled);
             _orderText.text = filled ? $"{battingOrder}번" : string.Empty;
+            _orderText.color = duplicated ? UiPalette.StateOut : UiPalette.AccentGold;
         }
 
         private void OnClearClicked()

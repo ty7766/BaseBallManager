@@ -25,6 +25,8 @@ public class CardView : UiWidgetBehaviour
     //노말 베이스가 어두워 살짝 들어 올린다. 흰색으로 덮으면 청사진 무늬가 날아가
     //회색으로 뿌얘지므로 카드 종류색(하늘색)으로 올린다
     private const float NormalLiftAlpha = 0.10f;
+    //조합 결과 자리에 띄우는 물음표 크기 (카드 좌표계)
+    private const float UnknownMarkSize = 520f;
 
     [SerializeField] private RectTransform _front;
     [SerializeField] private RectTransform _back;
@@ -300,6 +302,22 @@ public class CardView : UiWidgetBehaviour
 
         _emptyText.gameObject.SetActive(true);
         _emptyText.text = label;
+    }
+
+    /// <summary>
+    /// 아직 모르는 카드 (조합 결과 자리). 빈 슬롯 그림의 + 대신 큰 물음표를 보인다
+    /// </summary>
+    public void SetUnknown()
+    {
+        SetEmpty("?");
+
+        _frontBase.sprite = UiSprites.Get(UiSprites.PanelLarge);
+        _frontBase.type = Image.Type.Sliced;
+        _frontBase.color = Color.white;
+
+        _emptyText.fontSize = UnknownMarkSize * _scale;
+        _emptyText.color = UiPalette.Text2;
+        Place(_emptyText.rectTransform, 60f, 700f, 1278f, 560f);
     }
 
     /// <summary>
