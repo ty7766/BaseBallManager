@@ -262,8 +262,11 @@ public class CombineScreen : CardActionScreen
             return;
         }
 
-        _materialIds.Clear();
+        //화면이 들고 있는 목록만 비우면 기반(CardActionScreen)의 선택이 남아
+        //다음 재료를 고를 수 없다. 반드시 ClearSelection 으로 비운다
+        ClearSelection();
 
+        //ClearSelection 이 결과도 치우므로 그 뒤에 새 결과를 넣는다
         _lastResultInstanceId = result.InstanceId;
 
         if (CardDisplayInfo.TryCreate(result.InstanceId, out CardDisplayInfo resultInfo))

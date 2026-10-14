@@ -400,9 +400,7 @@ public class LineUpScreen : UiScreenBehaviour
 
     private void ChangeOrder(HitterPosition slot, int order)
     {
-        if (!LineUpManager.Instance.SetBattingOrder(slot, order))
-            _onNotify?.Invoke($"{order}번 타순은 이미 사용 중입니다", false);
-
+        LineUpManager.Instance.SetBattingOrder(slot, order);
         Refresh();
     }
 
@@ -558,13 +556,20 @@ public class LineUpScreen : UiScreenBehaviour
             _onClear?.Invoke();
         }
 
+        //1번 아래와 9번 위는 없는 타순이라 아무 일도 하지 않는다
         private void DecreaseOrder()
         {
+            if (_battingOrder <= 1)
+                return;
+
             _onOrderChanged?.Invoke(_battingOrder - 1);
         }
 
         private void IncreaseOrder()
         {
+            if (_battingOrder >= LineUpManager.HitterSlotCount)
+                return;
+
             _onOrderChanged?.Invoke(_battingOrder + 1);
         }
     }
