@@ -30,6 +30,7 @@ public class CardCellView
     private readonly TMPro.TextMeshProUGUI _blockedText;
 
     private Action<int> _onClick;
+    private Action<int> _onLongPress;
     private bool _isHighlight;
 
     public CardCellView(Transform parent)
@@ -105,6 +106,7 @@ public class CardCellView
 
         _card.SetCard(info);
         _card.SetClickHandler(_onClick == null ? null : OnClicked);
+        _card.SetLongPressHandler(_onLongPress == null ? null : OnLongPressed);
 
         _lockIcon.gameObject.SetActive(info.IsLocked);
         _isHighlight = info.CardGrade == CardGrade.Star5 || info.CardType != CardType.Normal;
@@ -148,6 +150,20 @@ public class CardCellView
     {
         _onClick = onClick;
         _card.SetClickHandler(onClick == null ? null : OnClicked);
+    }
+
+    /// <summary>
+    /// 2초 길게 누르면 부를 콜백 (카드 상세 보기)
+    /// </summary>
+    public void SetLongPressHandler(Action<int> onLongPress)
+    {
+        _onLongPress = onLongPress;
+        _card.SetLongPressHandler(onLongPress == null ? null : OnLongPressed);
+    }
+
+    private void OnLongPressed()
+    {
+        _onLongPress?.Invoke(InstanceId);
     }
 
     public void SetVisible(bool visible)

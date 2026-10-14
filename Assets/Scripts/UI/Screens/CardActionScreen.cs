@@ -70,17 +70,19 @@ public abstract class CardActionScreen : UiScreenBehaviour
     private Action _onBack;
     private Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> _onPickCard;
     private Action<string, bool> _onNotify;
+    private Action<int> _onShowCardDetail;
 
     /// <summary>
     /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
     /// </summary>
     public void Initialize(Action onBack,
         Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> onPickCard,
-        Action<string, bool> onNotify)
+        Action<string, bool> onNotify, Action<int> onShowCardDetail)
     {
         _onBack = onBack;
         _onPickCard = onPickCard;
         _onNotify = onNotify;
+        _onShowCardDetail = onShowCardDetail;
     }
 
     /// <summary>
@@ -124,6 +126,12 @@ public abstract class CardActionScreen : UiScreenBehaviour
         _cardList.SetSelection(_selectedIds);
     }
 
+    //2초 길게 누르면 고르지 않고 카드 상세를 띄운다
+    private void OnCardListLongPressed(int instanceId)
+    {
+        _onShowCardDetail?.Invoke(instanceId);
+    }
+
     //단일이면 바꿔 끼우고, 여러 장이면 필요한 수까지 토글한다
     private void OnCardListClicked(int instanceId)
     {
@@ -162,6 +170,7 @@ public abstract class CardActionScreen : UiScreenBehaviour
             _cardList = CardGridView.Bake(Root);
             UiBuilder.Stretch(_cardList.Root, 32f, CardListTop, 32f, 200f);
             _cardList.SetClickHandler(OnCardListClicked);
+            _cardList.SetLongPressHandler(OnCardListLongPressed);
             _cardList.SetBlockedReason(GetBlockedReason);
             _cardList.SetEmptyMessage("고를 수 있는 카드가 없습니다");
         }
@@ -190,6 +199,7 @@ public abstract class CardActionScreen : UiScreenBehaviour
             return;
 
         _cardList.SetClickHandler(OnCardListClicked);
+        _cardList.SetLongPressHandler(OnCardListLongPressed);
         _cardList.SetBlockedReason(GetBlockedReason);
     }
 

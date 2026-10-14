@@ -53,6 +53,7 @@ public class CardDetailScreen : UiScreenBehaviour
         _cardView.SetClickHandler(Flip);
         Bind(_lockButton, ToggleLock);
         BindButton("CloseButton", OnCloseClicked);
+        BindButton("BackButton", OnCloseClicked);
     }
 
     protected override void Build()
@@ -78,6 +79,10 @@ public class CardDetailScreen : UiScreenBehaviour
         lockRect.pivot = new Vector2(0f, 0f);
         lockRect.offsetMin = new Vector2(40f, 40f);
         lockRect.offsetMax = new Vector2(-12f, 140f);
+
+        //왼쪽 위 뒤로가기 (기기 뒤로가기 키와 같은 동작)
+        Button backButton = UiBuilder.CreateButton(Root, "BackButton", "←", 44f, false, OnCloseClicked);
+        UiBuilder.Place(backButton.GetComponent<RectTransform>(), 24f, 24f, 96f, 96f);
 
         Button closeButton = UiBuilder.CreateButton(Root, "CloseButton", "닫기", 34f, true, OnCloseClicked);
         RectTransform closeRect = closeButton.GetComponent<RectTransform>();

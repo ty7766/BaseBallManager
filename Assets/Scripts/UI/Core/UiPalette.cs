@@ -5,13 +5,13 @@ using UnityEngine;
 /// </summary>
 public static class UiPalette
 {
-    public static readonly Color BgApp = Hex("#080D17");           //화면 바탕
-    public static readonly Color BgPanel = Hex("#0E1522");         //패널
-    public static readonly Color BgRow = Hex("#121B2B");           //행 · 칩
-    public static readonly Color BgSelected = Hex("#18233A");      //선택된 행 바탕
+    public static readonly Color BgApp = Hex("#1F2022");           //화면 바탕 (짙은 회색)
+    public static readonly Color BgPanel = Hex("#26282B");         //패널
+    public static readonly Color BgRow = Hex("#2E3033");           //행 · 칩
+    public static readonly Color BgSelected = Hex("#3A3D41");      //선택된 행 바탕
 
-    public static readonly Color LineHair = Hex("#1C2739");        //구분선
-    public static readonly Color LineBorder = Hex("#2A3953");      //테두리
+    public static readonly Color LineHair = Hex("#35383C");        //구분선
+    public static readonly Color LineBorder = Hex("#4A4E54");      //테두리
 
     public static readonly Color Text1 = Hex("#F3F6FA");           //주 글자
     public static readonly Color Text2 = Hex("#A9B4C5");           //보조 글자

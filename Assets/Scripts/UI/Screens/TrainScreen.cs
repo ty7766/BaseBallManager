@@ -34,12 +34,23 @@ public class TrainScreen : CardActionScreen
     [SerializeField] private TextMeshProUGUI[] _statTexts = new TextMeshProUGUI[StatCount];
     [SerializeField] private Button _trainButton;
     [SerializeField] private Button _breakthroughButton;
+    [SerializeField] private Button _trainTabButton;
+    [SerializeField] private Button _breakthroughTabButton;
+    [SerializeField] private RectTransform _trainPanel;
+    [SerializeField] private RectTransform _breakthroughPanel;
 
     private int _targetInstanceId = InventoryManager.InvalidInstanceId;
+    private bool _showBreakthrough;
 
     public override void Refresh()
     {
         base.Refresh();
+
+        UiTabStyle.Apply(_trainTabButton, !_showBreakthrough);
+        UiTabStyle.Apply(_breakthroughTabButton, _showBreakthrough);
+
+        _trainPanel.gameObject.SetActive(!_showBreakthrough);
+        _breakthroughPanel.gameObject.SetActive(_showBreakthrough);
 
         if (!CardDisplayInfo.TryCreate(_targetInstanceId, out CardDisplayInfo info))
         {
@@ -121,39 +132,64 @@ public class TrainScreen : CardActionScreen
 
         Bind(_trainButton, Train);
         Bind(_breakthroughButton, Breakthrough);
+        Bind(_trainTabButton, () => SelectTab(false));
+        Bind(_breakthroughTabButton, () => SelectTab(true));
     }
 
     protected override void BuildBody()
     {
+        _trainTabButton = UiBuilder.CreateButton(Body, "TrainTab", "훈련", 34f, true,
+            () => SelectTab(false));
+        UiBuilder.Place(_trainTabButton.GetComponent<RectTransform>(), 0f, 0f, 500f, 84f);
+
+        _breakthroughTabButton = UiBuilder.CreateButton(Body, "BreakthroughTab", "돌파", 34f, false,
+            () => SelectTab(true));
+        UiBuilder.Place(_breakthroughTabButton.GetComponent<RectTransform>(), 516f, 0f, 500f, 84f);
 
         _targetText = UiBuilder.CreateText(Body, "Target", 32f, UiPalette.TextOff);
-        UiBuilder.PlaceRow(_targetText.rectTransform, 112f, 48f, 8f);
+        UiBuilder.PlaceRow(_targetText.rectTransform, 104f, 48f, 8f);
+
+        // --- 훈련 탭 ---
+        _trainPanel = UiBuilder.CreateRect(Body, "TrainPanel");
+        UiBuilder.Stretch(_trainPanel, 0f, 168f, 0f, 0f);
 
         for (int i = 0; i < StatCount; i++)
         {
-            _statTexts[i] = UiBuilder.CreateText(Body, "Stat" + i, 32f, UiPalette.Text2);
-            UiBuilder.PlaceRow(_statTexts[i].rectTransform, 176f + i * 52f, 48f, 8f);
+            _statTexts[i] = UiBuilder.CreateText(_trainPanel, "Stat" + i, 32f, UiPalette.Text2);
+            UiBuilder.PlaceRow(_statTexts[i].rectTransform, i * 52f, 48f, 8f);
         }
 
-        _costText = UiBuilder.CreateText(Body, "Cost", 30f, UiPalette.Text3);
-        UiBuilder.PlaceRow(_costText.rectTransform, 400f, 48f, 8f);
+        _costText = UiBuilder.CreateText(_trainPanel, "Cost", 30f, UiPalette.Text3);
+        UiBuilder.PlaceRow(_costText.rectTransform, 224f, 48f, 8f);
 
-        _trainButton = UiBuilder.CreateButton(Body, "TrainButton", "훈련", 34f, true, Train);
-        UiBuilder.PlaceRow(_trainButton.GetComponent<RectTransform>(), 456f, 100f);
+        _trainButton = UiBuilder.CreateButton(_trainPanel, "TrainButton", "훈련", 34f, true, Train);
+        UiBuilder.PlaceRow(_trainButton.GetComponent<RectTransform>(), 288f, 100f);
 
-        UiBuilder.CreateDivider(Body, 0f, 580f, 1016f);
+        // --- 돌파 탭 ---
+        _breakthroughPanel = UiBuilder.CreateRect(Body, "BreakthroughPanel");
+        UiBuilder.Stretch(_breakthroughPanel, 0f, 168f, 0f, 0f);
 
-        TextMeshProUGUI breakthroughTitle = UiBuilder.CreateText(Body, "BreakthroughTitle", 34f, UiPalette.Text2);
-        UiBuilder.PlaceRow(breakthroughTitle.rectTransform, 600f, 44f, 8f);
-        breakthroughTitle.text = "훈련 돌파 (상한 해금)";
+        TextMeshProUGUI breakthroughTitle = UiBuilder.CreateText(_breakthroughPanel,
+            "BreakthroughTitle", 34f, UiPalette.Text2);
+        UiBuilder.PlaceRow(breakthroughTitle.rectTransform, 0f, 44f, 8f);
+        breakthroughTitle.text = "훈련 상한을 해금합니다";
 
-        _breakthroughText = UiBuilder.CreateText(Body, "Breakthrough", 30f, UiPalette.Text3);
-        UiBuilder.PlaceRow(_breakthroughText.rectTransform, 648f, 44f, 8f);
+        _breakthroughText = UiBuilder.CreateText(_breakthroughPanel, "Breakthrough", 30f, UiPalette.Text3);
+        UiBuilder.PlaceRow(_breakthroughText.rectTransform, 56f, 44f, 8f);
 
-        _breakthroughButton = UiBuilder.CreateButton(Body, "BreakthroughButton", "돌파", 34f, false, Breakthrough);
-        UiBuilder.PlaceRow(_breakthroughButton.GetComponent<RectTransform>(), 700f, 100f);
+        _breakthroughButton = UiBuilder.CreateButton(_breakthroughPanel, "BreakthroughButton",
+            "돌파", 34f, true, Breakthrough);
+        UiBuilder.PlaceRow(_breakthroughButton.GetComponent<RectTransform>(), 120f, 100f);
+
+        _breakthroughPanel.gameObject.SetActive(false);
     }
 
+    //훈련과 돌파를 탭으로 나눈다
+    private void SelectTab(bool breakthrough)
+    {
+        _showBreakthrough = breakthrough;
+        Refresh();
+    }
 
     private void Train()
     {

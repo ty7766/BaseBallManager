@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// 앱 전체 흐름. 타이틀 → 로비를 축으로 리그 · 경기 · 수급 · 육성 화면을 전환한다.
@@ -74,6 +75,44 @@ public class AppFlowController : MonoBehaviour
 
         UiAnimator.Tick(deltaSeconds);
         _toast?.Tick(deltaSeconds);
+
+        if (WasBackKeyPressed())
+            GoBack();
+    }
+
+    //안드로이드 뒤로가기 키와 iOS 의 ESC 는 새 입력 시스템에서 escapeKey 로 들어온다
+    private static bool WasBackKeyPressed()
+    {
+        return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
+    }
+
+    //덮어 띄운 화면을 먼저 닫고, 없으면 로비로. 로비·타이틀에서는 아무것도 하지 않는다
+    private void GoBack()
+    {
+        if (_cardDetailScreen.gameObject.activeSelf)
+        {
+            CloseCardDetail();
+            return;
+        }
+
+        if (_cardPickerScreen.gameObject.activeSelf)
+        {
+            CloseCardPicker();
+            return;
+        }
+
+        if (_pauseScreen.gameObject.activeSelf)
+            return;
+
+        if (_router.Current == null
+            || _router.Current == _titleScreen
+            || _router.Current == _lobbyScreen
+            || _router.Current == _liveGameScreen)
+        {
+            return;
+        }
+
+        ShowLobby();
     }
 
     private void OnDestroy()
@@ -139,11 +178,11 @@ public class AppFlowController : MonoBehaviour
         _inventoryScreen.Initialize(ShowLobby, OpenCardDetail, ShowToast);
         _gachaScreen.Initialize(ShowLobby, OpenCardDetail, ShowToast);
         _lineUpScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
-        _enhanceScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
-        _trainScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
-        _combineScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
-        _dismantleScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
-        _goldenGloveCraftScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
+        _enhanceScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
+        _trainScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
+        _combineScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
+        _dismantleScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
+        _goldenGloveCraftScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
 
         _cardPickerScreen.Initialize(CloseCardPicker);
         _cardDetailScreen.Initialize(CloseCardDetail, ShowToast);

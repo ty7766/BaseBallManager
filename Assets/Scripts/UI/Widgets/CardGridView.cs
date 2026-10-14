@@ -34,6 +34,7 @@ public class CardGridView : UiWidgetBehaviour
 
     private Action<int> _onCardClicked;
     private Func<CardDisplayInfo, string> _blockedReason;
+    private Action<int> _onCardLongPressed;
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
@@ -68,6 +69,17 @@ public class CardGridView : UiWidgetBehaviour
         _columns = Mathf.Max(1, columns);
         _cellWidth = Mathf.Max(1f, cellWidth);
         _centerInHeight = centerInHeight;
+    }
+
+    /// <summary>
+    /// 카드를 2초 길게 누르면 instanceId를 넘긴다 (상세 보기)
+    /// </summary>
+    public void SetLongPressHandler(Action<int> onCardLongPressed)
+    {
+        _onCardLongPressed = onCardLongPressed;
+
+        foreach (CardCellView cell in _cells)
+            cell.SetLongPressHandler(onCardLongPressed);
     }
 
     /// <summary>
@@ -183,6 +195,7 @@ public class CardGridView : UiWidgetBehaviour
             CardCellView created = new CardCellView(_content);
 
             created.SetClickHandler(_onCardClicked == null ? null : OnCellClicked);
+            created.SetLongPressHandler(_onCardLongPressed);
             _cells.Add(created);
         }
 

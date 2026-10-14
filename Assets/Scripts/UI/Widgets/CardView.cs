@@ -1,13 +1,14 @@
 ﻿using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
 /// 카드 1장 (명세 1-2 레이어 구조 · 6-6 좌표). 누르면 앞면/뒷면이 바뀐다.
 /// 좌표는 1398×1957 기준으로 적고 생성 시 폭에 맞춰 일괄 축소한다
 /// </summary>
-public class CardView : UiWidgetBehaviour
+public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
 {
     /// <summary>
     /// 카드 원본 규격 (명세 1-2)
@@ -27,6 +28,8 @@ public class CardView : UiWidgetBehaviour
     private const float NormalLiftAlpha = 0.10f;
     //조합 결과 자리에 띄우는 물음표 크기 (카드 좌표계)
     private const float UnknownMarkSize = 520f;
+    //이만큼 누르고 있으면 상세 보기로 넘긴다
+    private const float LongPressSeconds = 2f;
 
     [SerializeField] private RectTransform _front;
     [SerializeField] private RectTransform _back;
@@ -67,6 +70,10 @@ public class CardView : UiWidgetBehaviour
     [SerializeField] private TextMeshProUGUI _emptyText;
 
     private Action _onClick;
+    private Action _onLongPress;
+    private float _pressSeconds;
+    private bool _pressing;
+    private bool _longPressFired;
     private bool _showBack;
     [SerializeField] private bool _hasBack;
 
@@ -302,6 +309,46 @@ public class CardView : UiWidgetBehaviour
 
         _emptyText.gameObject.SetActive(true);
         _emptyText.text = label;
+    }
+
+    /// <summary>
+    /// 길게 누르면 부를 콜백 (카드 상세 보기)
+    /// </summary>
+    public void SetLongPressHandler(Action onLongPress)
+    {
+        _onLongPress = onLongPress;
+    }
+
+    void IPointerDownHandler.OnPointerDown(PointerEventData eventData)
+    {
+        _pressing = true;
+        _pressSeconds = 0f;
+        _longPressFired = false;
+    }
+
+    void IPointerUpHandler.OnPointerUp(PointerEventData eventData)
+    {
+        _pressing = false;
+    }
+
+    void IPointerExitHandler.OnPointerExit(PointerEventData eventData)
+    {
+        _pressing = false;
+    }
+
+    //길게 누르는 동안만 센다. 한 번 터지면 손을 뗄 때까지 다시 터지지 않는다
+    private void Update()
+    {
+        if (!_pressing || _longPressFired || _onLongPress == null)
+            return;
+
+        _pressSeconds += Time.unscaledDeltaTime;
+
+        if (_pressSeconds < LongPressSeconds)
+            return;
+
+        _longPressFired = true;
+        _onLongPress();
     }
 
     /// <summary>
