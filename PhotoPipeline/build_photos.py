@@ -43,6 +43,16 @@ HEAD_MARGIN = 0.08       # 머리 위 최소 여백
 FACE_RATIO = 0.125       # 얼굴 박스 높이 / 출력 높이.
                          # 성인은 머리 약 7.5개 키, 무릎은 머리끝에서 약 5.5개 아래.
                          # 이 값이면 머리끝~무릎이 한 칸에 들어온다 (전신샷 금지 · 작성자 지시)
+# --- 바닥 밀착 · 크기 정규화 (작성자 지시) ---
+TARGET_FILL = 0.92      # 인물 높이 / 출력 높이. 이 값이 되도록 키우거나 줄인다
+FLOOR_MARGIN = 0.01     # 인물 발끝과 프레임 바닥 사이 여백
+TOP_MARGIN_MIN = 0.03   # 머리 위 최소 여백
+ZOOM_LIMIT = 1.15       # 얼굴 기준 크기에서 벗어날 수 있는 한계.
+                        # 크게 열어 두면 포즈에 휘둘린다 — 팔을 벌린 사진은 가로로 넓어
+                        # 높이를 맞추면 사람이 작아 보이고, 배트를 치켜든 사진은 커 보인다.
+                        # 기준은 어디까지나 얼굴 크기고 여기서는 극단만 다듬는다
+TOO_SMALL_FILL = 0.55   # 보정하고도 이보다 작으면 원본 불량으로 본다
+
 FADE_START = 0.87       # 이 높이부터 아래로 알파가 0까지 떨어진다 (카드 하단 바에 녹아든다)
 MAX_SHRINK = 0.80        # 여백을 지키려고 줄일 수 있는 한계. 더 필요하면 줄이지 않고 경고만 한다
 
@@ -66,6 +76,53 @@ EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp")
 KEY_RULE = re.compile(r'^[^\/:*?"<>|]+$')
 
 SEVERE, CAUTION = 2, 1   # 검수 등급: 2 = 반드시 확인 / 1 = 확인 권장
+
+
+def anchor_to_floor(image):
+    """인물을 프레임 바닥에 붙이고 높이를 고르게 맞춘다.
+
+    얼굴 기준으로만 맞추면 원본이 어디서 잘렸느냐에 따라 인물이 공중에 뜨고
+    카드마다 크기가 달라 보인다. 누끼 결과의 실제 윤곽(alpha)을 보고 한 번 더 손본다.
+    돌려주는 값은 (채움 비율, 적용한 배율)"""
+    alpha = image[:, :, 3]
+    rows = np.where(alpha.max(axis=1) > 16)[0]
+
+    if len(rows) == 0:
+        return 0.0, 1.0
+
+    h, w = alpha.shape
+    top, bottom = int(rows[0]), int(rows[-1])
+    person = bottom - top + 1
+
+    #목표 높이에 맞춘 배율. 얼굴이 제각각 되지 않게 한계를 둔다
+    zoom = (TARGET_FILL * h) / person
+    zoom = max(1.0 / ZOOM_LIMIT, min(ZOOM_LIMIT, zoom))
+
+    scaled = cv2.resize(image, None, fx=zoom, fy=zoom,
+                        interpolation=cv2.INTER_AREA if zoom < 1 else cv2.INTER_CUBIC)
+
+    canvas = np.zeros_like(image)
+    new_top, new_bottom = int(top * zoom), int(bottom * zoom)
+
+    #발끝이 바닥 여백 위에 오도록 세로로 옮긴다. 머리가 잘리면 그만큼 되돌린다
+    shift = int(h * (1.0 - FLOOR_MARGIN)) - new_bottom
+    shift = min(shift, int(h * TOP_MARGIN_MIN) - new_top) if new_top + shift < h * TOP_MARGIN_MIN else shift
+
+    #가로는 인물 중심을 프레임 가운데로
+    cols = np.where(scaled[:, :, 3].max(axis=0) > 16)[0]
+    center = (int(cols[0]) + int(cols[-1])) // 2 if len(cols) else scaled.shape[1] // 2
+    dx = w // 2 - center
+
+    src_y0, src_y1 = max(0, -shift), min(scaled.shape[0], h - shift)
+    dst_y0, dst_y1 = max(0, shift), max(0, shift) + (src_y1 - src_y0)
+    src_x0, src_x1 = max(0, -dx), min(scaled.shape[1], w - dx)
+    dst_x0, dst_x1 = max(0, dx), max(0, dx) + (src_x1 - src_x0)
+
+    if src_y1 > src_y0 and src_x1 > src_x0 and dst_y1 <= h and dst_x1 <= w:
+        canvas[dst_y0:dst_y1, dst_x0:dst_x1] = scaled[src_y0:src_y1, src_x0:src_x1]
+        image[:] = canvas
+
+    return (person * zoom) / h, zoom
 
 
 def apply_bottom_fade(image):
@@ -506,7 +563,13 @@ def main():
             except Exception as error:   # 한 장이 깨져도 나머지는 계속 돈다
                 image, entry = None, {"error": f"처리 오류: {error}"}
             if image is not None:
+                fill, zoom = anchor_to_floor(image)
                 apply_bottom_fade(image)
+
+                if fill < TOO_SMALL_FILL:
+                    entry.setdefault("notes", []).append(
+                        "인물이 너무 작다 (프레임의 %d%%) — 원본 교체 권장" % int(fill * 100))
+                    entry["level"] = SEVERE
                 Image.fromarray(image, "RGBA").save(os.path.join(args.output, key + ".png"))
             report[key] = entry
 
