@@ -4,6 +4,11 @@
 public abstract class CardMasterData
 {
     /// <summary>
+    /// 골든글러브 카드 전용 사진의 파일명 접미사 (`김도영_골글.png`)
+    /// </summary>
+    public const string GoldenGlovePhotoSuffix = "_골글";
+
+    /// <summary>
     /// 카드가 지정되지 않은 슬롯. cardId는 1부터라 int 기본값이 곧 빈 슬롯이다
     /// </summary>
     public const int NoCardId = 0;
@@ -33,8 +38,11 @@ public abstract class CardMasterData
         CardGrade = cardGrade;
         Position = position;
         OVR = ovr;
-        //photo 열이 비면 선수 이름을 그대로 키로 쓴다 (사진은 인물당 1장).
+        //photo 열이 비면 선수 이름을 그대로 키로 쓴다 (노말·시그는 같은 사진).
+        //골든글러브만 특별 사진이라 접미사를 붙여 다른 파일을 찾는다.
         //같은 이름의 다른 인물이거나 특정 카드만 다른 사진을 쓸 때만 photo 열을 채운다
-        PhotoKey = string.IsNullOrWhiteSpace(photoKey) ? name : photoKey.Trim();
+        PhotoKey = string.IsNullOrWhiteSpace(photoKey)
+            ? (cardType == CardType.GoldenGlove ? name + GoldenGlovePhotoSuffix : name)
+            : photoKey.Trim();
     }
 }
