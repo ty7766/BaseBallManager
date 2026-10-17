@@ -38,9 +38,12 @@ from PIL import Image, ImageOps
 
 # --- 납품 규격 (경기_UI_명세.md 3-2) ---
 OUT_W, OUT_H = 768, 960
-EYE_LINE = 0.32          # 눈 중심이 오는 세로 위치
-HEAD_MARGIN = 0.10       # 머리 위 최소 여백
-FACE_RATIO = 0.225       # 얼굴 박스 높이 / 출력 높이. 맨머리는 여백 약 14%, 모자·헬멧은 10% 근처에 온다
+EYE_LINE = 0.17          # 눈 중심이 오는 세로 위치
+HEAD_MARGIN = 0.08       # 머리 위 최소 여백
+FACE_RATIO = 0.125       # 얼굴 박스 높이 / 출력 높이.
+                         # 성인은 머리 약 7.5개 키, 무릎은 머리끝에서 약 5.5개 아래.
+                         # 이 값이면 머리끝~무릎이 한 칸에 들어온다 (전신샷 금지 · 작성자 지시)
+FADE_START = 0.87       # 이 높이부터 아래로 알파가 0까지 떨어진다 (카드 하단 바에 녹아든다)
 MAX_SHRINK = 0.80        # 여백을 지키려고 줄일 수 있는 한계. 더 필요하면 줄이지 않고 경고만 한다
 
 # --- 검수 경고 기준 ---
@@ -59,9 +62,24 @@ POINT_X = [0, 4, 6, 8, 10, 12]   # YuNet 결과에서 x 좌표 열 (박스 · �
 POINT_Y = [1, 5, 7, 9, 11, 13]
 
 EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp")
-KEY_RULE = re.compile(r"^[a-z0-9_]+$")
+#파일명은 한글 `이름_팀` 이다. 경로에 못 쓰는 문자만 거른다
+KEY_RULE = re.compile(r'^[^\/:*?"<>|]+$')
 
 SEVERE, CAUTION = 2, 1   # 검수 등급: 2 = 반드시 확인 / 1 = 확인 권장
+
+
+def apply_bottom_fade(image):
+    """카드 하단에서 사진이 서서히 사라지게 알파를 깎는다.
+    명세의 card_mask_photo 와 같은 구간(사진 높이의 87%~100%)을 쓴다.
+    런타임에 마스크를 덧씌우면 Unity Mask 가 계단처럼 잘려 여기서 구워 넣는다"""
+    h = image.shape[0]
+    start = int(h * FADE_START)
+
+    if start >= h - 1:
+        return
+
+    ramp = np.linspace(1.0, 0.0, h - start, dtype=np.float32)
+    image[start:, :, 3] = (image[start:, :, 3].astype(np.float32) * ramp[:, None]).astype(np.uint8)
 
 
 class FaceDetector:
@@ -488,6 +506,7 @@ def main():
             except Exception as error:   # 한 장이 깨져도 나머지는 계속 돈다
                 image, entry = None, {"error": f"처리 오류: {error}"}
             if image is not None:
+                apply_bottom_fade(image)
                 Image.fromarray(image, "RGBA").save(os.path.join(args.output, key + ".png"))
             report[key] = entry
 

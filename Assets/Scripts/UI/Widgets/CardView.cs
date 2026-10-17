@@ -39,7 +39,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     [SerializeField] private Image _baseLift;
     [SerializeField] private Image _teamAura;
     [SerializeField] private Image _photo;
-    [SerializeField] private Image _photoMask;
     [SerializeField] private Image _nameShadow;
     [SerializeField] private Image _teamLogo;
     [SerializeField] private Image _shine;
@@ -122,14 +121,15 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
             _back.gameObject.SetActive(false);
         }
 
-        // --- 앞면: 배경 -> 선수 -> 프레임 -> 텍스트 -> 효과 (명세 1-2) ---
-        _teamAura = CreateLayer(_front, "TeamAura", "Card/card_team_aura", 139f, 300f, 1120f, 1120f);
-        _photo = CreateLayer(_front, "Photo", null, 123f, 150f, 1152f, 1440f);
-        _photo.preserveAspect = true;
-        _photoMask = CreateLayer(_front, "PhotoMask", "Card/card_mask_photo", 0f, 150f, 1398f, 1700f);
+        // --- 앞면: 배경 -> 선수 -> 텍스트 -> 효과 (명세 1-2) ---
+        //베이스 그림 3종은 완전 불투명이라 배경 레이어다. 선수 사진보다 반드시 아래에 깔아야 한다
         _frontBase = CreateLayer(_front, "Base", null, 0f, 0f, BaseWidth, BaseHeight);
         _baseLift = CreateLayer(_front, "BaseLift", null, 0f, 0f, BaseWidth, BaseHeight);
         _baseLift.raycastTarget = false;
+
+        _teamAura = CreateLayer(_front, "TeamAura", "Card/card_team_aura", 139f, 300f, 1120f, 1120f);
+        _photo = CreateLayer(_front, "Photo", null, 123f, 150f, 1152f, 1440f);
+        _photo.preserveAspect = true;
 
         _nameShadow = CreateLayer(_front, "NameShadow", "Card/card_name_shadow", 0f, 1480f, 1398f, 417f);
 
@@ -224,7 +224,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
             info.CardType == CardType.Normal ? NormalLiftAlpha : 0f);
 
         _teamAura.color = UiPalette.WithAlpha(teamColor, 0.55f);
-        _photoMask.color = UiPalette.WithAlpha(UiPalette.BgApp, _photoMask.sprite == null ? 0f : 0.9f);
 
         Sprite photo = PlayerPhotoProvider.Get(info.PhotoKey);
 
@@ -293,7 +292,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _photo.gameObject.SetActive(false);
         _teamLogo.gameObject.SetActive(false);
         _teamAura.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
-        _photoMask.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
         _nameShadow.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
 
         _ovrText.text = string.Empty;
