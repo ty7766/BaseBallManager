@@ -33,6 +33,8 @@ public abstract class CardMasterData
         CardGrade = cardGrade;
         Position = position;
         OVR = ovr;
-        PhotoKey = photoKey;
+        //photo 열이 비면 선수 이름을 그대로 키로 쓴다 (사진은 인물당 1장).
+        //같은 이름의 다른 인물이거나 특정 카드만 다른 사진을 쓸 때만 photo 열을 채운다
+        PhotoKey = string.IsNullOrWhiteSpace(photoKey) ? name : photoKey.Trim();
     }
 }

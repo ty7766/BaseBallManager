@@ -7,7 +7,7 @@
     python build_photos.py --only gujawook_24    지정한 키만 다시 만든다 (여러 개 가능)
 
 폴더
-    input/    원본 사진. 파일명(확장자 제외)이 곧 CSV photo 키다 (예: gujawook_24.jpg)
+    input/    원본 사진. 파일명(확장자 제외)이 곧 CSV photo 키다 (예: koojauk_24.jpg). fetch_photos.py가 채운다
     output/   768x960 PNG + review.html(검수 시트) + report.csv
     models/   얼굴 검출 모델(YuNet 0.2MB). 없으면 첫 실행 때 자동으로 받는다
 
@@ -33,8 +33,8 @@ import urllib.request
 import cv2
 import numpy as np
 from PIL import Image, ImageOps
-from pymatting import estimate_foreground_ml
-from rembg import new_session, remove
+
+# rembg·pymatting은 불러오는 데만 5초가 걸려 쓰는 곳에서 부른다 (fetch_photos가 얼굴 검출만 빌려 쓴다)
 
 # --- 납품 규격 (경기_UI_명세.md 3-2) ---
 OUT_W, OUT_H = 768, 960
@@ -124,10 +124,12 @@ class Segmenter:
     """rembg 배경 제거. 알파만 받고 합성은 직접 한다"""
 
     def __init__(self, model):
+        from rembg import new_session, remove
+        self._remove = remove
         self._session = new_session(model)
 
     def alpha(self, rgb):
-        mask = remove(Image.fromarray(rgb), session=self._session, only_mask=True)
+        mask = self._remove(Image.fromarray(rgb), session=self._session, only_mask=True)
         return np.asarray(mask, dtype=np.uint8)
 
 
@@ -227,6 +229,7 @@ def warp(img, x0, y0, scale, border):
 
 def decontaminate(rgb, alpha):
     """반투명 가장자리에 섞인 원래 배경색을 걷어낸다. 어두운 카드 위에 밝은 테두리(헤일로)가 안 남는다"""
+    from pymatting import estimate_foreground_ml
     fg = estimate_foreground_ml(rgb / 255.0, alpha / 255.0)
     return np.clip(fg * 255.0 + 0.5, 0, 255).astype(np.uint8)
 
@@ -499,7 +502,7 @@ def main():
     counts = write_review(args.output, args.input, report, sources)
     print(f"\n정상 {counts['ok']} · 확인 권장 {counts['warn']} · 반드시 확인 {counts['bad']} · 실패 {counts['fail']}")
     print(f"검수 시트: {os.path.join(args.output, 'review.html')}")
-    print("확인이 끝난 PNG를 Assets/Resources/Photos/ 로 복사하고, CSV photo 열에 키를 적으세요")
+    print("확인이 끝난 PNG를 Assets/Resources/Photos/ 로 복사하세요 (CSV photo 열이 비어 있으면: python fetch_photos.py keys)")
 
 
 if __name__ == "__main__":
