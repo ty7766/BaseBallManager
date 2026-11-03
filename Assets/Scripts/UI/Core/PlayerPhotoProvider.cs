@@ -1,47 +1,38 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 선수 누끼 사진(768×960)을 필요할 때만 올린다 (명세 3-2).
-/// 한 장이 2MB 가까이 되므로 동시에 들고 있는 장수를 제한한다
+/// 선수 누끼 사진을 필요할 때만 올린다. 작은 카드는 썸네일(320×400), 큰 카드는 원본(768×960)을 쓴다.
+/// 원본은 동시에 들고 있는 장수를 제한하고, 썸네일은 화면을 떠날 때 한꺼번에 내린다
 /// </summary>
 public static class PlayerPhotoProvider
 {
-    private const string ResourceRoot = "Photos/";
-    private const int MaxLoadedCount = 12;
+    private const string PhotoRoot = "Photos/";
+    private const string ThumbRoot = "Photos/Thumb/";
+    private const int MaxFullCount = 12;
 
-    private static readonly Dictionary<string, Sprite> Loaded = new Dictionary<string, Sprite>(MaxLoadedCount);
-    private static readonly List<string> LoadOrder = new List<string>(MaxLoadedCount);
+    private static readonly Dictionary<string, Sprite> FullLoaded = new Dictionary<string, Sprite>(MaxFullCount);
+    private static readonly List<string> FullOrder = new List<string>(MaxFullCount);
+    private static readonly Dictionary<string, Sprite> ThumbLoaded = new Dictionary<string, Sprite>(64);
     private static readonly HashSet<string> Missing = new HashSet<string>();
 
     /// <summary>
-    /// 사진 1장. 키가 비었거나 파일이 없으면 null (사진 없는 카드로 그린다)
+    /// 사진 1장. 썸네일이 없으면 원본으로 대신한다. 키가 비었거나 파일이 없으면 null
     /// </summary>
-    public static Sprite Get(string photoKey)
+    public static Sprite Get(string photoKey, bool thumbnail)
     {
         if (string.IsNullOrEmpty(photoKey) || Missing.Contains(photoKey))
             return null;
 
-        if (Loaded.TryGetValue(photoKey, out Sprite cached))
+        if (thumbnail)
         {
-            Touch(photoKey);
-            return cached;
+            Sprite thumb = GetThumb(photoKey);
+
+            if (thumb != null)
+                return thumb;
         }
 
-        Sprite loaded = Resources.Load<Sprite>(ResourceRoot + photoKey);
-
-        if (loaded == null)
-        {
-            Missing.Add(photoKey);
-            return null;
-        }
-
-        EvictIfNeeded();
-
-        Loaded[photoKey] = loaded;
-        LoadOrder.Add(photoKey);
-
-        return loaded;
+        return GetFull(photoKey);
     }
 
     /// <summary>
@@ -49,33 +40,85 @@ public static class PlayerPhotoProvider
     /// </summary>
     public static void UnloadAll()
     {
-        foreach (KeyValuePair<string, Sprite> entry in Loaded)
-            Resources.UnloadAsset(entry.Value);
+        foreach (Sprite sprite in FullLoaded.Values)
+            Unload(sprite);
 
-        Loaded.Clear();
-        LoadOrder.Clear();
+        foreach (Sprite sprite in ThumbLoaded.Values)
+            Unload(sprite);
+
+        FullLoaded.Clear();
+        FullOrder.Clear();
+        ThumbLoaded.Clear();
     }
 
-    //가장 오래 전에 쓴 사진부터 내린다
-    private static void EvictIfNeeded()
+    //썸네일은 그리드에 수백 장이 동시에 깔리므로 내리지 않고 들고 있는다
+    private static Sprite GetThumb(string photoKey)
     {
-        while (LoadOrder.Count >= MaxLoadedCount)
+        if (ThumbLoaded.TryGetValue(photoKey, out Sprite cached))
+            return cached;
+
+        Sprite loaded = Resources.Load<Sprite>(ThumbRoot + photoKey);
+
+        if (loaded != null)
+            ThumbLoaded[photoKey] = loaded;
+
+        return loaded;
+    }
+
+    //원본은 큰 카드 몇 장에만 쓰이므로 오래 안 쓴 것부터 내린다
+    private static Sprite GetFull(string photoKey)
+    {
+        if (FullLoaded.TryGetValue(photoKey, out Sprite cached))
         {
-            string oldest = LoadOrder[0];
+            FullOrder.Remove(photoKey);
+            FullOrder.Add(photoKey);
+            return cached;
+        }
 
-            LoadOrder.RemoveAt(0);
+        Sprite loaded = Resources.Load<Sprite>(PhotoRoot + photoKey);
 
-            if (Loaded.TryGetValue(oldest, out Sprite sprite))
+        if (loaded == null)
+        {
+            Missing.Add(photoKey);
+            return null;
+        }
+
+        EvictFullIfNeeded();
+
+        FullLoaded[photoKey] = loaded;
+        FullOrder.Add(photoKey);
+
+        return loaded;
+    }
+
+    //가장 오래 전에 쓴 원본부터 내린다
+    private static void EvictFullIfNeeded()
+    {
+        while (FullOrder.Count >= MaxFullCount)
+        {
+            string oldest = FullOrder[0];
+
+            FullOrder.RemoveAt(0);
+
+            if (FullLoaded.TryGetValue(oldest, out Sprite sprite))
             {
-                Resources.UnloadAsset(sprite);
-                Loaded.Remove(oldest);
+                Unload(sprite);
+                FullLoaded.Remove(oldest);
             }
         }
     }
 
-    private static void Touch(string photoKey)
+    //스프라이트만 내리면 텍스처가 메모리에 남는다. 텍스처까지 내린다
+    private static void Unload(Sprite sprite)
     {
-        LoadOrder.Remove(photoKey);
-        LoadOrder.Add(photoKey);
+        if (sprite == null)
+            return;
+
+        Texture2D texture = sprite.texture;
+
+        Resources.UnloadAsset(sprite);
+
+        if (texture != null)
+            Resources.UnloadAsset(texture);
     }
 }

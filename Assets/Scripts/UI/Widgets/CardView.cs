@@ -30,6 +30,8 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private const float UnknownMarkSize = 520f;
     //이만큼 누르고 있으면 상세 보기로 넘긴다
     private const float LongPressSeconds = 2f;
+    //화면 폭이 이 이하인 카드는 썸네일 사진(320×400)으로 충분하다
+    private const float ThumbMaxDisplayWidth = 360f;
 
     [SerializeField] private RectTransform _front;
     [SerializeField] private RectTransform _back;
@@ -74,6 +76,8 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private bool _pressing;
     private bool _longPressFired;
     private bool _showBack;
+    private float _displayWidth;
+    private string _photoKey;
     [SerializeField] private bool _hasBack;
 
     /// <summary>
@@ -225,10 +229,8 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
         _teamAura.color = UiPalette.WithAlpha(teamColor, 0.55f);
 
-        Sprite photo = PlayerPhotoProvider.Get(info.PhotoKey);
-
-        _photo.sprite = photo;
-        _photo.gameObject.SetActive(photo != null);
+        _photoKey = info.PhotoKey;
+        ApplyPhoto();
 
         Color inkColor = CardVisualLookup.GetInkColor(info.CardType);
 
@@ -289,6 +291,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _frontBase.sprite = UiSprites.Get(UiSprites.CardSlotEmpty);
         _frontBase.color = _frontBase.sprite == null ? UiPalette.BgPanel : Color.white;
 
+        _photoKey = null;
         _photo.gameObject.SetActive(false);
         _teamLogo.gameObject.SetActive(false);
         _teamAura.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
@@ -404,6 +407,30 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     {
         _onClick = onClick;
         _button.interactable = onClick != null;
+    }
+
+    /// <summary>
+    /// 조립 폭과 다르게 스케일로 키우거나 줄여 띄울 때 실제 화면 폭을 알린다. 사진 해상도를 고르는 데 쓴다
+    /// </summary>
+    public void SetDisplayWidth(float width)
+    {
+        if (Mathf.Approximately(_displayWidth, width))
+            return;
+
+        _displayWidth = width;
+
+        if (_photoKey != null)
+            ApplyPhoto();
+    }
+
+    //화면 폭이 작으면 썸네일을 쓴다. 그리드 수백 장에 원본을 올리면 메모리가 터진다
+    private void ApplyPhoto()
+    {
+        float shownWidth = _displayWidth > 0f ? _displayWidth : BaseWidth * _scale;
+        Sprite photo = PlayerPhotoProvider.Get(_photoKey, shownWidth <= ThumbMaxDisplayWidth);
+
+        _photo.sprite = photo;
+        _photo.gameObject.SetActive(photo != null);
     }
 
     //카드 좌표(1398 기준)를 실제 크기로 환산해 배치한다

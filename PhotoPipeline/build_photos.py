@@ -1,30 +1,34 @@
 """
-선수 사진 일괄 처리 — 배경 제거 + 얼굴 기준 정렬 + 768x960 저장
+선수 사진 일괄 처리 — 배경 제거 + 얼굴 기준 정렬 + 768x960 저장 (+ 그리드용 320x400 썸네일)
 
 사용법
     python build_photos.py                       input/ 전체 (이미 만든 것은 건너뜀)
     python build_photos.py --force               전부 다시 만든다
-    python build_photos.py --only gujawook_24    지정한 키만 다시 만든다 (여러 개 가능)
+    python build_photos.py --only 김도영_기아      지정한 키만 다시 만든다 (여러 개 가능)
+    python build_photos.py --install             만든 PNG를 Unity Resources/Photos 로 복사까지 한다
 
 폴더
-    input/    원본 사진. 파일명(확장자 제외)이 곧 CSV photo 키다 (예: koojauk_24.jpg). fetch_photos.py가 채운다
-    output/   768x960 PNG + review.html(검수 시트) + report.csv
-    models/   얼굴 검출 모델(YuNet 0.2MB). 없으면 첫 실행 때 자동으로 받는다
+    input/          원본 사진. 파일명(확장자 제외)이 곧 사진 키다 — `이름_팀` (골든글러브는 `이름_팀_골글`)
+    output/         768x960 PNG + thumb/(320x400) + review.html(검수 시트) + report.csv
+    models/         얼굴 검출 모델(YuNet 0.2MB). 없으면 첫 실행 때 자동으로 받는다
 
 필요한 것
     pip install "rembg[cpu]" opencv-python pillow pymatting
     배경 제거 모델(BiRefNet-portrait 973MB)은 rembg가 첫 실행 때 ~/.u2net 에 받는다
 
-규격 (경기_UI_명세.md 3-2)
-    768 x 960 · 눈높이 세로 32% · 머리(모자·헬멧 포함) 위 여백 최소 10% · 얼굴 중심 가로 50%
+규격 (경기_UI_명세.md 3-2 · 프레이밍 B안 = 머리~허벅지)
+    768 x 960 · 얼굴 박스 높이 15.5% · 눈높이 세로 21% · 얼굴 중심 가로 50% · 아래 13%는 서서히 투명하게
+    크기는 얼굴로만 정한다. 보이는 몸 길이로 맞추면 원본이 어디서 잘렸느냐에 따라 카드마다 크기가 달라진다
 """
 
 import argparse
 import csv
+import filecmp
 import html
 import json
 import os
 import re
+import shutil
 import sys
 import time
 import urllib.parse
@@ -36,25 +40,14 @@ from PIL import Image, ImageOps
 
 # rembg·pymatting은 불러오는 데만 5초가 걸려 쓰는 곳에서 부른다 (fetch_photos가 얼굴 검출만 빌려 쓴다)
 
-# --- 납품 규격 (경기_UI_명세.md 3-2) ---
+# --- 납품 규격 (경기_UI_명세.md 3-2 · 프레이밍 B안, 작성자 확정 2026-11-03) ---
 OUT_W, OUT_H = 768, 960
-EYE_LINE = 0.17          # 눈 중심이 오는 세로 위치
-HEAD_MARGIN = 0.08       # 머리 위 최소 여백
-FACE_RATIO = 0.125       # 얼굴 박스 높이 / 출력 높이.
-                         # 성인은 머리 약 7.5개 키, 무릎은 머리끝에서 약 5.5개 아래.
-                         # 이 값이면 머리끝~무릎이 한 칸에 들어온다 (전신샷 금지 · 작성자 지시)
-# --- 바닥 밀착 · 크기 정규화 (작성자 지시) ---
-TARGET_FILL = 0.92      # 인물 높이 / 출력 높이. 이 값이 되도록 키우거나 줄인다
-FLOOR_MARGIN = 0.01     # 인물 발끝과 프레임 바닥 사이 여백
-TOP_MARGIN_MIN = 0.03   # 머리 위 최소 여백
-ZOOM_LIMIT = 1.15       # 얼굴 기준 크기에서 벗어날 수 있는 한계.
-                        # 크게 열어 두면 포즈에 휘둘린다 — 팔을 벌린 사진은 가로로 넓어
-                        # 높이를 맞추면 사람이 작아 보이고, 배트를 치켜든 사진은 커 보인다.
-                        # 기준은 어디까지나 얼굴 크기고 여기서는 극단만 다듬는다
-TOO_SMALL_FILL = 0.55   # 보정하고도 이보다 작으면 원본 불량으로 본다
-
-FADE_START = 0.87       # 이 높이부터 아래로 알파가 0까지 떨어진다 (카드 하단 바에 녹아든다)
-MAX_SHRINK = 0.80        # 여백을 지키려고 줄일 수 있는 한계. 더 필요하면 줄이지 않고 경고만 한다
+THUMB_W, THUMB_H = 320, 400   # 그리드·라인업 같은 작은 카드용
+EYE_LINE = 0.21          # 눈 중심이 오는 세로 위치
+HEAD_MARGIN = 0.03       # 머리(모자·헬멧 포함) 위 최소 여백
+FACE_RATIO = 0.155       # 얼굴 박스 높이 / 출력 높이. 눈 아래로 얼굴 5.1개 = 허벅지까지 보인다
+FADE_START = 0.87       # 이 높이부터 아래로 알파가 0까지 떨어진다 (카드 하단 이름 그림자에 녹아든다)
+MAX_SHRINK = 0.85        # 모자·헬멧이 여백을 넘을 때 줄일 수 있는 한계. 더 필요하면 줄이지 않고 경고만 한다
 
 # --- 검수 경고 기준 ---
 UPSCALE_WARN = 1.3       # 원본을 이 배율 넘게 키우면 흐려지기 시작한다
@@ -62,6 +55,9 @@ UPSCALE_BAD = 2.0
 BOTTOM_CUT_OK = 0.90     # 원본 하단 끝이 이 높이보다 아래면 카드 하단 바에 가려져 괜찮다
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECT = os.path.dirname(ROOT)
+UNITY_PHOTOS = os.path.join(PROJECT, "Assets", "Resources", "Photos")
+CARD_ART = os.path.join(PROJECT, "Assets", "Resources", "UI", "Card")
 MODEL_DIR = os.path.join(ROOT, "models")
 YUNET_FILE = "face_detection_yunet_2023mar.onnx"
 YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/" + YUNET_FILE
@@ -76,53 +72,6 @@ EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp")
 KEY_RULE = re.compile(r'^[^\/:*?"<>|]+$')
 
 SEVERE, CAUTION = 2, 1   # 검수 등급: 2 = 반드시 확인 / 1 = 확인 권장
-
-
-def anchor_to_floor(image):
-    """인물을 프레임 바닥에 붙이고 높이를 고르게 맞춘다.
-
-    얼굴 기준으로만 맞추면 원본이 어디서 잘렸느냐에 따라 인물이 공중에 뜨고
-    카드마다 크기가 달라 보인다. 누끼 결과의 실제 윤곽(alpha)을 보고 한 번 더 손본다.
-    돌려주는 값은 (채움 비율, 적용한 배율)"""
-    alpha = image[:, :, 3]
-    rows = np.where(alpha.max(axis=1) > 16)[0]
-
-    if len(rows) == 0:
-        return 0.0, 1.0
-
-    h, w = alpha.shape
-    top, bottom = int(rows[0]), int(rows[-1])
-    person = bottom - top + 1
-
-    #목표 높이에 맞춘 배율. 얼굴이 제각각 되지 않게 한계를 둔다
-    zoom = (TARGET_FILL * h) / person
-    zoom = max(1.0 / ZOOM_LIMIT, min(ZOOM_LIMIT, zoom))
-
-    scaled = cv2.resize(image, None, fx=zoom, fy=zoom,
-                        interpolation=cv2.INTER_AREA if zoom < 1 else cv2.INTER_CUBIC)
-
-    canvas = np.zeros_like(image)
-    new_top, new_bottom = int(top * zoom), int(bottom * zoom)
-
-    #발끝이 바닥 여백 위에 오도록 세로로 옮긴다. 머리가 잘리면 그만큼 되돌린다
-    shift = int(h * (1.0 - FLOOR_MARGIN)) - new_bottom
-    shift = min(shift, int(h * TOP_MARGIN_MIN) - new_top) if new_top + shift < h * TOP_MARGIN_MIN else shift
-
-    #가로는 인물 중심을 프레임 가운데로
-    cols = np.where(scaled[:, :, 3].max(axis=0) > 16)[0]
-    center = (int(cols[0]) + int(cols[-1])) // 2 if len(cols) else scaled.shape[1] // 2
-    dx = w // 2 - center
-
-    src_y0, src_y1 = max(0, -shift), min(scaled.shape[0], h - shift)
-    dst_y0, dst_y1 = max(0, shift), max(0, shift) + (src_y1 - src_y0)
-    src_x0, src_x1 = max(0, -dx), min(scaled.shape[1], w - dx)
-    dst_x0, dst_x1 = max(0, dx), max(0, dx) + (src_x1 - src_x0)
-
-    if src_y1 > src_y0 and src_x1 > src_x0 and dst_y1 <= h and dst_x1 <= w:
-        canvas[dst_y0:dst_y1, dst_x0:dst_x1] = scaled[src_y0:src_y1, src_x0:src_x1]
-        image[:] = canvas
-
-    return (person * zoom) / h, zoom
 
 
 def apply_bottom_fade(image):
@@ -356,7 +305,7 @@ def review_flags(key, face, scale, margin, cuts, bottom_fill):
     if face["others"] > 0:
         flags.append((CAUTION, f"다른 얼굴 {face['others']}개 감지"))
     if not KEY_RULE.match(key):
-        flags.append((CAUTION, "파일명 규칙 위반 (영문 소문자·숫자·_)"))
+        flags.append((CAUTION, "파일명에 쓸 수 없는 문자가 있음"))
     return flags
 
 
@@ -405,6 +354,32 @@ def process(path, key, detector, segmenter):
     return np.dstack([rgb_out, alpha_out]), entry
 
 
+def save_thumb(image, path):
+    """그리드·라인업용 320x400. 면적 평균으로 줄여 가장자리가 거칠어지지 않게 한다"""
+    small = cv2.resize(image, (THUMB_W, THUMB_H), interpolation=cv2.INTER_AREA)
+    Image.fromarray(small, "RGBA").save(path)
+
+
+def install(out_dir, report):
+    """만든 PNG를 Unity Resources/Photos(원본)와 Photos/Thumb(썸네일)로 복사한다.
+    실패한 사진은 건너뛰고, 내용이 같은 파일은 다시 쓰지 않는다 (Unity 재임포트를 줄인다)"""
+    thumb_dir = os.path.join(UNITY_PHOTOS, "Thumb")
+    os.makedirs(thumb_dir, exist_ok=True)
+    copied = 0
+    for key, entry in report.items():
+        if "error" in entry:
+            continue
+        pairs = ((os.path.join(out_dir, key + ".png"), os.path.join(UNITY_PHOTOS, key + ".png")),
+                 (os.path.join(out_dir, "thumb", key + ".png"), os.path.join(thumb_dir, key + ".png")))
+        if not all(os.path.exists(src) for src, _ in pairs):
+            continue
+        for src, dst in pairs:
+            if not (os.path.exists(dst) and filecmp.cmp(src, dst, shallow=False)):
+                shutil.copyfile(src, dst)
+                copied += 1
+    return copied
+
+
 def load_report(out_dir):
     path = os.path.join(out_dir, REPORT_FILE)
     if not os.path.exists(path):
@@ -445,10 +420,12 @@ figure.s1{border-color:var(--warn)}figure.s2,figure.fail{border-color:var(--bad)
 .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .bg-check .ph{background:repeating-conic-gradient(#8a8a8a 0 25%,#b5b5b5 0 50%) 0 0/16px 16px}
 .bg-white .ph{background:#fff}
-.guide .ph::before,.guide .ph::after{content:"";position:absolute;left:0;right:0;pointer-events:none}
-.guide .ph::before{top:10%;border-top:1px dashed #ff5b4acc}
-.guide .ph::after{top:32%;border-top:1px solid #4fd1c5cc}
-.guide .ph i{position:absolute;top:0;bottom:0;left:50%;border-left:1px dotted #4fd1c599}
+.guide:not(.as-card) .ph::before,.guide:not(.as-card) .ph::after{content:"";position:absolute;left:0;right:0;pointer-events:none}
+.guide .ph::before{top:var(--margin);border-top:1px dashed #ff5b4acc}
+.guide .ph::after{top:var(--eye);border-top:1px solid #4fd1c5cc}
+.guide:not(.as-card) .ph i{position:absolute;top:0;bottom:0;left:50%;border-left:1px dotted #4fd1c599}
+.as-card .ph{aspect-ratio:1398/1957;background:var(--card) center/100% 100% no-repeat}
+.as-card .ph img{inset:auto;left:8.80%;top:7.66%;width:82.40%;height:73.58%}
 figcaption{padding:8px 10px}figcaption b{display:block;font-size:13px;word-break:break-all}
 figcaption span{color:var(--dim);font-size:12px}
 figcaption em{display:block;font-style:normal;font-size:12px;color:var(--warn)}
@@ -462,6 +439,7 @@ document.querySelectorAll('[data-bg]').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('[data-bg]').forEach(x=>x.classList.toggle('on',x===b));
   main.classList.remove('bg-check','bg-white');if(b.dataset.bg!=='navy')main.classList.add('bg-'+b.dataset.bg);});
 document.getElementById('guide').onchange=e=>main.classList.toggle('guide',e.target.checked);
+document.getElementById('ascard').onchange=e=>main.classList.toggle('as-card',e.target.checked);
 document.getElementById('onlybad').onchange=e=>main.classList.toggle('only-bad',e.target.checked);
 """
 
@@ -491,19 +469,25 @@ def write_review(out_dir, in_dir, report, sources):
             f'<figcaption><b>{html.escape(key)}</b><span>{html.escape(meta)}</span>'
             f'<em>{html.escape(note)}</em></figcaption></figure>')
 
+    card_url = urllib.parse.quote(
+        os.path.relpath(os.path.join(CARD_ART, "card_base_normal.png"), out_dir).replace(os.sep, "/"))
+    variables = (f':root{{--margin:{HEAD_MARGIN:.0%};--eye:{EYE_LINE:.0%};'
+                 f'--card:url("{card_url}")}}')
     page = (
         '<!doctype html><html lang="ko"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        f'<title>선수 사진 검수</title><style>{REVIEW_STYLE}</style></head><body>'
-        '<header><h1>선수 사진 검수<small>768×960 · 빨간 점선 = 머리 여백 10% · 청록선 = 눈높이 32%</small></h1>'
+        f'<title>선수 사진 검수</title><style>{variables}{REVIEW_STYLE}</style></head><body>'
+        f'<header><h1>선수 사진 검수<small>768×960 · 빨간 점선 = 머리 여백 {HEAD_MARGIN:.0%} · '
+        f'청록선 = 눈높이 {EYE_LINE:.0%} · 카드로 보기 = 게임과 같은 자리</small></h1>'
         f'<div class="sum"><b>전체 {len(report)}</b><b>정상 {counts["ok"]}</b>'
         f'<b class="w">확인 권장 {counts["warn"]}</b><b class="x">반드시 확인 {counts["bad"]}</b>'
         f'<b class="x">실패 {counts["fail"]}</b></div>'
         '<div class="ctl">배경 <button data-bg="navy" class="on">남색</button>'
         '<button data-bg="check">체크</button><button data-bg="white">흰색</button>'
+        '<label><input type="checkbox" id="ascard" checked> 카드로 보기</label>'
         '<label><input type="checkbox" id="guide" checked> 가이드선</label>'
         '<label><input type="checkbox" id="onlybad"> 문제만 보기</label></div></header>'
-        f'<main class="guide">{"".join(cards)}</main><script>{REVIEW_SCRIPT}</script></body></html>')
+        f'<main class="guide as-card">{"".join(cards)}</main><script>{REVIEW_SCRIPT}</script></body></html>')
     with open(os.path.join(out_dir, "review.html"), "w", encoding="utf-8") as f:
         f.write(page)
     return counts
@@ -513,6 +497,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="선수 사진 배경 제거 + 얼굴 정렬 (768x960)")
     parser.add_argument("--force", action="store_true", help="이미 만든 사진도 다시 만든다")
     parser.add_argument("--only", nargs="+", metavar="KEY", help="지정한 photo 키만 다시 만든다")
+    parser.add_argument("--install", action="store_true",
+                        help="끝난 뒤 Unity Assets/Resources/Photos(+Thumb)로 복사한다")
     parser.add_argument("--model", default="birefnet-portrait", help="rembg 모델 (기본 birefnet-portrait)")
     parser.add_argument("--input", default=os.path.join(ROOT, "input"))
     parser.add_argument("--output", default=os.path.join(ROOT, "output"))
@@ -525,7 +511,7 @@ def main():
     if not os.path.isdir(args.input):
         os.makedirs(args.input, exist_ok=True)
         sys.exit(f"[중단] {args.input} 를 만들었습니다. 원본 사진을 넣고 다시 실행하세요")
-    os.makedirs(args.output, exist_ok=True)
+    os.makedirs(os.path.join(args.output, "thumb"), exist_ok=True)
 
     sources = {}
     for name in sorted(os.listdir(args.input)):
@@ -546,7 +532,8 @@ def main():
         dst = os.path.join(args.output, key + ".png")
         if args.only and key not in args.only:
             continue
-        fresh = (os.path.exists(dst) and os.path.getmtime(dst) >= os.path.getmtime(src)
+        thumb = os.path.join(args.output, "thumb", key + ".png")
+        fresh = (os.path.exists(dst) and os.path.exists(thumb) and os.path.getmtime(dst) >= os.path.getmtime(src)
                  and key in report and "error" not in report[key])
         if args.force or args.only or not fresh:
             todo.append(key)
@@ -563,14 +550,9 @@ def main():
             except Exception as error:   # 한 장이 깨져도 나머지는 계속 돈다
                 image, entry = None, {"error": f"처리 오류: {error}"}
             if image is not None:
-                fill, zoom = anchor_to_floor(image)
                 apply_bottom_fade(image)
-
-                if fill < TOO_SMALL_FILL:
-                    entry.setdefault("notes", []).append(
-                        "인물이 너무 작다 (프레임의 %d%%) — 원본 교체 권장" % int(fill * 100))
-                    entry["level"] = SEVERE
                 Image.fromarray(image, "RGBA").save(os.path.join(args.output, key + ".png"))
+                save_thumb(image, os.path.join(args.output, "thumb", key + ".png"))
             report[key] = entry
 
             spent = time.time() - t
@@ -584,7 +566,10 @@ def main():
     counts = write_review(args.output, args.input, report, sources)
     print(f"\n정상 {counts['ok']} · 확인 권장 {counts['warn']} · 반드시 확인 {counts['bad']} · 실패 {counts['fail']}")
     print(f"검수 시트: {os.path.join(args.output, 'review.html')}")
-    print("확인이 끝난 PNG를 Assets/Resources/Photos/ 로 복사하세요 (CSV photo 열이 비어 있으면: python fetch_photos.py keys)")
+    if args.install:
+        print(f"Unity 로 복사: {install(args.output, report)}개 파일 → {UNITY_PHOTOS}")
+    else:
+        print("게임에 넣으려면: python build_photos.py --install")
 
 
 if __name__ == "__main__":

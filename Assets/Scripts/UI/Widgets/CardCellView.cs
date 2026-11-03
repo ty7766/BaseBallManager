@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -90,6 +90,7 @@ public class CardCellView
         float height = CellHeight * scale;
 
         _root.localScale = new Vector3(scale, scale, 1f);
+        _card.SetDisplayWidth(width);
 
         UiBuilder.Place(_root,
             offsetX + column * (width + columnGap),
