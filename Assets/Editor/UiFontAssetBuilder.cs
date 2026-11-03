@@ -1,7 +1,8 @@
-using System.IO;
+﻿using System.IO;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
 
 /// <summary>
 /// OS 한글 폰트에서 TMP 폰트 자산을 만들어 Resources에 저장한다.
@@ -11,6 +12,15 @@ public static class UiFontAssetBuilder
 {
     private const string AssetFolder = "Assets/Resources/UI/Fonts";
     private const string AssetPath = AssetFolder + "/UiKoreanFont.asset";
+
+    //카드 폰트(이사만루)는 라이선스 확인 전이라 이 폴더째 git 에서 뺀다
+    private const string CardFolder = AssetFolder + "/Card";
+    private const string CardSourcePath = CardFolder + "/esamanru Bold.ttf";
+    private const string CardAssetPath = CardFolder + "/CardFont.asset";
+    //큰 OVR 숫자도 뭉개지지 않는 샘플 크기 · 밑그림자가 번질 여백
+    private const int CardSamplingSize = 64;
+    private const int CardAtlasPadding = 8;
+    private const int CardAtlasSize = 1024;
 
     private static readonly string[] CandidateFamilies =
     {
@@ -22,6 +32,35 @@ public static class UiFontAssetBuilder
     {
         if (Ensure() == null)
             Debug.LogError("[UiFontAssetBuilder]: 한글 폰트 자산을 만들지 못했습니다");
+    }
+
+    /// <summary>
+    /// 카드 폰트 자산을 이사만루 Bold 에서 새로 만든다. 글리프는 재생 중 필요한 만큼 채워진다
+    /// </summary>
+    [MenuItem("Tools/BaseBallManager/카드 폰트 자산 만들기", false, 10)]
+    public static void BuildCardFont()
+    {
+        Font source = AssetDatabase.LoadAssetAtPath<Font>(CardSourcePath);
+
+        if (source == null)
+        {
+            Debug.LogWarning($"[UiFontAssetBuilder]: '{CardSourcePath}' 에 이사만루 Bold 를 넣고 다시 실행하세요");
+            return;
+        }
+
+        if (AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(CardAssetPath) != null)
+            AssetDatabase.DeleteAsset(CardAssetPath);
+
+        TMP_FontAsset created = TMP_FontAsset.CreateFontAsset(source, CardSamplingSize, CardAtlasPadding,
+            GlyphRenderMode.SDFAA, CardAtlasSize, CardAtlasSize, AtlasPopulationMode.Dynamic, true);
+
+        created.name = "CardFont";
+
+        AssetDatabase.CreateAsset(created, CardAssetPath);
+        AttachSubAssets(created);
+        AssetDatabase.SaveAssets();
+
+        Debug.Log($"[UiFontAssetBuilder]: '{CardAssetPath}' 를 만들었습니다");
     }
 
     /// <summary>

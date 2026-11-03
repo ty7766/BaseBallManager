@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// 경기_UI_명세 6-2 색 토큰. 화면 코드는 색 리터럴을 쓰지 않고 여기만 참조한다
@@ -33,10 +33,10 @@ public static class UiPalette
     public static readonly Color CardSignature = Hex("#FF6FA0");   //시그니쳐
     public static readonly Color CardGoldenGlove = Hex("#F2C14E"); //골든글러브
 
-    //카드 앞면 새김색 (명세 6-6). 시그·골글 베이스는 밝은 바탕이라 위 강조색으로는 글자가 묻힌다
-    public static readonly Color CardNormalInk = Hex("#1E3A66");       //노말 남색
-    public static readonly Color CardSignatureInk = Hex("#7A1F3D");    //시그니쳐 진한 와인
-    public static readonly Color CardGoldenGloveInk = Hex("#6B4A1E");  //골든글러브 진한 청동
+    //카드 앞면 별 (명세 6-6). 등급마다 색이 다르다
+    public static readonly Color CardStar3 = Hex("#3D8BFF");       //3성 파랑
+    public static readonly Color CardStar4 = Hex("#2FD06A");       //4성 초록
+    public static readonly Color CardStar5 = Hex("#A85CFF");       //5성 보라
 
     public static readonly Color LogNormal = Hex("#DCE4EF");       //중계 평범
     public static readonly Color LogOffense = Hex("#FFA24C");      //중계 공격

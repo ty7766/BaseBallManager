@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// 보유 카드의 등급·종류를 instanceId로 역추적한다.
@@ -44,20 +44,6 @@ public static class CardVisualLookup
             CardType.GoldenGlove => UiPalette.CardGoldenGlove,
             CardType.Normal => UiPalette.CardNormal,
             _ => UiPalette.Text1
-        };
-    }
-
-    /// <summary>
-    /// 카드 앞면에 새기는 진한 색 (명세 6-6). 밝은 베이스 위에서도 읽힌다
-    /// </summary>
-    public static Color GetInkColor(CardType cardType)
-    {
-        return cardType switch
-        {
-            CardType.Signature => UiPalette.CardSignatureInk,
-            CardType.GoldenGlove => UiPalette.CardGoldenGloveInk,
-            CardType.Normal => UiPalette.CardNormalInk,
-            _ => UiPalette.CardNormalInk
         };
     }
 }

@@ -16,16 +16,29 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     public const float BaseWidth = 1398f;
     public const float BaseHeight = 1957f;
 
+    /// <summary>
+    /// 사진 칸 (카드 좌표, 위에서부터). 카드 폭에 꽉 채우고 머리가 별 아래에 오게 내린다.
+    /// 좌우 잘림이 카드 테두리와 겹쳐 사진이 일부러 자른 것처럼 보인다
+    /// </summary>
+    public const float PhotoTop = 202f;
+    public const float PhotoHeight = 1748f;
+
     private const int MaxStars = 5;
     private const int StatCount = 4;
-    //5개를 가운데 정렬해도 오른쪽 위 강화 배지(x 1078)와 겹치지 않는 크기
-    private const float StarSize = 144f;
+    //별 그림 한 칸(그림자 자리 포함) · 보이는 별 · 별 사이 간격 · 칸 윗변
+    private const float StarCell = 132f;
+    private const float StarSize = 106f;
+    private const float StarGap = 6f;
+    private const float StarTop = 45f;
     private const float StatBarMaxStat = 150f;
-    //그림 알파가 255 까지 올라가 조금만 올려도 흰 띠가 된다
-    private const float ShineAlpha = 0.10f;
-    //노말 베이스가 어두워 살짝 들어 올린다. 흰색으로 덮으면 청사진 무늬가 날아가
-    //회색으로 뿌얘지므로 카드 종류색(하늘색)으로 올린다
-    private const float NormalLiftAlpha = 0.10f;
+    //강화 숫자 크기. 두 자리(+10)는 메달 안에 들도록 줄인다
+    private const float EnhanceFontSize = 108f;
+    private const float EnhanceWideFontSize = 92f;
+    //이름 뒤 연도는 조금 작게 붙인다 (곽빈'26)
+    private const string YearOpenTag = "<size=85%>'";
+    private const string YearCloseTag = "</size>";
+    //강화 + 기호는 숫자보다 작고 조금 위로
+    private const string EnhancePlusTag = "<size=60%><voffset=0.12em>+</voffset></size>";
     //조합 결과 자리에 띄우는 물음표 크기 (카드 좌표계)
     private const float UnknownMarkSize = 520f;
     //이만큼 누르고 있으면 상세 보기로 넘긴다
@@ -38,21 +51,20 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     [SerializeField] private float _scale;
 
     [SerializeField] private Image _frontBase;
-    [SerializeField] private Image _baseLift;
-    [SerializeField] private Image _teamAura;
+    [SerializeField] private Image _overlay;
+    [SerializeField] private Image _photoBack;
     [SerializeField] private Image _photo;
-    [SerializeField] private Image _nameShadow;
+    [SerializeField] private Image _foreground;
     [SerializeField] private Image _teamLogo;
     [SerializeField] private Image _shine;
     [SerializeField] private Image _glow;
     [SerializeField] private TextMeshProUGUI _ovrText;
     [SerializeField] private TextMeshProUGUI _positionText;
     [SerializeField] private TextMeshProUGUI _nameText;
+    [SerializeField] private Image[] _starBacks = new Image[MaxStars];
     [SerializeField] private Image[] _stars = new Image[MaxStars];
 
-    [SerializeField] private Image _enhanceFill;
-    [SerializeField] private Image _enhanceRim;
-    [SerializeField] private Image _enhanceLine;
+    [SerializeField] private Image _enhanceBadge;
     [SerializeField] private TextMeshProUGUI _enhanceText;
 
     [SerializeField] private Image _backBase;
@@ -78,6 +90,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private bool _showBack;
     private float _displayWidth;
     private string _photoKey;
+    private bool _cardFontApplied;
     [SerializeField] private bool _hasBack;
 
     /// <summary>
@@ -115,6 +128,12 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _button.interactable = false;
         _button.onClick.AddListener(OnClicked);
 
+        //시그·골글 테두리 광은 카드 뒤에 깐다 (명세 6-6). 9-슬라이스 테두리도 카드 축소 비율을 따라야
+        //고리가 카드 가장자리에 붙는다. 그대로 두면 작은 카드에서 고리가 카드 안쪽으로 파고든다
+        _glow = CreateLayer(Root, "Glow", "Card/card_fx_glow_signature", -180f, -180f, BaseWidth + 360f, BaseHeight + 360f);
+        _glow.type = Image.Type.Sliced;
+        _glow.pixelsPerUnitMultiplier = 1f / _scale;
+
         _front = UiBuilder.CreateRect(Root, "Front");
         UiBuilder.Stretch(_front, 0f, 0f, 0f, 0f);
 
@@ -125,45 +144,40 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
             _back.gameObject.SetActive(false);
         }
 
-        // --- 앞면: 배경 -> 선수 -> 텍스트 -> 효과 (명세 1-2) ---
-        //베이스 그림 3종은 완전 불투명이라 배경 레이어다. 선수 사진보다 반드시 아래에 깔아야 한다
+        // --- 앞면: 배경 -> 사진 뒤 그림자 -> 선수 -> 하단 물감 띠 -> 글자 -> 광택 (명세 1-2 · 6-6) ---
+        //배경 그림은 완전 불투명이라 맨 아래다. 골글 월계수는 그 위, 사진 뒤에 깐다
         _frontBase = CreateLayer(_front, "Base", null, 0f, 0f, BaseWidth, BaseHeight);
-        _baseLift = CreateLayer(_front, "BaseLift", null, 0f, 0f, BaseWidth, BaseHeight);
-        _baseLift.raycastTarget = false;
+        _overlay = CreateHiddenLayer(_front, "Overlay", 0f, 0f, BaseWidth, BaseHeight);
 
-        _teamAura = CreateLayer(_front, "TeamAura", "Card/card_team_aura", 139f, 300f, 1120f, 1120f);
-        _photo = CreateLayer(_front, "Photo", null, 123f, 150f, 1152f, 1440f);
-        _photo.preserveAspect = true;
+        //그림자·빛 번짐은 사진 칸보다 넓게 퍼지므로 카드 전체 칸에 깔고 셰이더가 사진 위치를 안다
+        _photoBack = CreateHiddenLayer(_front, "PhotoBack", 0f, 0f, BaseWidth, BaseHeight);
+        _photo = CreateHiddenLayer(_front, "Photo", 0f, PhotoTop, BaseWidth, PhotoHeight);
+        _foreground = CreateHiddenLayer(_front, "Foreground", 0f, 0f, BaseWidth, BaseHeight);
 
-        _nameShadow = CreateLayer(_front, "NameShadow", "Card/card_name_shadow", 0f, 1480f, 1398f, 417f);
-
-        _ovrText = CreateCardText(_front, "Ovr", 270f, 90f, 60f, 300f, 320f, TextAlignmentOptions.Center);
-        _positionText = CreateCardText(_front, "Position", 108f, 90f, 380f, 300f, 140f, TextAlignmentOptions.Center);
-        _teamLogo = CreateLayer(_front, "TeamLogo", null, 150f, 530f, 180f, 180f);
+        _ovrText = CreateCardText(_front, "Ovr", 230f, 46f, 34f, 320f, 230f, TextAlignmentOptions.Center);
+        _positionText = CreateCardText(_front, "Position", 104f, 46f, 286f, 320f, 104f, TextAlignmentOptions.Center);
+        _teamLogo = CreateLayer(_front, "TeamLogo", null, 1086f, 34f, 260f, 260f);
         _teamLogo.preserveAspect = true;
 
         RectTransform starRow = UiBuilder.CreateRect(_front, "Stars");
-        Place(starRow, (BaseWidth - MaxStars * StarSize) * 0.5f, 24f, MaxStars * StarSize, StarSize);
+        Place(starRow, 0f, StarTop, BaseWidth, StarCell);
 
         for (int i = 0; i < MaxStars; i++)
         {
-            _stars[i] = UiBuilder.CreateImage(starRow, "Star", UiPalette.CardNormal, UiSprites.IconStar);
-            Place(_stars[i].rectTransform, i * StarSize, 0f, StarSize, StarSize);
+            _starBacks[i] = CreateLayer(starRow, "StarBack", UiSprites.CardStarBack, 0f, 0f, StarCell, StarCell);
+            _starBacks[i].gameObject.SetActive(false);
+
+            _stars[i] = CreateLayer(starRow, "Star", UiSprites.CardStarFill, 0f, 0f, StarCell, StarCell);
             _stars[i].gameObject.SetActive(false);
         }
 
-        _enhanceFill = CreateLayer(_front, "EnhanceFill", "Card/badge_enhance_fill", 1078f, 56f, 264f, 229f);
-        _enhanceRim = CreateLayer(_front, "EnhanceRim", "Card/badge_enhance_rim", 1078f, 56f, 264f, 229f);
-        _enhanceLine = CreateLayer(_front, "EnhanceLine", "Card/badge_enhance_line", 1078f, 56f, 264f, 229f);
-        _enhanceText = CreateCardText(_front, "EnhanceText", 147f, 1078f, 86f, 264f, 170f, TextAlignmentOptions.Center);
+        _enhanceBadge = CreateHiddenLayer(_front, "EnhanceBadge", 1096f, 306f, 240f, 208f);
+        _enhanceText = CreateCardText(_front, "EnhanceText", EnhanceFontSize, 1096f, 306f, 240f, 208f,
+            TextAlignmentOptions.Center);
 
-        _nameText = CreateCardText(_front, "Name", 142f, 60f, 1560f, 1278f, 200f, TextAlignmentOptions.Center);
+        _nameText = CreateCardText(_front, "Name", 138f, 40f, 1712f, 1318f, 170f, TextAlignmentOptions.Center);
 
-        _shine = CreateLayer(_front, "Shine", "Card/card_fx_shine_5", 0f, 0f, BaseWidth, BaseHeight);
-
-        //그림 알파가 255까지 올라가 그대로 깔면 흰 띠가 된다. 광택으로 읽히도록 낮춘다
-        _shine.color = UiPalette.WithAlpha(Color.white, ShineAlpha);
-        _glow = CreateLayer(_front, "Glow", "Card/card_fx_glow_signature", -180f, -180f, BaseWidth + 360f, BaseHeight + 360f);
+        _shine = CreateHiddenLayer(_front, "Shine", 0f, 0f, BaseWidth, BaseHeight);
 
         _emptyText = CreateCardText(_front, "Empty", 120f, 60f, 880f, 1278f, 200f, TextAlignmentOptions.Center);
         _emptyText.gameObject.SetActive(false);
@@ -209,66 +223,55 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     /// </summary>
     public void SetCard(CardDisplayInfo info)
     {
+        ApplyCardFont();
+
         _emptyText.gameObject.SetActive(false);
         _front.gameObject.SetActive(!_showBack);
 
         if (_hasBack)
             _back.gameObject.SetActive(_showBack);
 
+        CardStyle style = CardStyle.Get(info.CardType, info.CardGrade);
         Color typeColor = CardVisualLookup.GetTypeColor(info.CardType);
-        Color teamColor = UiPalette.GetTeamColor(info.TeamName);
 
-        ApplyBase(_frontBase, info.CardType, teamColor);
+        ApplyBase(_frontBase, style);
+        _frontBase.material = CardMaterials.GetHolo(style);
 
         if (_hasBack)
-            ApplyBase(_backBase, info.CardType, teamColor);
+            ApplyBase(_backBase, style);
 
-        //노말 베이스만 어두워 살짝 밝힌다
-        _baseLift.color = UiPalette.WithAlpha(UiPalette.CardNormal,
-            info.CardType == CardType.Normal ? NormalLiftAlpha : 0f);
+        ShowSprite(_overlay, style.OverlaySprite);
+        ShowSprite(_foreground, style.ForegroundSprite);
 
-        _teamAura.color = UiPalette.WithAlpha(teamColor, 0.55f);
-
+        _photoBack.material = CardMaterials.GetPhotoBack(style);
+        _photo.material = CardMaterials.GetPhoto(style);
         _photoKey = info.PhotoKey;
         ApplyPhoto();
 
-        Color inkColor = CardVisualLookup.GetInkColor(info.CardType);
-
-        //이름 뒤 타원 그림자는 종류별 진한 색이어야 흰 이름이 읽힌다 (명세 6-6).
-        //시그·골글 베이스는 밝고 무늬가 많아 노말보다 진하게 깐다
-        _nameShadow.color = UiPalette.WithAlpha(inkColor,
-            info.CardType == CardType.Normal ? 0.72f : 0.92f);
+        //노말은 어두운 배경이라 흰 숫자, 시그·골글은 밝은 배경이라 진한 새김색
+        Material ovrMaterial = style.IsLightBase ? CardTextMaterials.LightShadow : CardTextMaterials.Shadow;
 
         _ovrText.text = info.FinalOvr.ToString();
-        //노말은 어두운 베이스라 흰 숫자, 시그·골글은 밝은 베이스라 진한 새김색
-        _ovrText.color = info.CardType == CardType.Normal ? UiPalette.Text1 : inkColor;
+        _ovrText.color = style.OvrColor;
+        _ovrText.fontSharedMaterial = ovrMaterial;
 
         _positionText.text = info.Position;
-        _positionText.color = _ovrText.color;
+        _positionText.color = style.OvrColor;
+        _positionText.fontSharedMaterial = ovrMaterial;
 
         Sprite logo = UiSprites.Get("Team/logo_" + info.TeamName);
 
         _teamLogo.sprite = logo;
         _teamLogo.gameObject.SetActive(logo != null);
 
-        int starCount = (int)info.CardGrade;
-
-        for (int i = 0; i < MaxStars; i++)
-        {
-            bool shown = i < starCount;
-
-            _stars[i].gameObject.SetActive(shown);
-
-            if (shown)
-                _stars[i].color = typeColor;
-        }
-
-        CenterStars(starCount);
+        ApplyStars(info.CardGrade);
         ApplyEnhanceBadge(info.EnhanceLevel);
 
-        _nameText.text = PlayerLabelFormat.NameWithYear(info.Name, info.Year);
+        _nameText.text = info.Name + YearOpenTag + PlayerLabelFormat.Year(info.Year) + YearCloseTag;
 
-        _shine.gameObject.SetActive(info.CardType == CardType.Normal && info.CardGrade == CardGrade.Star5);
+        _shine.material = CardMaterials.Shine;
+        _shine.color = UiPalette.WithAlpha(Color.white, style.ShineStrength);
+        _shine.gameObject.SetActive(true);
         ApplyGlow(info.CardType);
 
         if (_hasBack)
@@ -286,16 +289,17 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         if (_hasBack)
             _back.gameObject.SetActive(false);
 
-        _baseLift.color = UiPalette.WithAlpha(UiPalette.CardNormal, 0f);
-
         _frontBase.sprite = UiSprites.Get(UiSprites.CardSlotEmpty);
+        _frontBase.type = Image.Type.Simple;
+        _frontBase.material = null;
         _frontBase.color = _frontBase.sprite == null ? UiPalette.BgPanel : Color.white;
 
         _photoKey = null;
         _photo.gameObject.SetActive(false);
+        _photoBack.gameObject.SetActive(false);
+        _overlay.gameObject.SetActive(false);
+        _foreground.gameObject.SetActive(false);
         _teamLogo.gameObject.SetActive(false);
-        _teamAura.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
-        _nameShadow.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
 
         _ovrText.text = string.Empty;
         _positionText.text = string.Empty;
@@ -303,10 +307,8 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _shine.gameObject.SetActive(false);
         _glow.gameObject.SetActive(false);
 
-        for (int i = 0; i < MaxStars; i++)
-            _stars[i].gameObject.SetActive(false);
-
-        SetEnhanceBadgeVisible(false);
+        ApplyStars(CardGrade.None);
+        ApplyEnhanceBadge(0);
 
         _emptyText.gameObject.SetActive(true);
         _emptyText.text = label;
@@ -431,6 +433,26 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
         _photo.sprite = photo;
         _photo.gameObject.SetActive(photo != null);
+        _photoBack.sprite = photo;
+        _photoBack.gameObject.SetActive(photo != null);
+    }
+
+    //카드 앞면 글자를 카드 폰트로 바꾼다. 프리팹은 본문 폰트로 굽고(카드 폰트는 로컬 자산이라) 처음 그릴 때 한 번 바꾼다
+    private void ApplyCardFont()
+    {
+        if (_cardFontApplied)
+            return;
+
+        _cardFontApplied = true;
+
+        TMP_FontAsset cardFont = UiFontProvider.Card;
+
+        _ovrText.font = cardFont;
+        _positionText.font = cardFont;
+        _nameText.font = cardFont;
+        _nameText.fontSharedMaterial = CardTextMaterials.Shadow;
+        _enhanceText.font = cardFont;
+        _enhanceText.fontSharedMaterial = CardTextMaterials.Emboss;
     }
 
     //카드 좌표(1398 기준)를 실제 크기로 환산해 배치한다
@@ -462,44 +484,76 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         return text;
     }
 
-    //베이스 스프라이트가 없으면 종류색 테두리 패널로 떨어진다
-    private void ApplyBase(Image target, CardType cardType, Color teamColor)
+    //효과 레이어는 스프라이트·머티리얼이 정해지기 전까지 흰 사각형이 보이지 않게 꺼 둔다
+    private Image CreateHiddenLayer(Transform parent, string name, float x, float y, float width, float height)
     {
-        Sprite baseSprite = UiSprites.Get(GetBaseSpritePath(cardType));
+        Image image = CreateLayer(parent, name, null, x, y, width, height);
 
-        target.sprite = baseSprite;
-        target.color = baseSprite != null ? Color.white : UiPalette.WithAlpha(teamColor, 0.35f);
+        image.gameObject.SetActive(false);
 
-        if (baseSprite == null)
-            target.type = Image.Type.Simple;
+        return image;
     }
 
+    //베이스 스프라이트가 없으면 어두운 패널로 떨어진다. 물음표 카드가 바꿔 둔 9-슬라이스도 되돌린다
+    private void ApplyBase(Image target, CardStyle style)
+    {
+        Sprite baseSprite = UiSprites.Get(style.BaseSprite);
+
+        target.sprite = baseSprite;
+        target.type = Image.Type.Simple;
+        target.color = baseSprite != null ? Color.white : UiPalette.BgPanel;
+    }
+
+    //경로가 없거나 그림이 없으면 레이어를 끈다
+    private static void ShowSprite(Image target, string spritePath)
+    {
+        Sprite sprite = UiSprites.Get(spritePath);
+
+        target.sprite = sprite;
+        target.gameObject.SetActive(sprite != null);
+    }
+
+    //별은 등급 수만큼 가운데로 모아 그린다. 흰 테두리 별 위에 등급색 별을 얹는다 (명세 6-4 · 6-6)
+    private void ApplyStars(CardGrade cardGrade)
+    {
+        int starCount = (int)cardGrade;
+        Color starColor = CardStyle.GetStarColor(cardGrade);
+        float totalWidth = starCount * StarSize + Mathf.Max(0, starCount - 1) * StarGap;
+        float startX = (BaseWidth - totalWidth) * 0.5f - (StarCell - StarSize) * 0.5f;
+
+        for (int i = 0; i < MaxStars; i++)
+        {
+            bool shown = i < starCount;
+
+            _starBacks[i].gameObject.SetActive(shown);
+            _stars[i].gameObject.SetActive(shown);
+
+            if (!shown)
+                continue;
+
+            float x = startX + i * (StarSize + StarGap);
+
+            Place(_starBacks[i].rectTransform, x, 0f, StarCell, StarCell);
+            Place(_stars[i].rectTransform, x, 0f, StarCell, StarCell);
+            _stars[i].color = starColor;
+        }
+    }
+
+    //0이면 메달을 끈다. 금속(동·은·금·홀로)마다 숫자 새김색이 다르다
     private void ApplyEnhanceBadge(int enhanceLevel)
     {
         bool shown = enhanceLevel > 0;
 
-        SetEnhanceBadgeVisible(shown);
+        _enhanceBadge.gameObject.SetActive(shown);
+        _enhanceText.gameObject.SetActive(shown);
 
         if (!shown)
             return;
 
-        _enhanceFill.sprite = UiSprites.Get(enhanceLevel >= EnhanceBadgeColors.HoloLevel
-            ? "Card/badge_enhance_holo"
-            : "Card/badge_enhance_fill");
-
-        _enhanceFill.color = EnhanceBadgeColors.GetFillColor(enhanceLevel);
-        _enhanceRim.color = EnhanceBadgeColors.GetRimColor(enhanceLevel);
-        _enhanceLine.color = UiPalette.WithAlpha(Color.white, 0.2f);
-        _enhanceText.text = "+" + enhanceLevel;
-        _enhanceText.color = Color.white;
-    }
-
-    private void SetEnhanceBadgeVisible(bool visible)
-    {
-        _enhanceFill.gameObject.SetActive(visible);
-        _enhanceRim.gameObject.SetActive(visible);
-        _enhanceLine.gameObject.SetActive(visible);
-        _enhanceText.gameObject.SetActive(visible);
+        _enhanceBadge.sprite = UiSprites.Get(EnhanceBadgeStyle.GetSpritePath(enhanceLevel));
+        _enhanceText.text = EnhancePlusTag + enhanceLevel;
+        _enhanceText.color = EnhanceBadgeStyle.GetInkColor(enhanceLevel);
+        _enhanceText.fontSize = (enhanceLevel >= EnhanceBadgeStyle.HoloLevel ? EnhanceWideFontSize : EnhanceFontSize) * _scale;
     }
 
     private void ApplyGlow(CardType cardType)
@@ -521,16 +575,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         }
 
         _glow.gameObject.SetActive(false);
-    }
-
-    //별은 등급 수만큼만 그리므로 가운데로 다시 모은다 (명세 6-4)
-    private void CenterStars(int starCount)
-    {
-        float totalWidth = starCount * StarSize;
-        float startX = (MaxStars * StarSize - totalWidth) * 0.5f;
-
-        for (int i = 0; i < starCount; i++)
-            Place(_stars[i].rectTransform, startX + i * StarSize, 0f, StarSize, StarSize);
     }
 
     private void FillBack(CardDisplayInfo info, Color typeColor)
@@ -570,16 +614,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private static float BarWidth(int statValue)
     {
         return Mathf.Clamp(statValue, 0, (int)StatBarMaxStat) / StatBarMaxStat * 1218f;
-    }
-
-    private static string GetBaseSpritePath(CardType cardType)
-    {
-        return cardType switch
-        {
-            CardType.Signature => "Card/card_base_signature",
-            CardType.GoldenGlove => "Card/card_base_goldenglove",
-            _ => "Card/card_base_normal"
-        };
     }
 
     private static string GradeLabel(CardGrade grade)
