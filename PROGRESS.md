@@ -359,8 +359,10 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 | 셰이더 | `Assets/Shaders/UI/` — `CardPhoto`(왼쪽 위 가장자리 빛 · 배경색 물들임) · `CardPhotoBack`(사진 알파를 밉맵으로 흐린 그림자 · 빛 번짐) · `CardShine`(카드마다 사선 빛 띠, 화면 위치만큼 늦게 시작) · `CardHolo`(배경 무지개 반사). 모두 시간 값으로 움직여 CPU 갱신이 없다 |
 | 코드 | `CardView` 레이어 재구성 (명세 1-2 · 6-6) · `CardStyle`(종류·등급별 그림·색) · `CardMaterials`(스타일당 머티리얼 1벌) · `CardTextMaterials`(TMP 밑그림자 3벌) · `EnhanceBadgeStyle`(구 `EnhanceBadgeColors`) · `CardArtImporter` · `UiFontProvider.Card` |
 | 사진 | 사진 칸을 카드 폭에 꽉 채움 (0, 202) 1398×1748. 파이프라인 가로 정렬을 몸통 무게중심 쪽으로 최대 18% 당김 + 사진별 보정 `PHOTO_NUDGE_X` (김도영 +4%) |
-| 글꼴 | 이사만루 Bold → `Resources/UI/Fonts/Card/CardFont` (메뉴 `카드 폰트 자산 만들기`). 🔒 라이선스 확인 전이라 폴더째 git 제외 · 없으면 본문 폰트. 프리팹은 본문 폰트로 굽고 첫 `SetCard` 에서 바꾼다 |
+| 글꼴 | 이사만루 Bold (공게임즈) → `Resources/UI/Fonts/Card/CardFont` (메뉴 `카드 폰트 자산 만들기`). 상업 이용 가능 · 출처 표기 조건 (작성자 확인 11-04) → 저장소에 커밋. 프리팹은 본문 폰트로 굽고 첫 `SetCard` 에서 카드 폰트 + 밑그림자 머티리얼을 입힌다 |
 | 정리 | 안 쓰게 된 `card_base_normal` · `card_team_aura` · `card_name_shadow` · `card_fx_shine_5` · `card_mask_photo` · `badge_enhance_fill/rim/line` 삭제 |
+
+⏭️ **README 를 쓸 때 크레딧에 "이사만루체 — 공게임즈(GONGGAMES)" 출처를 적는다** (폰트 이용 조건)
 
 #### 🔴 이번에 겪은 것
 

@@ -437,7 +437,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _photoBack.gameObject.SetActive(photo != null);
     }
 
-    //카드 앞면 글자를 카드 폰트로 바꾼다. 프리팹은 본문 폰트로 굽고(카드 폰트는 로컬 자산이라) 처음 그릴 때 한 번 바꾼다
+    //카드 앞면 글자를 카드 폰트로 바꾼다. 밑그림자 머티리얼은 런타임에 만들어 프리팹에 저장되지 않으므로 처음 그릴 때 함께 입힌다
     private void ApplyCardFont()
     {
         if (_cardFontApplied)

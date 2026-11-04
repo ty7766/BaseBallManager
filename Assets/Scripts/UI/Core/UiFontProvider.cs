@@ -13,7 +13,7 @@ public static class UiFontProvider
     public const string AssetResourcePath = "UI/Fonts/UiKoreanFont";
 
     /// <summary>
-    /// 카드 앞면 폰트 자산(이사만루)의 Resources 경로. 라이선스 확인 전이라 저장소에 올리지 않고 로컬에만 둔다
+    /// 카드 앞면 폰트 자산(이사만루 · 공게임즈)의 Resources 경로. 출처 표기 조건이라 README 크레딧에 남긴다
     /// </summary>
     public const string CardAssetResourcePath = "UI/Fonts/Card/CardFont";
 
@@ -41,7 +41,7 @@ public static class UiFontProvider
     }
 
     /// <summary>
-    /// 카드 앞면 OVR · 포지션 · 이름 · 강화 숫자 폰트. 로컬 자산이 없으면 본문 폰트로 떨어진다
+    /// 카드 앞면 OVR · 포지션 · 이름 · 강화 숫자 폰트. 자산이 없으면 본문 폰트로 떨어진다
     /// </summary>
     public static TMP_FontAsset Card
     {

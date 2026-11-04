@@ -649,7 +649,7 @@ cardId,name,team,year,cardType,grade,position,power,contact,run,defense,OVR,phot
 ### 6-3. 서체
 
 - 한글 · UI: **Pretendard** (목업은 Noto Sans KR로 대체 표시) / 숫자 · 영문 라벨: **Barlow Condensed** (둘 다 OFL)
-- 카드 앞면 OVR · 포지션 · 이름 · 강화 숫자: **이사만루 Bold** (작성자 준비). 라이선스 확인 전이라 `Resources/UI/Fonts/Card/` 째 git에서 뺐다 — 없으면 본문 폰트로 그린다. 폰트 자산은 메뉴 `카드 폰트 자산 만들기`
+- 카드 앞면 OVR · 포지션 · 이름 · 강화 숫자: **이사만루 Bold** (공게임즈 · 작성자 준비). 상업 이용 가능 · **출처 표기 조건** → README 크레딧에 적는다. `Resources/UI/Fonts/Card/` · 폰트 자산은 메뉴 `카드 폰트 자산 만들기` · 동적 아틀라스라 커밋 전 `UI 폰트 글리프 캐시 비우기`가 본문·카드 폰트를 함께 비운다
 - TMP는 OpenType `tnum`을 못 쓴다 → 표 · 스코어 숫자는 `<mspace=…>` 태그로 폭을 고정한다
 - 주요 크기(1080 기준): 스코어 150 · 이닝 92 · 칩 OVR 54 · 행 OVR 46 · 선수 이름 42(칩) / 33~34(행) · 연도·포지션 31 · 별 23 · 중계 문장 38 · 표 숫자 32 · 화면 제목 48
 

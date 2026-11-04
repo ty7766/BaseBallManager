@@ -13,7 +13,7 @@ public static class UiFontAssetBuilder
     private const string AssetFolder = "Assets/Resources/UI/Fonts";
     private const string AssetPath = AssetFolder + "/UiKoreanFont.asset";
 
-    //카드 폰트(이사만루)는 라이선스 확인 전이라 이 폴더째 git 에서 뺀다
+    //카드 폰트(이사만루 · 공게임즈). 출처 표기 조건이라 README 크레딧에 남긴다
     private const string CardFolder = AssetFolder + "/Card";
     private const string CardSourcePath = CardFolder + "/esamanru Bold.ttf";
     private const string CardAssetPath = CardFolder + "/CardFont.asset";
@@ -70,20 +70,12 @@ public static class UiFontAssetBuilder
     [MenuItem("Tools/BaseBallManager/UI 폰트 글리프 캐시 비우기", false, 10)]
     public static void ClearGlyphCache()
     {
-        TMP_FontAsset fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetPath);
+        ClearGlyphs(AssetPath);
+        ClearGlyphs(CardAssetPath);
 
-        if (fontAsset == null)
-        {
-            Debug.LogWarning($"[UiFontAssetBuilder]: '{AssetPath}' 가 없습니다");
-            return;
-        }
-
-        fontAsset.ClearFontAssetData(true);
-
-        EditorUtility.SetDirty(fontAsset);
         AssetDatabase.SaveAssets();
 
-        Debug.Log("[UiFontAssetBuilder]: 폰트 글리프 캐시를 비웠습니다 (재생하면 다시 채워집니다)");
+        Debug.Log("[UiFontAssetBuilder]: 본문 · 카드 폰트 글리프 캐시를 비웠습니다 (재생하면 다시 채워집니다)");
     }
 
     /// <summary>
@@ -110,6 +102,21 @@ public static class UiFontAssetBuilder
         Debug.Log($"[UiFontAssetBuilder]: '{AssetPath}' 를 만들었습니다");
 
         return AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetPath);
+    }
+
+    //동적 아틀라스에 쌓인 글리프를 지운다. 자산이 없으면 경고만 남긴다
+    private static void ClearGlyphs(string assetPath)
+    {
+        TMP_FontAsset fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath);
+
+        if (fontAsset == null)
+        {
+            Debug.LogWarning($"[UiFontAssetBuilder]: '{assetPath}' 가 없습니다");
+            return;
+        }
+
+        fontAsset.ClearFontAssetData(true);
+        EditorUtility.SetDirty(fontAsset);
     }
 
     //아틀라스 텍스처와 머티리얼은 메모리상 객체다. 서브 에셋으로 함께 저장해야 참조가 살아남는다
