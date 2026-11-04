@@ -20,9 +20,16 @@ public class LineUpScreen : UiScreenBehaviour
     //투수는 야수 칸과 같은 크기로 (한 행 5장이면 들어간다)
     private const float PitcherCardWidth = SlotCardWidth;
     private const float PitcherColumnGap = 24f;
-    private const float BenchTop = 1030f;
     private const float FieldWidth = 1016f;
-    private const float FieldTop = 400f;
+    //야수 영역 = 버튼 줄 아래 ~ 로비 버튼 위. 수비 배치 + 벤치 묶음을 이 안의 세로 가운데에 둔다
+    private const float FieldTop = 320f;
+    private const float FieldBottom = 180f;
+    //수비 배치 칸 높이(C·DH 타순 버튼 아래 끝) · 벤치와의 간격
+    private const float FormationHeight = 1000f;
+    private const float BenchGap = 110f;
+    private const string FieldLinesSprite = "Lineup/lineup_field";
+    //투수 탭은 그대로 위에서부터 깐다
+    private const float PitcherTop = 400f;
     //투수는 3행뿐이라 영역 안에서 더 내려 깐다
     private const float PitcherTopOffset = 150f;
     private const float PitcherRowStep = 310f;
@@ -38,10 +45,10 @@ public class LineUpScreen : UiScreenBehaviour
         "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"
     };
 
-    //HitterSlots 순서대로, 야구장에서 그 포지션이 서는 자리 (필드 영역 좌상단 기준)
+    //HitterSlots 순서대로 야구장 자리 (수비 배치 칸 좌상단 기준). CF 를 축으로 좌우대칭 5열 — 바깥 ±393 · 안쪽 ±183
     private static readonly Vector2[] HitterSlotPoints =
     {
-        new Vector2(300f, 670f),  //C   홈플레이트 (DH 자리를 비우려 왼쪽으로)
+        new Vector2(240f, 670f),  //C   홈 왼쪽 (SS 아래)
         new Vector2(816f, 490f),  //1B  오른쪽
         new Vector2(606f, 330f),  //2B  오른쪽 중간
         new Vector2(30f, 490f),   //3B  왼쪽
@@ -49,7 +56,7 @@ public class LineUpScreen : UiScreenBehaviour
         new Vector2(30f, 60f),    //LF  좌익
         new Vector2(423f, 0f),    //CF  중견
         new Vector2(816f, 60f),   //RF  우익
-        new Vector2(640f, 670f)   //DH  수비 자리가 없어 C 오른쪽 빈 자리에
+        new Vector2(606f, 670f)   //DH  수비 자리가 없어 C 와 대칭인 홈 오른쪽 (2B 아래)
     };
 
     private const int DhSlotIndex = 8;
@@ -67,6 +74,7 @@ public class LineUpScreen : UiScreenBehaviour
     [SerializeField] private Button _hitterTabButton;
     [SerializeField] private Button _pitcherTabButton;
     [SerializeField] private RectTransform _fieldArea;
+    [SerializeField] private RectTransform _formation;
     [SerializeField] private RectTransform _pitcherArea;
     private readonly List<FieldSlot> _fieldSlots = new List<FieldSlot>(HitterSlotCount);
     private readonly List<FieldSlot> _benchSlots = new List<FieldSlot>(BenchSlotCount);
@@ -160,12 +168,24 @@ public class LineUpScreen : UiScreenBehaviour
         Button clearButton = UiBuilder.CreateButton(Root, "ClearAll", "전체 비우기", 34f, false, ClearAll);
         UiBuilder.Place(clearButton.GetComponent<RectTransform>(), 548f, 212f, 500f, 88f);
 
-        //탭 아래에 바짝 붙지 않도록 내려 깐다
         _fieldArea = UiBuilder.CreateRect(Root, "Field");
-        UiBuilder.Stretch(_fieldArea, 32f, FieldTop, 32f, 200f);
+        UiBuilder.Stretch(_fieldArea, 32f, FieldTop, 32f, FieldBottom);
+
+        float benchHeight = SlotLabelHeight + SlotGap + SmallCardWidth * CardView.BaseHeight / CardView.BaseWidth;
+
+        _formation = UiBuilder.CreateRect(_fieldArea, "Formation");
+        _formation.anchorMin = new Vector2(0.5f, 0.5f);
+        _formation.anchorMax = new Vector2(0.5f, 0.5f);
+        _formation.pivot = new Vector2(0.5f, 0.5f);
+        _formation.anchoredPosition = Vector2.zero;
+        _formation.sizeDelta = new Vector2(FieldWidth, FormationHeight + BenchGap + benchHeight);
+
+        Image fieldLines = UiBuilder.CreateImage(_formation, "FieldLines", Color.white, FieldLinesSprite);
+        UiBuilder.Place(fieldLines.rectTransform, 0f, 0f, FieldWidth, FormationHeight);
+        fieldLines.gameObject.SetActive(fieldLines.sprite != null);
 
         _pitcherArea = UiBuilder.CreateRect(Root, "PitcherField");
-        UiBuilder.Stretch(_pitcherArea, 32f, FieldTop, 32f, 200f);
+        UiBuilder.Stretch(_pitcherArea, 32f, PitcherTop, 32f, 200f);
 
         Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
         RectTransform backRect = backButton.GetComponent<RectTransform>();
@@ -192,18 +212,18 @@ public class LineUpScreen : UiScreenBehaviour
         //DH 까지 포함해 9자리를 야구장 좌표대로 깐다
         for (int i = 0; i <= DhSlotIndex; i++)
         {
-            _fieldSlots.Add(new FieldSlot(_fieldArea, HitterSlotLabels[i],
+            _fieldSlots.Add(new FieldSlot(_formation, HitterSlotLabels[i],
                 HitterSlotPoints[i].x, HitterSlotPoints[i].y, SlotCardWidth));
         }
 
-        //벤치 5장은 야구장 아래에 가로 한 줄로
+        //벤치 5장은 야구장 아래에 간격을 두고 가로 한 줄로
         float step = SmallCardWidth + 16f;
         float left = (FieldWidth - (BenchSlotCount * step - 16f)) * 0.5f;
 
         for (int i = 0; i < BenchSlotCount; i++)
         {
-            _benchSlots.Add(new FieldSlot(_fieldArea, $"벤치 {i + 1}",
-                left + i * step, BenchTop, SmallCardWidth, false));
+            _benchSlots.Add(new FieldSlot(_formation, $"벤치 {i + 1}",
+                left + i * step, FormationHeight + BenchGap, SmallCardWidth, false));
         }
     }
 
@@ -501,7 +521,7 @@ public class LineUpScreen : UiScreenBehaviour
             //한글 폰트에 ✕(U+2715) 글리프가 없어 네모로 깨진다. 기본 라틴 X 를 쓴다
             _clearButton = UiBuilder.CreateButton(root, "Clear", "X", 26f, false, OnClearClicked);
             UiBuilder.Place(_clearButton.GetComponent<RectTransform>(),
-                width - ClearSize, cardTop, ClearSize, ClearSize);
+                width - ClearSize, cardTop + cardHeight - ClearSize, ClearSize, ClearSize);
 
             if (!withOrder)
                 return;
