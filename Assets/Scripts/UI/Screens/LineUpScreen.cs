@@ -24,9 +24,10 @@ public class LineUpScreen : UiScreenBehaviour
     //야수 영역 = 버튼 줄 아래 ~ 로비 버튼 위. 수비 배치 + 벤치 묶음을 이 안의 세로 가운데에 둔다
     private const float FieldTop = 320f;
     private const float FieldBottom = 180f;
-    //수비 배치 칸 높이(C·DH 타순 버튼 아래 끝) · 벤치와의 간격
-    private const float FormationHeight = 1000f;
+    //수비 배치 칸 높이(C·DH 타순 버튼 아래 끝) · 벤치와의 간격 · 벤치 카드 사이
+    private const float FormationHeight = 1070f;
     private const float BenchGap = 110f;
+    private const float BenchCardGap = 30f;
     private const string FieldLinesSprite = "Lineup/lineup_field";
     //투수 탭은 그대로 위에서부터 깐다
     private const float PitcherTop = 400f;
@@ -45,18 +46,18 @@ public class LineUpScreen : UiScreenBehaviour
         "C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"
     };
 
-    //HitterSlots 순서대로 야구장 자리 (수비 배치 칸 좌상단 기준). CF 를 축으로 좌우대칭 5열 — 바깥 ±393 · 안쪽 ±183
+    //HitterSlots 순서대로 야구장 자리 (수비 배치 칸 좌상단 기준). CF 를 축으로 좌우대칭 5열 — 바깥 ±403 · 안쪽 ±183
     private static readonly Vector2[] HitterSlotPoints =
     {
-        new Vector2(240f, 670f),  //C   홈 왼쪽 (SS 아래)
-        new Vector2(816f, 490f),  //1B  오른쪽
-        new Vector2(606f, 330f),  //2B  오른쪽 중간
-        new Vector2(30f, 490f),   //3B  왼쪽
-        new Vector2(240f, 330f),  //SS  왼쪽 중간
-        new Vector2(30f, 60f),    //LF  좌익
+        new Vector2(240f, 740f),  //C   홈 왼쪽 (SS 아래)
+        new Vector2(826f, 545f),  //1B  오른쪽
+        new Vector2(606f, 370f),  //2B  오른쪽 중간
+        new Vector2(20f, 545f),   //3B  왼쪽
+        new Vector2(240f, 370f),  //SS  왼쪽 중간
+        new Vector2(20f, 70f),    //LF  좌익
         new Vector2(423f, 0f),    //CF  중견
-        new Vector2(816f, 60f),   //RF  우익
-        new Vector2(606f, 670f)   //DH  수비 자리가 없어 C 와 대칭인 홈 오른쪽 (2B 아래)
+        new Vector2(826f, 70f),   //RF  우익
+        new Vector2(606f, 740f)   //DH  수비 자리가 없어 C 와 대칭인 홈 오른쪽 (2B 아래)
     };
 
     private const int DhSlotIndex = 8;
@@ -134,6 +135,8 @@ public class LineUpScreen : UiScreenBehaviour
             RefreshHitterField();
         else
             RefreshPitcherField();
+
+        FitFormation();
     }
 
     protected override void BindEvents()
@@ -217,14 +220,24 @@ public class LineUpScreen : UiScreenBehaviour
         }
 
         //벤치 5장은 야구장 아래에 간격을 두고 가로 한 줄로
-        float step = SmallCardWidth + 16f;
-        float left = (FieldWidth - (BenchSlotCount * step - 16f)) * 0.5f;
+        float step = SmallCardWidth + BenchCardGap;
+        float left = (FieldWidth - (BenchSlotCount * step - BenchCardGap)) * 0.5f;
 
         for (int i = 0; i < BenchSlotCount; i++)
         {
             _benchSlots.Add(new FieldSlot(_formation, $"벤치 {i + 1}",
                 left + i * step, FormationHeight + BenchGap, SmallCardWidth, false));
         }
+    }
+
+    //16:9 처럼 세로가 짧은 기기에서는 수비 배치 묶음을 영역 높이에 맞춰 통째로 줄인다 (긴 기기는 그대로)
+    private void FitFormation()
+    {
+        float available = _fieldArea.rect.height;
+        float needed = _formation.sizeDelta.y;
+        float scale = available > 0f && needed > available ? available / needed : 1f;
+
+        _formation.localScale = new Vector3(scale, scale, 1f);
     }
 
     //9포지션을 야구장 자리대로 깐다
@@ -479,7 +492,9 @@ public class LineUpScreen : UiScreenBehaviour
     //야구장 자리에 놓이는 야수 1칸. 카드 비율 그림 + 포지션 + 타순 조절
     private sealed class FieldSlot
     {
-        private const float ClearSize = 40f;
+        //카드 오른쪽 아래 모서리에 겹치므로 이름을 덜 가리게 작게
+        private const float ClearSize = 30f;
+        private const float ClearFontSize = 20f;
 
         private readonly CardView _card;
         private readonly TextMeshProUGUI _orderText;
@@ -519,7 +534,7 @@ public class LineUpScreen : UiScreenBehaviour
             UiBuilder.Place(_card.Root, 0f, cardTop, width, cardHeight);
 
             //한글 폰트에 ✕(U+2715) 글리프가 없어 네모로 깨진다. 기본 라틴 X 를 쓴다
-            _clearButton = UiBuilder.CreateButton(root, "Clear", "X", 26f, false, OnClearClicked);
+            _clearButton = UiBuilder.CreateButton(root, "Clear", "X", ClearFontSize, false, OnClearClicked);
             UiBuilder.Place(_clearButton.GetComponent<RectTransform>(),
                 width - ClearSize, cardTop + cardHeight - ClearSize, ClearSize, ClearSize);
 

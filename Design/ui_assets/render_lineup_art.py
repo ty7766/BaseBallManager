@@ -4,8 +4,9 @@
 사용법
     python Design/ui_assets/render_lineup_art.py
 
-좌표는 LineUpScreen 의 수비 배치 칸(1016×1000, 왼쪽 위 원점)과 같다. 2배로 내보낸다.
-홈플레이트는 C·DH 사이, 2루는 CF 아래, 1·3루 베이스는 카드 사이 틈에 오도록 내야 크기를 맞췄다
+좌표는 LineUpScreen 의 수비 배치 칸(1016×1070, 왼쪽 위 원점)과 같다. 2배로 내보낸다.
+홈플레이트는 C·DH 사이, 2루는 CF 아래, 1·3루 베이스는 카드 사이 틈에 오도록 내야 크기를 맞췄다.
+배치 좌표(HitterSlotPoints)를 바꾸면 여기 HOME · DIAMOND_SIDE 도 같이 맞춘다
 
 출력
     Assets/Resources/UI/Lineup/lineup_field.png
@@ -18,20 +19,21 @@ from pathlib import Path
 
 from PIL import Image
 
-W, H = 1016, 1000
+W, H = 1016, 1070
 SCALE = 2
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "Assets" / "Resources" / "UI" / "Lineup"
 WORK = Path(tempfile.gettempdir()) / "bbm_lineup_art"
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
-LINE = 'stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="5" fill="none" stroke-linecap="round"'
-MARK = 'fill="#FFFFFF" fill-opacity="0.34"'
+LINE = 'stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="5" fill="none" stroke-linecap="round"'
+MARK = 'fill="#FFFFFF" fill-opacity="0.5"'
 
 CX = W / 2
-HOME = (CX, 935)
-DIAMOND_SIDE = 406                       # 2루가 CF 아래(360), 1·3루가 카드 사이 틈(x 795 · 221)에 온다
-FENCE_RADIUS = 925                       # 외야 펜스. 꼭대기가 CF 이름표 바로 위
+HOME = (CX, 1000)
+DIAMOND_SIDE = 293 * math.sqrt(2)        # 2루가 CF 아래(414), 1·3루가 카드 사이 틈(x 801 · 215)에 온다
+FENCE_RADIUS = 990                       # 외야 펜스. 꼭대기가 CF 이름표 바로 위
+BASE_PATH_GAP = 6                        # 루를 잇는 줄은 두 줄 — 가운데 선에서 양쪽으로 이만큼
 INFIELD_RADIUS = DIAMOND_SIDE * 95 / 90  # 내야 잔디 경계 (마운드 중심, 실제 구장 비율)
 
 
@@ -57,6 +59,14 @@ def arc(cx, cy, r, x_limit_y):
     return f'<polyline points="{" ".join(pts)}" {LINE}/>'
 
 
+def diamond(mound, offset):
+    """마운드 중심의 다이아몬드. offset 만큼 바깥(+)·안쪽(-)으로 평행하게 옮긴 선"""
+    half = DIAMOND_SIDE / math.sqrt(2) + offset * math.sqrt(2)
+    mx, my = mound
+    pts = ((mx, my + half), (mx + half, my), (mx, my - half), (mx - half, my))
+    return f'<polygon points="{" ".join(f"{f(x)},{f(y)}" for x, y in pts)}" {LINE} stroke-width="4"/>'
+
+
 def field():
     home, first, second, third, mound = base_points()
     hx, hy = home
@@ -71,9 +81,9 @@ def field():
         # 외야 펜스 · 내야 잔디 경계
         arc(hx, hy, FENCE_RADIUS, lambda x: H),
         arc(mound[0], mound[1], INFIELD_RADIUS, foul_line_y),
-        # 내야 다이아몬드
-        f'<polygon points="{f(hx)},{f(hy)} {f(first[0])},{f(first[1])} {f(second[0])},{f(second[1])} '
-        f'{f(third[0])},{f(third[1])}" {LINE}/>',
+        # 내야 다이아몬드 (루를 잇는 줄 두 줄)
+        diamond(mound, -BASE_PATH_GAP),
+        diamond(mound, BASE_PATH_GAP),
         # 마운드 · 투수판
         f'<circle cx="{f(mound[0])}" cy="{f(mound[1])}" r="38" {LINE}/>',
         f'<rect x="{f(mound[0] - 14)}" y="{f(mound[1] - 4)}" width="28" height="8" {MARK}/>',
