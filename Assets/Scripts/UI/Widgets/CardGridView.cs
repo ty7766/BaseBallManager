@@ -154,15 +154,6 @@ public class CardGridView : UiWidgetBehaviour
     }
 
     /// <summary>
-    /// 깔려 있는 카드를 앞에서부터 차례로 열어 보인다
-    /// </summary>
-    public void PlayRevealSequence(float stepSeconds = 0.08f)
-    {
-        for (int i = 0; i < Count; i++)
-            _cells[i].PlayReveal(i * stepSeconds);
-    }
-
-    /// <summary>
     /// 선택 표시를 교체한다 (단일·다중 선택 공용)
     /// </summary>
     public void SetSelection(IReadOnlyCollection<int> selectedInstanceIds)

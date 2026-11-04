@@ -5,16 +5,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 뽑기 화면. 일반 · 시그니쳐를 1회 또는 10연차로 돌리고 결과를 그린다
+/// 뽑기 화면. 일반 · 시그니쳐를 1회 또는 10연차로 돌리고, 결과는 뒷면으로 깔아 눌러 · 밀어 뒤집게 한다
 /// </summary>
 public class GachaScreen : UiScreenBehaviour
 {
-    private const float SingleCardWidth = 540f;
-    private const int TenRollColumns = 5;
-    private const float TenRollCardWidth = 185f;
-    //결과 영역 높이 (1920 - 위 588 - 아래 200). 이 안에서 세로 가운데로 모은다
-    private const float ResultAreaHeight = 1132f;
-
     private const int TenRollCount = 10;
 
     private Action _onBack;
@@ -30,9 +24,12 @@ public class GachaScreen : UiScreenBehaviour
     [SerializeField] private TextMeshProUGUI _rollTenLabel;
     [SerializeField] private TextMeshProUGUI _pityText;
     [SerializeField] private TextMeshProUGUI _resultText;
-    [SerializeField] private CardGridView _resultGrid;
+    [SerializeField] private RectTransform _resultArea;
+    [SerializeField] private TextMeshProUGUI _emptyText;
 
-    private List<int> _resultInstanceIds = new List<int>(TenRollCount);
+    private readonly List<int> _resultInstanceIds = new List<int>(TenRollCount);
+    private readonly List<CardDisplayInfo> _resultCards = new List<CardDisplayInfo>(TenRollCount);
+    private GachaRevealView _reveal;
 
     private GachaType _gachaType = GachaType.Normal;
 
@@ -78,7 +75,6 @@ public class GachaScreen : UiScreenBehaviour
 
     protected override void BindEvents()
     {
-        _resultGrid.SetClickHandler(OnResultClicked);
         Bind(_normalTabButton, () => SelectType(GachaType.Normal));
         Bind(_signatureTabButton, () => SelectType(GachaType.Signature));
         Bind(_rollOnceButton, RollOnce);
@@ -118,10 +114,12 @@ public class GachaScreen : UiScreenBehaviour
         UiBuilder.Place(_resultText.rectTransform, 32f, 536f, 1016f, 44f);
         _resultText.text = "결과";
 
-        _resultGrid = CardGridView.Bake(Root);
-        UiBuilder.Stretch(_resultGrid.Root, 32f, 588f, 32f, 200f);
-        _resultGrid.SetClickHandler(OnResultClicked);
-        _resultGrid.SetEmptyMessage("아직 뽑지 않았습니다");
+        _resultArea = UiBuilder.CreateRect(Root, "Result");
+        UiBuilder.Stretch(_resultArea, 32f, 588f, 32f, 200f);
+
+        _emptyText = UiBuilder.CreateText(_resultArea, "Empty", 34f, UiPalette.Text3, TextAlignmentOptions.Center);
+        UiBuilder.Stretch(_emptyText.rectTransform, 0f, 0f, 0f, 0f);
+        _emptyText.text = "아직 뽑지 않았습니다";
 
         Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
         RectTransform backRect = backButton.GetComponent<RectTransform>();
@@ -136,6 +134,7 @@ public class GachaScreen : UiScreenBehaviour
     protected override void OnShown()
     {
         Refresh();
+        _reveal?.ResumeHint();
     }
 
     private void SelectType(GachaType gachaType)
@@ -191,16 +190,22 @@ public class GachaScreen : UiScreenBehaviour
             _resultInstanceIds.Add(result.InstanceId);
     }
 
+    //결과를 뒷면으로 깐다. 1장은 가운데 크게, 10장은 4 · 4 · 2 줄
     private void ShowResults(int rolledCount)
     {
-        //단일은 가운데 큰 1장, 10연은 2행 5열
-        if (_resultInstanceIds.Count <= 1)
-            _resultGrid.SetLayout(1, SingleCardWidth, ResultAreaHeight);
-        else
-            _resultGrid.SetLayout(TenRollColumns, TenRollCardWidth, ResultAreaHeight);
+        _resultCards.Clear();
 
-        _resultGrid.SetCards(_resultInstanceIds);
-        _resultGrid.PlayRevealSequence();
+        foreach (int instanceId in _resultInstanceIds)
+        {
+            if (CardDisplayInfo.TryCreate(instanceId, out CardDisplayInfo info))
+                _resultCards.Add(info);
+        }
+
+        if (_reveal == null)
+            _reveal = new GachaRevealView(_resultArea);
+
+        _emptyText.gameObject.SetActive(_resultCards.Count == 0);
+        _reveal.Show(_resultCards, OnResultClicked);
         _resultText.text = $"결과  {_resultInstanceIds.Count}장" +
                            (_resultInstanceIds.Count < rolledCount ? "  (인벤토리가 꽉 차 일부를 받지 못했습니다)" : string.Empty);
 

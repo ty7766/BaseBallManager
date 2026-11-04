@@ -31,7 +31,6 @@ public class CardCellView
 
     private Action<int> _onClick;
     private Action<int> _onLongPress;
-    private bool _isHighlight;
 
     public CardCellView(Transform parent)
     {
@@ -110,25 +109,10 @@ public class CardCellView
         _card.SetLongPressHandler(_onLongPress == null ? null : OnLongPressed);
 
         _lockIcon.gameObject.SetActive(info.IsLocked);
-        _isHighlight = info.CardGrade == CardGrade.Star5 || info.CardType != CardType.Normal;
 
         SetSelected(false);
         SetDimmed(false);
         SetBlocked(null);
-    }
-
-    /// <summary>
-    /// 뽑기 결과가 하나씩 열리는 연출. 5성·시그·골글은 파티클이 함께 터진다
-    /// </summary>
-    public void PlayReveal(float delay)
-    {
-        _card.PlayAppear(delay);
-
-        if (!_isHighlight)
-            return;
-
-        UiAnimator.Play(0.01f, null, () => UiEffects.Burst(_root, UiEffectKind.Reveal),
-            UiEase.Linear, delay);
     }
 
     /// <summary>
