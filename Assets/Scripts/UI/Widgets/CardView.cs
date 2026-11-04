@@ -39,6 +39,9 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private const string YearCloseTag = "</size>";
     //강화 + 기호는 숫자보다 작고 조금 위로
     private const string EnhancePlusTag = "<size=60%><voffset=0.12em>+</voffset></size>";
+    //OVR 칸 (카드 좌표). 세 자리는 두 자리가 차지하는 가장 넓은 폭에 맞춰 가로로만 누른다
+    private const float OvrLeft = 46f;
+    private const float OvrWidth = 320f;
     //조합 결과 자리에 띄우는 물음표 크기 (카드 좌표계)
     private const float UnknownMarkSize = 520f;
     //이만큼 누르고 있으면 상세 보기로 넘긴다
@@ -91,6 +94,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private float _displayWidth;
     private string _photoKey;
     private bool _cardFontApplied;
+    private float _ovrMaxWidth;
     [SerializeField] private bool _hasBack;
 
     /// <summary>
@@ -154,9 +158,10 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _photo = CreateHiddenLayer(_front, "Photo", 0f, PhotoTop, BaseWidth, PhotoHeight);
         _foreground = CreateHiddenLayer(_front, "Foreground", 0f, 0f, BaseWidth, BaseHeight);
 
-        _ovrText = CreateCardText(_front, "Ovr", 230f, 46f, 34f, 320f, 230f, TextAlignmentOptions.Center);
-        _positionText = CreateCardText(_front, "Position", 104f, 46f, 286f, 320f, 104f, TextAlignmentOptions.Center);
-        _teamLogo = CreateLayer(_front, "TeamLogo", null, 1086f, 34f, 260f, 260f);
+        _ovrText = CreateCardText(_front, "Ovr", 230f, OvrLeft, 34f, OvrWidth, 230f, TextAlignmentOptions.Center);
+        CenterPivotX(_ovrText.rectTransform);
+        _positionText = CreateCardText(_front, "Position", 104f, OvrLeft, 286f, OvrWidth, 104f, TextAlignmentOptions.Center);
+        _teamLogo = CreateLayer(_front, "TeamLogo", null, 1046f, 30f, 300f, 300f);
         _teamLogo.preserveAspect = true;
 
         RectTransform starRow = UiBuilder.CreateRect(_front, "Stars");
@@ -171,8 +176,8 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
             _stars[i].gameObject.SetActive(false);
         }
 
-        _enhanceBadge = CreateHiddenLayer(_front, "EnhanceBadge", 1096f, 306f, 240f, 208f);
-        _enhanceText = CreateCardText(_front, "EnhanceText", EnhanceFontSize, 1096f, 306f, 240f, 208f,
+        _enhanceBadge = CreateHiddenLayer(_front, "EnhanceBadge", 1076f, 342f, 240f, 208f);
+        _enhanceText = CreateCardText(_front, "EnhanceText", EnhanceFontSize, 1076f, 342f, 240f, 208f,
             TextAlignmentOptions.Center);
 
         _nameText = CreateCardText(_front, "Name", 138f, 40f, 1712f, 1318f, 170f, TextAlignmentOptions.Center);
@@ -254,6 +259,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _ovrText.text = info.FinalOvr.ToString();
         _ovrText.color = style.OvrColor;
         _ovrText.fontSharedMaterial = ovrMaterial;
+        FitOvrWidth();
 
         _positionText.text = info.Position;
         _positionText.color = style.OvrColor;
@@ -453,6 +459,34 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _nameText.fontSharedMaterial = CardTextMaterials.Shadow;
         _enhanceText.font = cardFont;
         _enhanceText.fontSharedMaterial = CardTextMaterials.Emboss;
+        _ovrMaxWidth = MeasureWidestTwoDigits();
+    }
+
+    //세 자리 OVR 은 두 자리 최대 폭에 맞춰 가로로만 누른다. 키는 그대로라 숫자 크기가 같아 보인다
+    private void FitOvrWidth()
+    {
+        float width = _ovrText.GetPreferredValues(_ovrText.text).x;
+        float squeeze = _ovrMaxWidth > 0f && width > _ovrMaxWidth ? _ovrMaxWidth / width : 1f;
+
+        _ovrText.rectTransform.localScale = new Vector3(squeeze, 1f, 1f);
+    }
+
+    //숫자마다 폭이 다른 글꼴이라 00 ~ 99 중 가장 넓은 것을 기준으로 삼는다
+    private float MeasureWidestTwoDigits()
+    {
+        float widest = 0f;
+
+        for (int digit = 0; digit <= 9; digit++)
+            widest = Mathf.Max(widest, _ovrText.GetPreferredValues(digit.ToString() + digit).x);
+
+        return widest;
+    }
+
+    //가로로 누를 때 가운데를 축으로 줄어들도록 중심을 칸 가운데로 옮긴다 (위치는 그대로)
+    private static void CenterPivotX(RectTransform rect)
+    {
+        rect.pivot = new Vector2(0.5f, rect.pivot.y);
+        rect.anchoredPosition += new Vector2(rect.sizeDelta.x * 0.5f, 0f);
     }
 
     //카드 좌표(1398 기준)를 실제 크기로 환산해 배치한다
