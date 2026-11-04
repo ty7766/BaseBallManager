@@ -170,11 +170,14 @@ public sealed class GachaRevealView
             card.SetHint(0f, 0f);
     }
 
-    //왼쪽에서 나타나 오른쪽으로 흐르며 사라진다. 뒷면이 남아 있고 화면에 보이는 동안만 되풀이한다
+    //왼쪽에서 나타나 오른쪽으로 흐르며 사라진다. 뒷면이 남아 있고 화면에 보이는 동안만 되풀이한다 (화면이 지워졌으면 멈춘다)
     private void PlayHintCycle()
     {
         _hintTween = UiAnimator.Play(HintCycleSeconds, t =>
         {
+            if (_hint == null)
+                return;
+
             float offset = (t - 0.5f) * HintTravel;
             float alpha = t < 0.3f ? t / 0.3f : t > 0.7f ? (1f - t) / 0.3f : 1f;
 
@@ -184,7 +187,7 @@ public sealed class GachaRevealView
         {
             _hintTween = null;
 
-            if (_faceDownCount > 0 && _hint.gameObject.activeInHierarchy)
+            if (_hint != null && _faceDownCount > 0 && _hint.gameObject.activeInHierarchy)
                 PlayHintCycle();
         }, UiEase.Linear);
     }

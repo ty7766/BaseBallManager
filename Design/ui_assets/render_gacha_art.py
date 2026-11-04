@@ -30,6 +30,7 @@ PLATE_WIDTH = 190
 BASE_SIZE = 62
 BG_W, BG_H = 1080, 2340
 STAGE_Y = 1330           # 빛줄기가 엇갈리는 높이 = 결과 카드 가운데 (1080×2278 기준)
+LAMP_Y = 145             # 조명 높이. 제목(32~92)을 피해 재화 줄(100~190) 뒤에 숨긴다
 
 
 def f(v):
@@ -91,8 +92,8 @@ def ring():
 
 
 def beam(corner_x, direction, target_y, length, spread, opacity):
-    """모서리 조명(corner_x, 80)에서 화면 가운데(target_y)를 지나 퍼지는 쐐기 모양 빛줄기"""
-    ax, ay = corner_x, 80
+    """모서리 조명(corner_x, LAMP_Y)에서 화면 가운데(target_y)를 지나 퍼지는 쐐기 모양 빛줄기"""
+    ax, ay = corner_x, LAMP_Y
     vx, vy = BG_W / 2 - ax, target_y - ay
     norm = math.hypot(vx, vy)
     px, py = -vy / norm * direction, vx / norm * direction
@@ -117,11 +118,11 @@ def gacha_bg():
     for x, d in ((0, 1), (BG_W, -1)):
         for target_y, length, spread, opacity in ((STAGE_Y, 1.4, 260, 1.0), (STAGE_Y + 170, 1.25, 170, 0.6)):
             out.append(beam(x, d, target_y, length, spread, opacity))
-        out.append(f'<circle cx="{x}" cy="80" r="170" fill="url(#lamp)"/>')
+        out.append(f'<circle cx="{x}" cy="{LAMP_Y}" r="170" fill="url(#lamp)"/>')
         for row in range(2):
             for col in range(3):
                 lx = x + d * (34 + col * 34)
-                out.append(f'<circle cx="{lx}" cy="{40 + row * 34}" r="10" fill="#fff" fill-opacity="0.5"/>')
+                out.append(f'<circle cx="{lx}" cy="{LAMP_Y - 17 + row * 34}" r="10" fill="#fff" fill-opacity="0.5"/>')
     out.append(f'<ellipse cx="{BG_W / 2}" cy="{STAGE_Y}" rx="520" ry="380" fill="url(#cross)"/>')
     return "".join(out)
 
