@@ -347,8 +347,13 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 
 **브랜치 운영** — 공통 UI는 `feature/game-ui`, 카드 공통 디자인은 `feature/ui-card` 에서 끝내고 `feature/game-ui` 로 합친다.
 그다음 메뉴별 브랜치 8개(`feature/ui-lineup` · `-gacha` · `-inventory` · `-enhance` · `-train` · `-combine` · `-dismantle` · `-goldenglove`)를 `feature/game-ui` 에서 딴다.
-공통 수정은 `feature/game-ui` 에 커밋하고 진행 중인 메뉴 브랜치에 병합해 받는다.
-⚠️ 메뉴 브랜치를 따기 전에 "이 화면만 굽기" 메뉴를 먼저 넣는다 (지금은 19화면을 전부 다시 구워 병합 충돌이 난다). 씬 파일은 `feature/game-ui` 에서만 고친다.
+공통 수정은 `feature/game-ui` 에 커밋하고 진행 중인 메뉴 브랜치에 병합해 받는다. 끝난 메뉴 브랜치는 `feature/game-ui` 로 병합한다.
+✅ 11-04: `feature/ui-card` → `feature/game-ui` 병합 · 메뉴 브랜치 8개 생성.
+
+🔴 **굽기 규칙 (브랜치 충돌 방지)**
+- 메뉴 브랜치에서는 **`선택한 UI 프리팹만 굽기`** — Project 창에서 자기 화면 프리팹(`Resources/UI/Screens/○○Screen`)을 골라 Tools 메뉴 또는 우클릭 `BaseBallManager/이 화면 프리팹만 다시 굽기`
+- `UI 프리팹 모두 굽기` 는 **`feature/game-ui` 에서만** (CardView 처럼 여러 화면이 쓰는 위젯을 바꿨을 때)
+- 씬 파일(`SampleScene.unity`)은 `feature/game-ui` 에서만 고친다 · 커밋 전 `UI 폰트 글리프 캐시 비우기`
 
 **작성자 지시 (레퍼런스 = 컴프야 v26 카드)** — 배경 분위기 · 허벅지 중간부터 보이는 큰 선수 · 로고 오른쪽 위 · 별 가운데 위(3성 파랑 · 4성 초록 · 5성 보라) · 이름 가운데 아래 `곽빈'26` · LIVE 배지 없음 · 전체 광택 · "카드와 선수가 따로 노는 느낌" 해소 · 강화는 육각형 · 글꼴 이사만루
 
