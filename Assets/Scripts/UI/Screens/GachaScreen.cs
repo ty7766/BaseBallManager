@@ -10,6 +10,10 @@ using UnityEngine.UI;
 public class GachaScreen : UiScreenBehaviour
 {
     private const int TenRollCount = 10;
+    //구장 조명 배경. 화면 폭 1080 기준으로 위에 붙이고, 세로가 짧은 기기는 아래가 잘린다
+    private const string StageSprite = "Gacha/gacha_bg";
+    private const float StageWidth = 1080f;
+    private const float StageHeight = 2340f;
 
     private Action _onBack;
     private Action<int> _onCardSelected;
@@ -84,6 +88,16 @@ public class GachaScreen : UiScreenBehaviour
 
     protected override void Build()
     {
+        Image stage = UiBuilder.CreateImage(Root, "StageLights", Color.white, StageSprite);
+        RectTransform stageRect = stage.rectTransform;
+
+        stageRect.anchorMin = new Vector2(0.5f, 1f);
+        stageRect.anchorMax = new Vector2(0.5f, 1f);
+        stageRect.pivot = new Vector2(0.5f, 1f);
+        stageRect.anchoredPosition = Vector2.zero;
+        stageRect.sizeDelta = new Vector2(StageWidth, StageHeight);
+        stage.gameObject.SetActive(stage.sprite != null);
+
         TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
         UiBuilder.Place(title.rectTransform, 32f, 32f, 500f, 60f);
         title.text = "뽑기";

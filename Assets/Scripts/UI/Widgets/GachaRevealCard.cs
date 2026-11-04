@@ -12,6 +12,10 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     private const string BackSprite = "Card/card_back";
     private const string GlowSprite = "Fx/glow_soft";
     private const string RingSprite = "Fx/ring";
+    private const string ArrowSprite = "Gacha/swipe_arrow";
+    //밀기 안내 화살표 폭(카드 폭 비율). 그림 비율 360×110 을 따른다
+    private const float ArrowWidthRatio = 0.55f;
+    private const float ArrowAspect = 110f / 360f;
     //카드 폭의 이 비율만큼 밀면 완전히 뒤집힌다 · 이만큼 넘게 밀고 놓으면 끝까지 넘긴다
     private const float FullDragRatio = 0.9f;
     private const float CommitProgress = 0.35f;
@@ -38,6 +42,7 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     private Image _glow;
     private Image _ring;
     private Image _flash;
+    private Image _hintArrow;
     private float _width;
     private float _progress;
     private float _dragStartX;
@@ -82,8 +87,21 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         _glow.gameObject.SetActive(false);
         _ring.gameObject.SetActive(false);
         _flash.gameObject.SetActive(false);
+        _hintArrow.color = UiPalette.WithAlpha(Color.white, 0f);
 
         SetProgress(0f);
+    }
+
+    /// <summary>
+    /// 밀기 안내 화살표의 가로 위치(카드 폭 비율)와 투명도. 결과 자리가 모든 뒷면에 같은 박자로 넘긴다.
+    /// 밀고 있거나 뒤집히는 중이면 숨긴다
+    /// </summary>
+    public void SetHint(float offset, float alpha)
+    {
+        bool idle = !IsFaceUp && !_dragging && !_flipping;
+
+        _hintArrow.rectTransform.anchoredPosition = new Vector2(offset * _width, 0f);
+        _hintArrow.color = UiPalette.WithAlpha(Color.white, idle ? alpha : 0f);
     }
 
     void IPointerClickHandler.OnPointerClick(PointerEventData eventData)
@@ -101,6 +119,7 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
 
         _dragging = true;
         _dragStartX = ToLocalX(eventData);
+        _hintArrow.color = UiPalette.WithAlpha(Color.white, 0f);
     }
 
     void IDragHandler.OnDrag(PointerEventData eventData)
@@ -253,6 +272,11 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         Image backShine = UiBuilder.CreateImage(_back.transform, "Shine", UiPalette.WithAlpha(Color.white, BackShineStrength));
         UiBuilder.Stretch(backShine.rectTransform, 0f, 0f, 0f, 0f);
         backShine.material = CardMaterials.Shine;
+
+        float arrowWidth = width * ArrowWidthRatio;
+
+        _hintArrow = CreateCentered(_back.transform, "SwipeArrow", ArrowSprite, arrowWidth, arrowWidth * ArrowAspect);
+        _hintArrow.gameObject.SetActive(true);
 
         _flash = UiBuilder.CreateImage(_pivot, "Flash", UiPalette.WithAlpha(Color.white, 0f));
         UiBuilder.Stretch(_flash.rectTransform, 0f, 0f, 0f, 0f);

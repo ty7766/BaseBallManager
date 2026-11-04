@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
-/// 뽑기 결과 자리. 1장은 가운데 크게, 10장은 4 · 4 · 2 줄로 뒷면을 깔고 아래에 "밀어서 뒤집기" 안내를 띄운다.
+/// 뽑기 결과 자리. 1장은 가운데 크게, 10장은 4 · 4 · 2 줄로 뒷면을 깔고 카드 한가운데에 밀기 화살표를 띄운다.
 /// 카드는 처음 쓸 때 한 번 만들어 두고 돌려쓴다 (1장용 1 + 10장용 10)
 /// </summary>
 public sealed class GachaRevealView
@@ -16,22 +15,18 @@ public sealed class GachaRevealView
     private const float MultiWidth = 196f;
     private const float MultiColumnGap = 64f;
     private const float MultiRowGap = 44f;
-    private const float HintGap = 36f;
-    private const float HintHeight = 100f;
-    private const float ArrowWidth = 330f;
-    private const float ArrowHeight = 60f;
-    //화살표가 왼쪽에서 나타나 오른쪽으로 흐르며 사라지는 한 번의 길이와 이동 거리
+    private const float HintGap = 30f;
+    private const float HintHeight = 44f;
+    //화살표가 왼쪽에서 나타나 오른쪽으로 흐르며 사라지는 한 번의 길이와 이동 거리(카드 폭 비율)
     private const float HintCycleSeconds = 1.6f;
-    private const float HintTravel = 90f;
-    private const string ArrowSprite = "Gacha/swipe_arrow";
+    private const float HintTravel = 0.22f;
 
     private static readonly int[] MultiRowCounts = { 4, 4, 2 };
 
     private readonly RectTransform _group;
     private readonly RectTransform _hint;
-    private readonly RectTransform _arrow;
-    private readonly CanvasGroup _arrowGroup;
     private readonly List<GachaRevealCard> _multiCards = new List<GachaRevealCard>(MaxCards);
+    private readonly List<GachaRevealCard> _shownCards = new List<GachaRevealCard>(MaxCards);
 
     private GachaRevealCard _singleCard;
     private int _faceDownCount;
@@ -46,22 +41,9 @@ public sealed class GachaRevealView
 
         _hint = UiBuilder.CreateRect(_group, "SwipeHint");
 
-        Image arrow = UiBuilder.CreateImage(_hint, "Arrow", Color.white, ArrowSprite);
-
-        _arrow = arrow.rectTransform;
-        _arrow.anchorMin = new Vector2(0.5f, 1f);
-        _arrow.anchorMax = new Vector2(0.5f, 1f);
-        _arrow.pivot = new Vector2(0.5f, 1f);
-        _arrow.sizeDelta = new Vector2(ArrowWidth, ArrowHeight);
-        _arrowGroup = arrow.gameObject.AddComponent<CanvasGroup>();
-
         TextMeshProUGUI label = UiBuilder.CreateText(_hint, "Label", 30f, UiPalette.Text2, TextAlignmentOptions.Center);
-        label.rectTransform.anchorMin = new Vector2(0f, 1f);
-        label.rectTransform.anchorMax = new Vector2(1f, 1f);
-        label.rectTransform.pivot = new Vector2(0.5f, 1f);
-        label.rectTransform.anchoredPosition = new Vector2(0f, -ArrowHeight - 4f);
-        label.rectTransform.sizeDelta = new Vector2(0f, 40f);
-        label.text = "밀어서 뒤집기";
+        UiBuilder.Stretch(label.rectTransform, 0f, 0f, 0f, 0f);
+        label.text = "카드를 누르거나 오른쪽으로 밀어서 뒤집기";
 
         _group.gameObject.SetActive(false);
     }
@@ -79,6 +61,8 @@ public sealed class GachaRevealView
             SetHintVisible(false);
             return;
         }
+
+        _shownCards.Clear();
 
         if (cards.Count == 1)
             LayoutSingle(cards[0], onOpen);
@@ -111,6 +95,7 @@ public sealed class GachaRevealView
         UiBuilder.Place(_singleCard.Root, 0f, 0f, SingleWidth, height);
         _singleCard.SetVisible(true);
         _singleCard.SetCard(info, onOpen, OnCardRevealed);
+        _shownCards.Add(_singleCard);
     }
 
     //4 · 4 · 2 줄. 줄마다 가운데로 모은다
@@ -148,6 +133,7 @@ public sealed class GachaRevealView
                 UiBuilder.Place(card.Root, left + column * (MultiWidth + MultiColumnGap),
                     row * (height + MultiRowGap), MultiWidth, height);
                 card.SetCard(cards[index], onOpen, OnCardRevealed);
+                _shownCards.Add(card);
             }
         }
     }
@@ -175,7 +161,13 @@ public sealed class GachaRevealView
         _hintTween = null;
 
         if (visible)
+        {
             PlayHintCycle();
+            return;
+        }
+
+        foreach (GachaRevealCard card in _shownCards)
+            card.SetHint(0f, 0f);
     }
 
     //왼쪽에서 나타나 오른쪽으로 흐르며 사라진다. 뒷면이 남아 있고 화면에 보이는 동안만 되풀이한다
@@ -183,8 +175,11 @@ public sealed class GachaRevealView
     {
         _hintTween = UiAnimator.Play(HintCycleSeconds, t =>
         {
-            _arrow.anchoredPosition = new Vector2((t - 0.5f) * HintTravel, 0f);
-            _arrowGroup.alpha = t < 0.3f ? t / 0.3f : t > 0.7f ? (1f - t) / 0.3f : 1f;
+            float offset = (t - 0.5f) * HintTravel;
+            float alpha = t < 0.3f ? t / 0.3f : t > 0.7f ? (1f - t) / 0.3f : 1f;
+
+            foreach (GachaRevealCard card in _shownCards)
+                card.SetHint(offset, alpha);
         }, () =>
         {
             _hintTween = null;

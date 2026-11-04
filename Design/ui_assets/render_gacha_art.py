@@ -1,15 +1,17 @@
 """
-뽑기 화면 아트 — 카드 뒷면 · 밀어서 뒤집기 화살표 · 공개 이펙트(빛 번짐 · 고리)
+뽑기 화면 아트 — 카드 뒷면 · 밀어서 뒤집기 화살표 · 공개 이펙트(빛 번짐 · 고리) · 구장 조명 배경
 
 사용법
     python Design/ui_assets/render_gacha_art.py
 
 출력
-    Assets/Resources/UI/Card/card_back.png      카드 뒷면 1398×1957 (어두운 회색 + 은색 테두리 + 빨간 실밥)
-    Assets/Resources/UI/Gacha/swipe_arrow.png   꼬리(왼쪽)로 갈수록 옅어지는 화살표 330×60 → 2배
+    Assets/Resources/UI/Card/card_back.png      카드 뒷면 1398×1957 (어두운 회색 + 은색 테두리 + 내야 다이아몬드 문장)
+    Assets/Resources/UI/Gacha/swipe_arrow.png   꼬리(왼쪽)로 갈수록 옅어지는 두꺼운 화살표 360×110 → 2배
+    Assets/Resources/UI/Gacha/gacha_bg.png      구장 조명 배경 1080×2340 (위 양쪽 모서리에서 카드 자리로 엇갈리는 빛줄기)
     Assets/Resources/UI/Fx/glow_soft.png        흰 원형 빛 번짐 256 (등급색으로 틴트)
     Assets/Resources/UI/Fx/ring.png             흰 고리 256 (공개 순간 퍼지는 충격파)
 """
+import math
 import subprocess
 import tempfile
 import time
@@ -23,51 +25,57 @@ WORK = Path(tempfile.gettempdir()) / "bbm_gacha_art"
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 
 CW, CH = 1398, 1957
-SEAM_RADIUS = 980        # 카드 전체를 공 한가운데로 보고 그린 실밥의 공 반지름
-SEAM_STITCHES = 21
+DIAMOND_HALF = 400       # 가운데 다이아몬드 반대각선 (시안 330 에서 키움)
+PLATE_WIDTH = 190
+BASE_SIZE = 62
+BG_W, BG_H = 1080, 2340
+STAGE_Y = 1330           # 빛줄기가 엇갈리는 높이 = 결과 카드 가운데 (1080×2278 기준)
 
 
 def f(v):
     return f"{v:.1f}"
 
 
-def cubic(p0, p1, p2, p3, t):
-    """3차 베지어 위의 점"""
-    u = 1 - t
-    return tuple(u ** 3 * a + 3 * u * u * t * b + 3 * u * t * t * c + t ** 3 * d for a, b, c, d in zip(p0, p1, p2, p3))
-
-
 def card_back():
-    """어두운 회색 바탕(배경 #1B1B1B 보다 한 단 밝다) + 왼쪽 위 은은한 빛 + 큰 실밥 두 줄(바늘땀만 빨강) + 은색 테두리 두 줄"""
-    cx, cy, r = CW / 2, CH / 2, SEAM_RADIUS
+    """어두운 회색 바탕(배경 #1B1B1B 보다 한 단 밝다) + 가운데서 옅어지는 내야 격자 + 큰 다이아몬드 두 줄 ·
+    은색 홈플레이트 · 1·2·3루 베이스 + 은색 테두리 두 줄"""
+    cx, cy, k = CW / 2, CH / 2, DIAMOND_HALF
     out = [f'''<defs>
 <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A3E46"/><stop offset="0.55" stop-color="#2A2D33"/><stop offset="1" stop-color="#202227"/></linearGradient>
 <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9EEF4"/><stop offset="0.5" stop-color="#8E96A2"/><stop offset="1" stop-color="#D3D9E1"/></linearGradient>
 <radialGradient id="hl" cx="0.3" cy="0.18" r="0.9"><stop offset="0" stop-color="#fff" stop-opacity="0.10"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<pattern id="lat" width="120" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="120" height="120" fill="none" stroke="#fff" stroke-width="3"/></pattern>
+<radialGradient id="fade" cx="0.5" cy="0.5" r="0.62"><stop offset="0" stop-color="#fff" stop-opacity="0.16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<mask id="m"><rect width="{CW}" height="{CH}" fill="url(#fade)"/></mask>
 </defs>
 <rect width="{CW}" height="{CH}" rx="46" fill="url(#bg)"/>
-<rect width="{CW}" height="{CH}" rx="46" fill="url(#hl)"/>''']
-    for side in (-1, 1):
-        ends_x, bend_x = cx + side * r * 0.62, cx + side * r * 0.22
-        p0, p1, p2, p3 = (ends_x, cy - r * 0.8), (bend_x, cy - r * 0.25), (bend_x, cy + r * 0.25), (ends_x, cy + r * 0.8)
-        out.append(f'<path d="M{f(p0[0])},{f(p0[1])} C{f(p1[0])},{f(p1[1])} {f(p2[0])},{f(p2[1])} {f(p3[0])},{f(p3[1])}" '
-                   f'fill="none" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="7"/>')
-        for i in range(1, SEAM_STITCHES + 1):
-            px, py = cubic(p0, p1, p2, p3, i / (SEAM_STITCHES + 1))
-            for s in (-1, 1):
-                out.append(f'<line x1="{f(px + s * 10)}" y1="{f(py)}" x2="{f(px + s * 44)}" y2="{f(py - 22)}" '
-                           f'stroke="#D9503F" stroke-opacity="0.85" stroke-width="9" stroke-linecap="round"/>')
+<rect width="{CW}" height="{CH}" rx="46" fill="url(#hl)"/>
+<rect width="{CW}" height="{CH}" fill="url(#lat)" mask="url(#m)"/>''']
     out.append(f'<rect x="14" y="14" width="{CW - 28}" height="{CH - 28}" rx="38" fill="none" stroke="url(#rim)" stroke-width="10"/>'
                f'<rect x="56" y="56" width="{CW - 112}" height="{CH - 112}" rx="20" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="4"/>')
+    for half, opacity in ((k, 0.9), (k + 34, 0.35)):
+        out.append(f'<polygon points="{f(cx)},{f(cy - half)} {f(cx + half)},{f(cy)} {f(cx)},{f(cy + half)} {f(cx - half)},{f(cy)}" '
+                   f'fill="none" stroke="url(#rim)" stroke-opacity="{opacity}" stroke-width="9"/>')
+    w = PLATE_WIDTH
+    out.append(f'<polygon points="{f(cx - w / 2)},{f(cy - w * 0.4)} {f(cx + w / 2)},{f(cy - w * 0.4)} {f(cx + w / 2)},{f(cy + w * 0.07)} '
+               f'{f(cx)},{f(cy + w * 0.53)} {f(cx - w / 2)},{f(cy + w * 0.07)}" fill="url(#rim)"/>')
+    half_base = BASE_SIZE / 2
+    for bx, by in ((cx + k, cy), (cx, cy - k), (cx - k, cy)):
+        out.append(f'<rect x="{f(bx - half_base)}" y="{f(by - half_base)}" width="{BASE_SIZE}" height="{BASE_SIZE}" '
+                   f'transform="rotate(45 {f(bx)} {f(by)})" fill="url(#rim)"/>')
     return "".join(out)
 
 
 def swipe_arrow():
-    """가는 몸통이 왼쪽 끝에서 투명 → 오른쪽 화살촉으로 갈수록 진해진다"""
+    """두꺼운 화살표. 몸통은 왼쪽 끝에서 투명 → 화살촉으로 갈수록 진해지고, 아래에 옅은 그림자를 깔아 밝은 뒷면에서도 보인다"""
+    body = 'M0,38 L238,38 L238,10 L352,55 L238,100 L238,72 L0,72 Z'
     return ('<defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
-            '<stop offset="1" stop-color="#fff" stop-opacity="1"/></linearGradient></defs>'
-            '<rect x="0" y="26" width="300" height="8" rx="4" fill="url(#a)"/>'
-            '<path d="M286,8 L318,30 L286,52" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>')
+            '<stop offset="0.55" stop-color="#fff" stop-opacity="0.75"/><stop offset="1" stop-color="#fff" stop-opacity="1"/></linearGradient>'
+            '<linearGradient id="s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0"/>'
+            '<stop offset="1" stop-color="#000" stop-opacity="0.45"/></linearGradient>'
+            '<filter id="b" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="4"/></filter></defs>'
+            f'<path d="{body}" fill="url(#s)" filter="url(#b)" transform="translate(3 5)"/>'
+            f'<path d="{body}" fill="url(#a)" stroke-linejoin="round"/>')
 
 
 def glow_soft():
@@ -80,6 +88,42 @@ def ring():
     return ('<defs><filter id="b"><feGaussianBlur stdDeviation="3"/></filter></defs>'
             '<circle cx="128" cy="128" r="112" fill="none" stroke="#fff" stroke-width="10" filter="url(#b)"/>'
             '<circle cx="128" cy="128" r="112" fill="none" stroke="#fff" stroke-width="4"/>')
+
+
+def beam(corner_x, direction, target_y, length, spread, opacity):
+    """모서리 조명(corner_x, 80)에서 화면 가운데(target_y)를 지나 퍼지는 쐐기 모양 빛줄기"""
+    ax, ay = corner_x, 80
+    vx, vy = BG_W / 2 - ax, target_y - ay
+    norm = math.hypot(vx, vy)
+    px, py = -vy / norm * direction, vx / norm * direction
+    ex, ey = ax + vx * length, ay + vy * length
+    return (f'<polygon points="{f(ax)},{f(ay)} {f(ex + px * spread)},{f(ey + py * spread)} {f(ex - px * spread)},{f(ey - py * spread)}" '
+            f'fill="url(#ray)" filter="url(#b)" opacity="{opacity}"/>')
+
+
+def gacha_bg():
+    """구장 조명 — 화면 위 양쪽 모서리 조명에서 카드 자리로 엇갈리는 빛줄기, 교차점의 옅은 빛, 아래쪽 잔디 결"""
+    out = [f'''<defs>
+<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151925"/><stop offset="0.72" stop-color="#121418"/><stop offset="1" stop-color="#132219"/></linearGradient>
+<linearGradient id="ray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.17"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<radialGradient id="lamp" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<radialGradient id="cross" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#DDE6FF" stop-opacity="0.10"/><stop offset="1" stop-color="#DDE6FF" stop-opacity="0"/></radialGradient>
+<filter id="b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter>
+</defs>
+<rect width="{BG_W}" height="{BG_H}" fill="url(#g)"/>''']
+    for i in range(14):
+        y = BG_H - 560 + i * 40
+        out.append(f'<rect y="{y}" width="{BG_W}" height="20" fill="#3E7A4F" fill-opacity="{0.012 + i * 0.003:.3f}"/>')
+    for x, d in ((0, 1), (BG_W, -1)):
+        for target_y, length, spread, opacity in ((STAGE_Y, 1.4, 260, 1.0), (STAGE_Y + 170, 1.25, 170, 0.6)):
+            out.append(beam(x, d, target_y, length, spread, opacity))
+        out.append(f'<circle cx="{x}" cy="80" r="170" fill="url(#lamp)"/>')
+        for row in range(2):
+            for col in range(3):
+                lx = x + d * (34 + col * 34)
+                out.append(f'<circle cx="{lx}" cy="{40 + row * 34}" r="10" fill="#fff" fill-opacity="0.5"/>')
+    out.append(f'<ellipse cx="{BG_W / 2}" cy="{STAGE_Y}" rx="520" ry="380" fill="url(#cross)"/>')
+    return "".join(out)
 
 
 def render(path, body, width, height, scale=1):
@@ -108,6 +152,7 @@ def render(path, body, width, height, scale=1):
 
 if __name__ == "__main__":
     render(UI / "Card" / "card_back.png", card_back(), CW, CH)
-    render(UI / "Gacha" / "swipe_arrow.png", swipe_arrow(), 330, 60, 2)
+    render(UI / "Gacha" / "swipe_arrow.png", swipe_arrow(), 360, 110, 2)
+    render(UI / "Gacha" / "gacha_bg.png", gacha_bg(), BG_W, BG_H)
     render(UI / "Fx" / "glow_soft.png", glow_soft(), 256, 256)
     render(UI / "Fx" / "ring.png", ring(), 256, 256)
