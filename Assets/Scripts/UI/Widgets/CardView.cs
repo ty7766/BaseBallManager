@@ -161,7 +161,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _ovrText = CreateCardText(_front, "Ovr", 230f, OvrLeft, 34f, OvrWidth, 230f, TextAlignmentOptions.Center);
         CenterPivotX(_ovrText.rectTransform);
         _positionText = CreateCardText(_front, "Position", 104f, OvrLeft, 286f, OvrWidth, 104f, TextAlignmentOptions.Center);
-        _teamLogo = CreateLayer(_front, "TeamLogo", null, 1046f, 30f, 300f, 300f);
+        _teamLogo = CreateLayer(_front, "TeamLogo", null, 1046f, 60f, 300f, 300f);
         _teamLogo.preserveAspect = true;
 
         RectTransform starRow = UiBuilder.CreateRect(_front, "Stars");
@@ -176,8 +176,8 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
             _stars[i].gameObject.SetActive(false);
         }
 
-        _enhanceBadge = CreateHiddenLayer(_front, "EnhanceBadge", 1076f, 342f, 240f, 208f);
-        _enhanceText = CreateCardText(_front, "EnhanceText", EnhanceFontSize, 1076f, 342f, 240f, 208f,
+        _enhanceBadge = CreateHiddenLayer(_front, "EnhanceBadge", 1076f, 372f, 240f, 208f);
+        _enhanceText = CreateCardText(_front, "EnhanceText", EnhanceFontSize, 1076f, 372f, 240f, 208f,
             TextAlignmentOptions.Center);
 
         _nameText = CreateCardText(_front, "Name", 138f, 40f, 1712f, 1318f, 170f, TextAlignmentOptions.Center);
