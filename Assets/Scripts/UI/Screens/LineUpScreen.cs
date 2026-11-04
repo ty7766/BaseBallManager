@@ -17,9 +17,10 @@ public class LineUpScreen : UiScreenBehaviour
     private const int BenchSlotCount = 5;
     //벤치는 DH 와 함께 6장이 한 줄에 들어가야 해 야수 칸보다 작다
     private const float SmallCardWidth = 150f;
-    //투수는 야수 칸과 같은 크기로 (한 행 5장이면 들어간다)
-    private const float PitcherCardWidth = SlotCardWidth;
-    private const float PitcherColumnGap = 24f;
+    //투수는 한 행 5장. 열 사이를 넓히려 야수 칸보다 조금 작다
+    private const float PitcherCardWidth = 160f;
+    private const float PitcherColumnGap = 44f;
+    private const float PitcherRowGap = 50f;
     private const float FieldWidth = 1016f;
     //야수 영역 = 버튼 줄 아래 ~ 로비 버튼 위. 수비 배치 + 벤치 묶음을 이 안의 세로 가운데에 둔다
     private const float FieldTop = 320f;
@@ -29,11 +30,9 @@ public class LineUpScreen : UiScreenBehaviour
     private const float BenchGap = 110f;
     private const float BenchCardGap = 30f;
     private const string FieldLinesSprite = "Lineup/lineup_field";
-    //투수 탭은 그대로 위에서부터 깐다
-    private const float PitcherTop = 400f;
-    //투수는 3행뿐이라 영역 안에서 더 내려 깐다
-    private const float PitcherTopOffset = 150f;
-    private const float PitcherRowStep = 310f;
+    //투수 배경 선 그림. 3행 묶음보다 위아래로 크게 깔아 세로가 긴 기기의 빈 곳을 채운다
+    private const string PitcherLinesSprite = "Lineup/pitcher_field";
+    private const float PitcherLinesHeight = 1300f;
 
     private static readonly HitterPosition[] HitterSlots =
     {
@@ -77,6 +76,7 @@ public class LineUpScreen : UiScreenBehaviour
     [SerializeField] private RectTransform _fieldArea;
     [SerializeField] private RectTransform _formation;
     [SerializeField] private RectTransform _pitcherArea;
+    [SerializeField] private RectTransform _pitcherFormation;
     private readonly List<FieldSlot> _fieldSlots = new List<FieldSlot>(HitterSlotCount);
     private readonly List<FieldSlot> _benchSlots = new List<FieldSlot>(BenchSlotCount);
     private readonly List<FieldSlot> _pitcherSlots = new List<FieldSlot>(MaxRowCount);
@@ -176,19 +176,26 @@ public class LineUpScreen : UiScreenBehaviour
 
         float benchHeight = SlotLabelHeight + SlotGap + SmallCardWidth * CardView.BaseHeight / CardView.BaseWidth;
 
-        _formation = UiBuilder.CreateRect(_fieldArea, "Formation");
-        _formation.anchorMin = new Vector2(0.5f, 0.5f);
-        _formation.anchorMax = new Vector2(0.5f, 0.5f);
-        _formation.pivot = new Vector2(0.5f, 0.5f);
-        _formation.anchoredPosition = Vector2.zero;
-        _formation.sizeDelta = new Vector2(FieldWidth, FormationHeight + BenchGap + benchHeight);
+        _formation = CreateCenteredGroup(_fieldArea, "Formation", FormationHeight + BenchGap + benchHeight);
 
         Image fieldLines = UiBuilder.CreateImage(_formation, "FieldLines", Color.white, FieldLinesSprite);
         UiBuilder.Place(fieldLines.rectTransform, 0f, 0f, FieldWidth, FormationHeight);
         fieldLines.gameObject.SetActive(fieldLines.sprite != null);
 
         _pitcherArea = UiBuilder.CreateRect(Root, "PitcherField");
-        UiBuilder.Stretch(_pitcherArea, 32f, PitcherTop, 32f, 200f);
+        UiBuilder.Stretch(_pitcherArea, 32f, FieldTop, 32f, FieldBottom);
+
+        float pitcherSlotHeight = SlotLabelHeight + SlotGap + PitcherCardWidth * CardView.BaseHeight / CardView.BaseWidth;
+
+        _pitcherFormation = CreateCenteredGroup(_pitcherArea, "PitcherFormation",
+            pitcherSlotHeight * 3f + PitcherRowGap * 2f);
+
+        Image pitcherLines = UiBuilder.CreateImage(_pitcherFormation, "PitcherLines", Color.white, PitcherLinesSprite);
+        pitcherLines.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+        pitcherLines.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+        pitcherLines.rectTransform.sizeDelta = new Vector2(FieldWidth, PitcherLinesHeight);
+        pitcherLines.rectTransform.anchoredPosition = Vector2.zero;
+        pitcherLines.gameObject.SetActive(pitcherLines.sprite != null);
 
         Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
         RectTransform backRect = backButton.GetComponent<RectTransform>();
@@ -228,6 +235,20 @@ public class LineUpScreen : UiScreenBehaviour
             _benchSlots.Add(new FieldSlot(_formation, $"벤치 {i + 1}",
                 left + i * step, FormationHeight + BenchGap, SmallCardWidth, false));
         }
+    }
+
+    //영역 세로 가운데에 고정하는 묶음. 기기 비율이 달라도 위아래 여백이 같다
+    private static RectTransform CreateCenteredGroup(RectTransform parent, string name, float height)
+    {
+        RectTransform group = UiBuilder.CreateRect(parent, name);
+
+        group.anchorMin = new Vector2(0.5f, 0.5f);
+        group.anchorMax = new Vector2(0.5f, 0.5f);
+        group.pivot = new Vector2(0.5f, 0.5f);
+        group.anchoredPosition = Vector2.zero;
+        group.sizeDelta = new Vector2(FieldWidth, height);
+
+        return group;
     }
 
     //16:9 처럼 세로가 짧은 기기에서는 수비 배치 묶음을 영역 높이에 맞춰 통째로 줄인다 (긴 기기는 그대로)
@@ -275,9 +296,12 @@ public class LineUpScreen : UiScreenBehaviour
         if (_pitcherSlots.Count > 0)
             return;
 
-        AddPitcherRow("SP", 5, PitcherTopOffset);
-        AddPitcherRow("RP", 5, PitcherTopOffset + PitcherRowStep);
-        AddPitcherRow("CP", 1, PitcherTopOffset + PitcherRowStep * 2f);
+        float rowStep = SlotLabelHeight + SlotGap + PitcherCardWidth * CardView.BaseHeight / CardView.BaseWidth
+            + PitcherRowGap;
+
+        AddPitcherRow("SP", 5, 0f);
+        AddPitcherRow("RP", 5, rowStep);
+        AddPitcherRow("CP", 1, rowStep * 2f);
     }
 
     //한 행을 가운데 정렬로 깐다
@@ -290,7 +314,7 @@ public class LineUpScreen : UiScreenBehaviour
         {
             string slotLabel = count == 1 ? label : $"{label} {i + 1}";
 
-            _pitcherSlots.Add(new FieldSlot(_pitcherArea, slotLabel,
+            _pitcherSlots.Add(new FieldSlot(_pitcherFormation, slotLabel,
                 left + i * step, top, PitcherCardWidth, false));
         }
     }
