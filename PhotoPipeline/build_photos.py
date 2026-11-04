@@ -17,7 +17,8 @@
     배경 제거 모델(BiRefNet-portrait 973MB)은 rembg가 첫 실행 때 ~/.u2net 에 받는다
 
 규격 (경기_UI_명세.md 3-2 · 프레이밍 B안 = 머리~허벅지)
-    768 x 960 · 얼굴 박스 높이 15.5% · 눈높이 세로 21% · 얼굴 중심 가로 50% · 아래 13%는 서서히 투명하게
+    768 x 960 · 얼굴 박스 높이 15.5% · 눈높이 세로 21% · 아래 13%는 서서히 투명하게
+    가로는 얼굴을 50%에 두되 몸통 무게중심 쪽으로 최대 18%까지 당긴다 (달리는 자세가 한쪽으로 쏠리지 않게)
     크기는 얼굴로만 정한다. 보이는 몸 길이로 맞추면 원본이 어디서 잘렸느냐에 따라 카드마다 크기가 달라진다
 """
 
@@ -48,6 +49,12 @@ HEAD_MARGIN = 0.03       # 머리(모자·헬멧 포함) 위 최소 여백
 FACE_RATIO = 0.155       # 얼굴 박스 높이 / 출력 높이. 눈 아래로 얼굴 5.1개 = 허벅지까지 보인다
 FADE_START = 0.87       # 이 높이부터 아래로 알파가 0까지 떨어진다 (카드 하단 이름 그림자에 녹아든다)
 MAX_SHRINK = 0.85        # 모자·헬멧이 여백을 넘을 때 줄일 수 있는 한계. 더 필요하면 줄이지 않고 경고만 한다
+BODY_PULL = 0.6          # 얼굴 대신 몸통 쪽으로 가로 중심을 당기는 비율. 달리는 자세처럼 몸이 한쪽에 쏠린 사진용
+MAX_BODY_SHIFT = 0.18    # 가로로 옮기는 한계 (출력 폭 비율). 얼굴이 32~68% 안에 머문다
+#자동 정렬 뒤 사진별로 손보는 가로 보정. 선수를 오른쪽(+)·왼쪽(-)으로 옮긴다 (출력 폭 비율)
+PHOTO_NUDGE_X = {
+    "김도영_기아": 0.04,
+}
 
 # --- 검수 경고 기준 ---
 UPSCALE_WARN = 1.3       # 원본을 이 배율 넘게 키우면 흐려지기 시작한다
@@ -186,7 +193,7 @@ def segment_region(rgb, segmenter, eye, scale):
     """출력 영역 주변만 잘라 배경을 지운다. 사진 전체를 넣을 때보다 머리카락 경계가 훨씬 세밀하다"""
     img_h, img_w = rgb.shape[:2]
     x0, y0, w, h = output_window(eye, scale * MAX_SHRINK)   # 최대로 줄였을 때의 창까지 덮는다
-    pad = 0.08
+    pad = 0.2   # 몸통 쪽으로 가로를 옮겨도(MAX_BODY_SHIFT) 누끼 영역 안에 들도록 넉넉히 잡는다
     rx0, ry0 = max(0, int(x0 - w * pad)), max(0, int(y0 - h * pad))
     rx1 = min(img_w, int(np.ceil(x0 + w * (1 + pad))))
     ry1 = min(img_h, int(np.ceil(y0 + h * (1 + pad))))
@@ -225,6 +232,20 @@ def keep_subject(alpha, eye, face_width):
     soft = cv2.dilate(keep.astype(np.uint8) * 255, np.ones((5, 5), np.uint8))
     soft = cv2.GaussianBlur(soft, (0, 0), 2)
     return (alpha.astype(np.uint16) * soft // 255).astype(np.uint8)
+
+
+def body_shift(alpha, eye, window):
+    """몸통 무게중심이 얼굴에서 가로로 얼마나 떨어졌나 (출력 폭 비율, 한계 안으로 자름).
+    얼굴만 가운데 두면 달리는 자세는 몸이 한쪽으로 쏠려 카드가 기울어 보인다"""
+    x0, y0, w, h = window
+    rows = slice(max(0, int(y0)), max(0, min(alpha.shape[0], int(y0 + h * FADE_START))))
+    c0 = max(0, int(eye[0] - w * 0.7))
+    c1 = min(alpha.shape[1], int(eye[0] + w * 0.7))
+    mass = alpha[rows, c0:c1].astype(np.float64).sum(axis=0)
+    if c1 <= c0 or mass.sum() <= 0:
+        return 0.0
+    center = c0 + float((np.arange(mass.size) * mass).sum() / mass.sum())
+    return float(np.clip((center - eye[0]) / w * BODY_PULL, -MAX_BODY_SHIFT, MAX_BODY_SHIFT))
 
 
 def head_top(alpha, eye, face_width):
@@ -335,6 +356,8 @@ def process(path, key, detector, segmenter):
         scale *= max(MAX_SHRINK, room / head_span)
 
     window = output_window(eye, scale)
+    shift = body_shift(alpha, eye, window) - PHOTO_NUDGE_X.get(key, 0.0)
+    window = (window[0] + shift * window[2],) + window[1:]
     x0, y0 = window[0], window[1]
     rgb_out = warp(region, x0, y0, scale, cv2.BORDER_REPLICATE)
     alpha_out = warp(alpha, x0, y0, scale, cv2.BORDER_CONSTANT)
@@ -348,6 +371,7 @@ def process(path, key, detector, segmenter):
     entry.update({
         "scale": round(float(scale), 3),
         "margin": round(float(margin), 3),
+        "shift": round(shift, 3),
         "flags": [text for _, text in flags],
         "severity": max((level for level, _ in flags), default=0),
     })

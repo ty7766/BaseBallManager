@@ -1,7 +1,8 @@
-using System.IO;
+﻿using System.IO;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
 
 /// <summary>
 /// OS 한글 폰트에서 TMP 폰트 자산을 만들어 Resources에 저장한다.
@@ -11,6 +12,15 @@ public static class UiFontAssetBuilder
 {
     private const string AssetFolder = "Assets/Resources/UI/Fonts";
     private const string AssetPath = AssetFolder + "/UiKoreanFont.asset";
+
+    //카드 폰트(이사만루 · 공게임즈). 출처 표기 조건이라 README 크레딧에 남긴다
+    private const string CardFolder = AssetFolder + "/Card";
+    private const string CardSourcePath = CardFolder + "/esamanru Bold.ttf";
+    private const string CardAssetPath = CardFolder + "/CardFont.asset";
+    //큰 OVR 숫자도 뭉개지지 않는 샘플 크기 · 밑그림자가 번질 여백
+    private const int CardSamplingSize = 64;
+    private const int CardAtlasPadding = 8;
+    private const int CardAtlasSize = 1024;
 
     private static readonly string[] CandidateFamilies =
     {
@@ -25,26 +35,47 @@ public static class UiFontAssetBuilder
     }
 
     /// <summary>
+    /// 카드 폰트 자산을 이사만루 Bold 에서 새로 만든다. 글리프는 재생 중 필요한 만큼 채워진다
+    /// </summary>
+    [MenuItem("Tools/BaseBallManager/카드 폰트 자산 만들기", false, 10)]
+    public static void BuildCardFont()
+    {
+        Font source = AssetDatabase.LoadAssetAtPath<Font>(CardSourcePath);
+
+        if (source == null)
+        {
+            Debug.LogWarning($"[UiFontAssetBuilder]: '{CardSourcePath}' 에 이사만루 Bold 를 넣고 다시 실행하세요");
+            return;
+        }
+
+        if (AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(CardAssetPath) != null)
+            AssetDatabase.DeleteAsset(CardAssetPath);
+
+        TMP_FontAsset created = TMP_FontAsset.CreateFontAsset(source, CardSamplingSize, CardAtlasPadding,
+            GlyphRenderMode.SDFAA, CardAtlasSize, CardAtlasSize, AtlasPopulationMode.Dynamic, true);
+
+        created.name = "CardFont";
+
+        AssetDatabase.CreateAsset(created, CardAssetPath);
+        AttachSubAssets(created);
+        AssetDatabase.SaveAssets();
+
+        Debug.Log($"[UiFontAssetBuilder]: '{CardAssetPath}' 를 만들었습니다");
+    }
+
+    /// <summary>
     /// 재생 중 구워진 글리프를 지워 자산을 원래 크기로 되돌린다.
     /// 동적 아틀라스는 쓸수록 커져 커밋 때마다 수 MB가 바뀌므로 커밋 전에 비운다
     /// </summary>
     [MenuItem("Tools/BaseBallManager/UI 폰트 글리프 캐시 비우기", false, 10)]
     public static void ClearGlyphCache()
     {
-        TMP_FontAsset fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetPath);
+        ClearGlyphs(AssetPath);
+        ClearGlyphs(CardAssetPath);
 
-        if (fontAsset == null)
-        {
-            Debug.LogWarning($"[UiFontAssetBuilder]: '{AssetPath}' 가 없습니다");
-            return;
-        }
-
-        fontAsset.ClearFontAssetData(true);
-
-        EditorUtility.SetDirty(fontAsset);
         AssetDatabase.SaveAssets();
 
-        Debug.Log("[UiFontAssetBuilder]: 폰트 글리프 캐시를 비웠습니다 (재생하면 다시 채워집니다)");
+        Debug.Log("[UiFontAssetBuilder]: 본문 · 카드 폰트 글리프 캐시를 비웠습니다 (재생하면 다시 채워집니다)");
     }
 
     /// <summary>
@@ -71,6 +102,21 @@ public static class UiFontAssetBuilder
         Debug.Log($"[UiFontAssetBuilder]: '{AssetPath}' 를 만들었습니다");
 
         return AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetPath);
+    }
+
+    //동적 아틀라스에 쌓인 글리프를 지운다. 자산이 없으면 경고만 남긴다
+    private static void ClearGlyphs(string assetPath)
+    {
+        TMP_FontAsset fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath);
+
+        if (fontAsset == null)
+        {
+            Debug.LogWarning($"[UiFontAssetBuilder]: '{assetPath}' 가 없습니다");
+            return;
+        }
+
+        fontAsset.ClearFontAssetData(true);
+        EditorUtility.SetDirty(fontAsset);
     }
 
     //아틀라스 텍스처와 머티리얼은 메모리상 객체다. 서브 에셋으로 함께 저장해야 참조가 살아남는다

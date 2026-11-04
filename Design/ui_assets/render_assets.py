@@ -61,13 +61,12 @@ def box(w, h, fill=None, ring=0, ring_color=None, radius=0):
 
 STAR = "M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"
 BURST = "M12 1l2.6 6.3L21 5l-2.3 6.4L24 14l-6.4 1.3L19 22l-7-3.6L5 22l1.4-6.7L0 14l5.3-2.6L3 5l6.4 2.3z"
-HEX = "45,3 135,3 177,78 135,153 45,153 3,78"
-HEX_INNER = "53,16 127,16 162,78 127,140 53,140 18,78"
 
 
 # ---------------------------------------------------------------- A. 카드 (카드 좌표 1배)
 
 def card_assets():
+    """카드 아이콘·빈 슬롯·테두리 광. 카드 배경·전경·강화 메달·카드 별은 render_card_art.py 가 만든다"""
     asset("Card", "icon_star", 176, 176,
           f'<path d="{STAR}" fill="{WHITE}" stroke="rgba(8,12,20,0.9)" stroke-width="1.1" stroke-linejoin="round"/>',
           scale=1, vb="0 0 24 24", tint="카드 종류색 (#93C1F5 · #FF6FA0 · #F2C14E)",
@@ -80,36 +79,6 @@ def card_assets():
           f'<path d="M{cx} {cy - 60}V{cy + 60}M{cx - 60} {cy}H{cx + 60}" stroke="rgba(255,255,255,0.35)" stroke-width="12"/>',
           scale=1, usage="빈 카드 슬롯 (라인업 · 조합 재료 칸). 카드 절반 크기")
 
-    asset("Card", "card_mask_photo", 1398, 1700,
-          '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">'
-          '<stop offset="0" stop-color="#fff"/><stop offset="0.74" stop-color="#fff"/>'
-          '<stop offset="0.94" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>'
-          '</linearGradient></defs><rect width="1398" height="1700" fill="url(#g)"/>',
-          scale=1, usage="사진 알파 마스크. 카드 (0,0)에 배치. 기본 Mask는 경계가 딱딱하므로 소프트 마스크 필요")
-
-    asset("Card", "card_team_aura", 1120, 1120,
-          '<defs><radialGradient id="g" cx="50%" cy="50%" r="50%">'
-          '<stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>'
-          '</radialGradient></defs><rect width="1120" height="1120" fill="url(#g)"/>',
-          scale=1, tint="팀색, 알파 0.28(노말) · 0.18(시그) · 골글 없음",
-          usage="중심을 카드 (699, 587)에. 사진 뒤")
-
-    asset("Card", "card_name_shadow", 1398, 417,
-          '<defs><radialGradient id="g" gradientUnits="userSpaceOnUse" cx="699" cy="233.52" r="838.8" '
-          'gradientTransform="translate(699 233.52) scale(1 0.288341) translate(-699 -233.52)">'
-          '<stop offset="0" stop-color="#fff"/><stop offset="0.52" stop-color="#fff" stop-opacity="0.5455"/>'
-          '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>'
-          '<rect width="1398" height="417" fill="url(#g)"/>',
-          scale=1, tint="노말 #040C1C 알파 0.66 · 시그 #4A0826 알파 0.56 · 골글 #281803 알파 0.6",
-          usage="카드 (0, 1540)에 배치. 이름 뒤")
-
-    asset("Card", "card_fx_shine_5", 1398, 1957,
-          '<defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="-249.9" y1="536" x2="1647.9" y2="1421">'
-          '<stop offset="0.30" stop-color="#fff" stop-opacity="0"/><stop offset="0.40" stop-color="#fff"/>'
-          '<stop offset="0.50" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>'
-          '<rect width="1398" height="1957" fill="url(#g)"/>',
-          scale=1, tint="흰색, 알파 0.14", usage="노말 5성만. 카드 전체 덮개 (움직이면 광택 연출)")
-
     for key, glow, ring in (("signature", "#FF5C93", "#FF6FA0"), ("goldenglove", "#F2C14E", "#F7D57A")):
         asset("Card", f"card_fx_glow_{key}", 800, 800,
               '<defs><filter id="b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="45"/></filter>'
@@ -118,21 +87,6 @@ def card_assets():
               f'<rect x="176" y="176" width="448" height="448" fill="{ring}" fill-opacity="0.58"/></g>',
               scale=1, border=[200, 200, 200, 200], mode="Sliced",
               usage="카드보다 사방 180 크게(1758×2317) 늘려서 카드 뒤에 배치")
-
-    asset("Card", "badge_enhance_fill", 264, 229, f'<polygon points="{HEX}" fill="{WHITE}"/>',
-          scale=1, vb="0 0 180 156", tint="+1 #5F6A7A · +2 #3C8B6E · +3 #3D6FB0 · +4 #6B55B0 · +5 #9A4A8E · +6 #B0703A · +7 #B04A42 · +8 #8E2B3A · +9 #4A1E2C",
-          usage="강화 육각형 바탕. 카드 우상단 (1078, 56)")
-    asset("Card", "badge_enhance_rim", 264, 229, f'<polygon points="{HEX}" fill="none" stroke="{WHITE}" stroke-width="6"/>',
-          scale=1, vb="0 0 180 156", tint="+1~3 흰색 알파 0.45 · +4~6 #C9D2DD · +7~9 #D9B45A · +10 흰색 알파 0.85",
-          usage="강화 테두리. 바탕 위에 겹침")
-    asset("Card", "badge_enhance_line", 264, 229, f'<polygon points="{HEX_INNER}" fill="none" stroke="{WHITE}" stroke-width="3"/>',
-          scale=1, vb="0 0 180 156", tint="흰색 알파 0.2 (+10은 0.4)", usage="강화 안쪽 선. 테두리 위에 겹침")
-    asset("Card", "badge_enhance_holo", 264, 229,
-          '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#19AFC6"/>'
-          '<stop offset="0.3" stop-color="#6E4BFF"/><stop offset="0.55" stop-color="#C23E9C"/>'
-          '<stop offset="0.8" stop-color="#E0981A"/><stop offset="1" stop-color="#19AFC6"/></linearGradient></defs>'
-          f'<polygon points="{HEX}" fill="url(#g)"/>',
-          scale=1, vb="0 0 180 156", usage="+10 전용 바탕 (틴트 안 함). 테두리 · 안쪽 선은 공용 애셋")
 
     asset("Card", "icon_breakthrough", 128, 128, f'<path d="{BURST}" fill="{WHITE}"/>',
           scale=1, vb="0 0 24 24", tint="#7EE3D8", usage="카드 뒷면 '돌파 완료'")

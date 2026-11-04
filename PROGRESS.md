@@ -343,6 +343,34 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
   큰 카드(상세 700 · 뽑기 1장 540)는 원본. 썸네일은 화면을 떠날 때 한꺼번에, 원본은 12장 LRU로 **텍스처까지** 내린다
 - `CardCellView.SetGridPosition` 이 실제 칸 폭을 카드에 알린다 (카드는 328로 조립한 뒤 스케일로 줄이므로)
 
+### 2-0-H. 🃏 카드 디자인 개편 (세션 61, 브랜치 `feature/ui-card`)
+
+**브랜치 운영** — 공통 UI는 `feature/game-ui`, 카드 공통 디자인은 `feature/ui-card` 에서 끝내고 `feature/game-ui` 로 합친다.
+그다음 메뉴별 브랜치 8개(`feature/ui-lineup` · `-gacha` · `-inventory` · `-enhance` · `-train` · `-combine` · `-dismantle` · `-goldenglove`)를 `feature/game-ui` 에서 딴다.
+공통 수정은 `feature/game-ui` 에 커밋하고 진행 중인 메뉴 브랜치에 병합해 받는다.
+⚠️ 메뉴 브랜치를 따기 전에 "이 화면만 굽기" 메뉴를 먼저 넣는다 (지금은 19화면을 전부 다시 구워 병합 충돌이 난다). 씬 파일은 `feature/game-ui` 에서만 고친다.
+
+**작성자 지시 (레퍼런스 = 컴프야 v26 카드)** — 배경 분위기 · 허벅지 중간부터 보이는 큰 선수 · 로고 오른쪽 위 · 별 가운데 위(3성 파랑 · 4성 초록 · 5성 보라) · 이름 가운데 아래 `곽빈'26` · LIVE 배지 없음 · 전체 광택 · "카드와 선수가 따로 노는 느낌" 해소 · 강화는 육각형 · 글꼴 이사만루
+
+| 한 것 | 내용 |
+|---|---|
+| 시안 | `PhotoPipeline/output/card_mockup.html` (로컬 · 사진 포함이라 git 제외) 로 3·4·5성 · 시그 · 골글을 상세 · 그리드 · 라인업 크기에서 비교 → 작성자 승인 |
+| 아트 | `Design/ui_assets/render_card_art.py` (신규) — 노멀 배경 등급별 3종(붓 터치 · 핀스트라이프 · 내야 격자 · 망점 · 실밥) · 사진 앞 하단 물감 띠 5종 · 골글 월계수 · 강화 육각 메달 4종(동·은·금·홀로) · 카드 별 2장. 고정 시드 |
+| 셰이더 | `Assets/Shaders/UI/` — `CardPhoto`(왼쪽 위 가장자리 빛 · 배경색 물들임) · `CardPhotoBack`(사진 알파를 밉맵으로 흐린 그림자 · 빛 번짐) · `CardShine`(카드마다 사선 빛 띠, 화면 위치만큼 늦게 시작) · `CardHolo`(배경 무지개 반사). 모두 시간 값으로 움직여 CPU 갱신이 없다 |
+| 코드 | `CardView` 레이어 재구성 (명세 1-2 · 6-6) · `CardStyle`(종류·등급별 그림·색) · `CardMaterials`(스타일당 머티리얼 1벌) · `CardTextMaterials`(TMP 밑그림자 3벌) · `EnhanceBadgeStyle`(구 `EnhanceBadgeColors`) · `CardArtImporter` · `UiFontProvider.Card` |
+| 사진 | 사진 칸을 카드 폭에 꽉 채움 (0, 202) 1398×1748. 파이프라인 가로 정렬을 몸통 무게중심 쪽으로 최대 18% 당김 + 사진별 보정 `PHOTO_NUDGE_X` (김도영 +4%) |
+| 글꼴 | 이사만루 Bold (공게임즈) → `Resources/UI/Fonts/Card/CardFont` (메뉴 `카드 폰트 자산 만들기`). 상업 이용 가능 · 출처 표기 조건 (작성자 확인 11-04) → 저장소에 커밋. 프리팹은 본문 폰트로 굽고 첫 `SetCard` 에서 카드 폰트 + 밑그림자 머티리얼을 입힌다 |
+| 정리 | 안 쓰게 된 `card_base_normal` · `card_team_aura` · `card_name_shadow` · `card_fx_shine_5` · `card_mask_photo` · `badge_enhance_fill/rim/line` 삭제 |
+
+⏭️ **README 를 쓸 때 크레딧에 "이사만루체 — 공게임즈(GONGGAMES)" 출처를 적는다** (폰트 이용 조건)
+
+#### 🔴 이번에 겪은 것
+
+- **리니어 색공간에서 더하기 합성은 시안보다 훨씬 밝다** — 광택 세기 0.42를 그대로 넣었더니 카드가 뿌옇게 덮였다. 시안 값의 0.4배로 둔다
+- **광택 띠 폭을 화면 기준으로 잡으면 작은 카드에서 막이 된다** — 폭은 카드 기준, 시작 시각만 화면 위치로 늦춘다 (uv 미분으로 카드 크기·위치를 구해 카드마다 값을 넘기지 않는다)
+- **시그·골글 테두리 광이 카드 안쪽에 사각형 선으로 보였다** — 9-슬라이스 그림을 Simple 로 늘려 그렸고, 카드 위에 깔렸다. Sliced + `pixelsPerUnitMultiplier = 1/축소비` + 카드 뒤로 옮김
+- **골글이 밋밋했던 이유** — 골글 베이스의 장식은 가운데 글러브 문양 하나인데, 선수를 키우며 그 문양이 선수 뒤로 숨었다. 양옆이 평평한 금색만 남아 월계수 장식으로 채웠다
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.
@@ -995,3 +1023,4 @@ Core                  SingletonBehaviour
 | 59 (10-15, Desktop) | **선수 사진 자동 수집 도구.** `PhotoPipeline/fetch_photos.py` — 네이버·카카오 이미지 검색 API → 그해 기사 사진만(2000년 이전은 `현역 시절` 검색 · 날짜 무시) → 후보 10장 YuNet 얼굴 검사(크기 · 흔들림 · 머리 잘림 · 다른 얼굴 · 하단/좌우 잘림) → 선수별 모든 연도 얼굴을 SFace로 대조해 다른 사람 제거 → 1등을 `input/{photo 키}.jpg`. 로컬 검수 화면(클릭 교체 · 없음 처리) · 이어하기 · 검색 캐시 · 직접 넣은 사진 보호 · 출처 `report.csv`. CSV `photo` 열 자동 채움(941명, 로마자 규칙 명세 3-2). 가짜 API로 전 흐름 검증, 실제 API는 키 발급 후 (2-0-G) |
 | 60 (10-17~18) | **선수 사진 방식 변경.** 자동 수집 보류 · 인물당 1장 · 한글 파일명 `이름_팀`(골든글러브는 `_골글` 별도) · `CardMasterData.BuildPhotoKey`(photo 열이 비면 `이름_팀`) · 수집 목록 590장 자동 생성 · jpg 통일(avif 미지원) · 카드 사진이 베이스에 가려 안 보이던 레이어 순서 수정 · 무릎 기준 프레이밍 |
 | 61 (11-03, Desktop) | **CLI → 데스크톱 앱 이관.** `PRODUCT.md`(impeccable init) 신설. **인게임 사진 문제 해결** — 원인 ① Unity 자동 슬라이스(Multiple) ② 보이는 몸 길이로 크기 맞춤 ③ 원본 저해상도. `PlayerPhotoImporter`(Single·Full Rect·밉맵·ASTC 6×6) · 프레이밍 B안(머리~허벅지, 얼굴 15.5% · 눈 21%) 작성자 확정 · `fit_to_frame` 폐기 · 썸네일 320×400 + `CardView.SetDisplayWidth`로 원본/썸네일 선택 · `PlayerPhotoProvider` 가 화면에 떠 있는 사진을 내리던 문제와 텍스처 미해제 수정 · `--install` · 검수 시트 카드 미리보기 · 수집 규칙(긴 변 1200px) (2-0-G) |
+| 61 이어서 (11-03, `feature/ui-card`) | **카드 디자인 개편.** 컴프야 v26 레퍼런스 · HTML 시안 승인 → Unity 적용. 노멀 배경 등급별 3종 · 하단 물감 띠 · 골글 월계수 · 금속 육각 강화 메달 · 등급색 별 · 로고 오른쪽 위 · 이름 `곽빈'26` · 이사만루(로컬 전용) · 카드 셰이더 4종(사진 빛 · 그림자 · 광택 · 홀로) · 사진 칸 카드 폭 꽉 채움 · 사진 가로 정렬 몸통 쪽 보정 · 시그·골글 테두리 광이 카드 안에 그려지던 문제 수정 (2-0-H) |
