@@ -5,7 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 뽑기 화면. 일반 · 시그니쳐를 1회 또는 10연차로 돌리고, 결과는 뒷면으로 깔아 눌러 · 밀어 뒤집게 한다
+/// 뽑기 화면. 일반 · 시그니쳐를 1회 또는 10회 돌리고, 결과는 뒷면으로 나눠 깔아 눌러 · 밀어 뒤집게 한다.
+/// 10회 버튼 아래 줄 오른쪽 기록 보기로 지금까지 뽑은 카드를 최신 순으로 본다
 /// </summary>
 public class GachaScreen : UiScreenBehaviour
 {
@@ -14,6 +15,13 @@ public class GachaScreen : UiScreenBehaviour
     private const string StageSprite = "Gacha/gacha_bg";
     private const float StageWidth = 1080f;
     private const float StageHeight = 2340f;
+    //뽑기 버튼 · 그 아래 결과 줄(왼쪽 결과 글 · 오른쪽 네모난 기록 보기)
+    private const float RollTop = 326f;
+    private const float RollHeight = 130f;
+    private const float ResultRowTop = 472f;
+    private const float HistoryButtonSize = 104f;
+    private const float ResultAreaTop = ResultRowTop + HistoryButtonSize + 16f;
+    private const float ResultAreaBottom = 184f;
 
     private Action _onBack;
     private Action<int> _onCardSelected;
@@ -24,9 +32,7 @@ public class GachaScreen : UiScreenBehaviour
     [SerializeField] private Button _signatureTabButton;
     [SerializeField] private Button _rollOnceButton;
     [SerializeField] private Button _rollTenButton;
-    [SerializeField] private TextMeshProUGUI _rollOnceLabel;
-    [SerializeField] private TextMeshProUGUI _rollTenLabel;
-    [SerializeField] private TextMeshProUGUI _pityText;
+    [SerializeField] private Button _historyButton;
     [SerializeField] private TextMeshProUGUI _resultText;
     [SerializeField] private RectTransform _resultArea;
     [SerializeField] private TextMeshProUGUI _emptyText;
@@ -34,6 +40,7 @@ public class GachaScreen : UiScreenBehaviour
     private readonly List<int> _resultInstanceIds = new List<int>(TenRollCount);
     private readonly List<CardDisplayInfo> _resultCards = new List<CardDisplayInfo>(TenRollCount);
     private GachaRevealView _reveal;
+    private GachaHistoryPanel _historyPanel;
 
     private GachaType _gachaType = GachaType.Normal;
 
@@ -48,7 +55,7 @@ public class GachaScreen : UiScreenBehaviour
     }
 
     /// <summary>
-    /// 보유 뽑기권 · 천장 카운터를 다시 읽는다
+    /// 보유 뽑기권을 다시 읽어 버튼을 켜고 끈다
     /// </summary>
     public void Refresh()
     {
@@ -57,24 +64,11 @@ public class GachaScreen : UiScreenBehaviour
         CurrencyType ticketType = GetTicketType();
         int tickets = CurrencyManager.Instance == null ? 0 : CurrencyManager.Instance.GetAmount(ticketType);
 
-        _rollOnceLabel.text = $"1회\n{GetTicketLabel()} 1";
-        _rollTenLabel.text = $"10연차\n{GetTicketLabel()} {TenRollCount}";
-
         _rollOnceButton.interactable = tickets >= 1;
         _rollTenButton.interactable = tickets >= TenRollCount;
 
         UiTabStyle.Apply(_normalTabButton, _gachaType == GachaType.Normal);
         UiTabStyle.Apply(_signatureTabButton, _gachaType == GachaType.Signature);
-
-        if (GachaManager.Instance == null)
-            return;
-
-        int pity = _gachaType == GachaType.Normal
-            ? GachaManager.Instance.NormalPityCount
-            : GachaManager.Instance.SignaturePityCount;
-
-        _pityText.text = $"천장  {pity} / {GachaManager.Instance.PityLimit}" +
-                         $"   ·   보유 {GetTicketLabel()} {tickets}장";
     }
 
     protected override void BindEvents()
@@ -83,6 +77,7 @@ public class GachaScreen : UiScreenBehaviour
         Bind(_signatureTabButton, () => SelectType(GachaType.Signature));
         Bind(_rollOnceButton, RollOnce);
         Bind(_rollTenButton, RollTen);
+        Bind(_historyButton, OpenHistory);
         BindButton("BackButton", OnBackClicked);
     }
 
@@ -113,23 +108,22 @@ public class GachaScreen : UiScreenBehaviour
             () => SelectType(GachaType.Signature));
         UiBuilder.Place(_signatureTabButton.GetComponent<RectTransform>(), 548f, 210f, 500f, 96f);
 
-        _pityText = UiBuilder.CreateText(Root, "Pity", 32f, UiPalette.Text2);
-        UiBuilder.Place(_pityText.rectTransform, 32f, 320f, 1016f, 44f);
+        _rollOnceButton = UiBuilder.CreateButton(Root, "RollOnce", "1회", 52f, false, RollOnce);
+        UiBuilder.Place(_rollOnceButton.GetComponent<RectTransform>(), 32f, RollTop, 500f, RollHeight);
 
-        _rollOnceButton = UiBuilder.CreateButton(Root, "RollOnce", string.Empty, 34f, false,
-            RollOnce, out _rollOnceLabel);
-        UiBuilder.Place(_rollOnceButton.GetComponent<RectTransform>(), 32f, 376f, 500f, 140f);
-
-        _rollTenButton = UiBuilder.CreateButton(Root, "RollTen", string.Empty, 34f, true,
-            RollTen, out _rollTenLabel);
-        UiBuilder.Place(_rollTenButton.GetComponent<RectTransform>(), 548f, 376f, 500f, 140f);
+        _rollTenButton = UiBuilder.CreateButton(Root, "RollTen", "10회", 52f, true, RollTen);
+        UiBuilder.Place(_rollTenButton.GetComponent<RectTransform>(), 548f, RollTop, 500f, RollHeight);
 
         _resultText = UiBuilder.CreateText(Root, "ResultTitle", 34f, UiPalette.Text3);
-        UiBuilder.Place(_resultText.rectTransform, 32f, 536f, 1016f, 44f);
+        UiBuilder.Place(_resultText.rectTransform, 32f, ResultRowTop, 1016f - HistoryButtonSize - 24f, HistoryButtonSize);
         _resultText.text = "결과";
 
+        _historyButton = UiBuilder.CreateButton(Root, "HistoryButton", "기록\n보기", 30f, false, OpenHistory);
+        UiBuilder.Place(_historyButton.GetComponent<RectTransform>(), 1048f - HistoryButtonSize, ResultRowTop,
+            HistoryButtonSize, HistoryButtonSize);
+
         _resultArea = UiBuilder.CreateRect(Root, "Result");
-        UiBuilder.Stretch(_resultArea, 32f, 588f, 32f, 200f);
+        UiBuilder.Stretch(_resultArea, 32f, ResultAreaTop, 32f, ResultAreaBottom);
 
         _emptyText = UiBuilder.CreateText(_resultArea, "Empty", 34f, UiPalette.Text3, TextAlignmentOptions.Center);
         UiBuilder.Stretch(_emptyText.rectTransform, 0f, 0f, 0f, 0f);
@@ -204,7 +198,7 @@ public class GachaScreen : UiScreenBehaviour
             _resultInstanceIds.Add(result.InstanceId);
     }
 
-    //결과를 뒷면으로 깐다. 1장은 가운데 크게, 10장은 4 · 4 · 2 줄
+    //결과를 뒷면으로 나눠 깐다. 1장은 가운데 크게, 10장은 4 · 4 · 2 줄
     private void ShowResults(int rolledCount)
     {
         _resultCards.Clear();
@@ -229,6 +223,15 @@ public class GachaScreen : UiScreenBehaviour
         Refresh();
     }
 
+    //처음 열 때 만들어 화면 맨 위에 덮는다
+    private void OpenHistory()
+    {
+        if (_historyPanel == null)
+            _historyPanel = GachaHistoryPanel.Create(Root);
+
+        _historyPanel.Open();
+    }
+
     private void OnResultClicked(int instanceId)
     {
         _onCardSelected?.Invoke(instanceId);
@@ -239,14 +242,8 @@ public class GachaScreen : UiScreenBehaviour
         return _gachaType == GachaType.Signature ? CurrencyType.SignatureTicket : CurrencyType.NormalTicket;
     }
 
-    private string GetTicketLabel()
-    {
-        return _gachaType == GachaType.Signature ? "시그권" : "일반권";
-    }
-
     private void OnBackClicked()
     {
         _onBack?.Invoke();
     }
-
 }

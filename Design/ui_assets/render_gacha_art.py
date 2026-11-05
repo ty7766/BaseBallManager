@@ -1,15 +1,16 @@
 """
-뽑기 화면 아트 — 카드 뒷면 · 밀어서 뒤집기 화살표 · 카드 모양 빛(뒤 번짐 · 테두리) · 구장 조명 배경
+뽑기 화면 아트 — 카드 뒷면 · 밀어서 뒤집기 화살표 · 뒤집을 때 새는 빛 · 공개 빛 번짐 · 구장 조명 배경
 
 사용법
     python Design/ui_assets/render_gacha_art.py
 
 출력
     Assets/Resources/UI/Card/card_back.png      카드 뒷면 1398×1957 (어두운 회색 + 은색 테두리 + 내야 다이아몬드 문장)
-    Assets/Resources/UI/Gacha/swipe_arrow.png   두꺼운 화살표 + 끊어진 꼬리 막대 셋(왼쪽으로 갈수록 가늘다) 330×140 → 2배
+    Assets/Resources/UI/Gacha/swipe_arrow.png   두꺼운 화살표(몸통 76) + 끊어진 꼬리 막대 셋(왼쪽으로 갈수록 가늘다) 330×164 → 2배
     Assets/Resources/UI/Gacha/gacha_bg.png      구장 조명 배경 1080×2340 (위 양쪽 모서리에서 카드 자리로 엇갈리는 빛줄기)
-    Assets/Resources/UI/Fx/card_glow.png        카드 뒤에서 번지는 빛 256 · 9-슬라이스 96 (가운데 = 카드, 테두리 = 바깥으로 옅어짐)
-    Assets/Resources/UI/Fx/card_rim.png         카드 테두리가 달아오르는 빛 256 · 9-슬라이스 96 (카드 모서리는 바깥에서 64)
+    Assets/Resources/UI/Fx/card_spill.png       들린 카드 틈에서 바닥으로 새는 빛 256×512. 오른쪽 변 = 카드 가장자리, 왼쪽으로 타원으로 옅어진다
+    Assets/Resources/UI/Fx/card_bloom.png       앞면이 드러날 때 카드에서 번지는 빛. 카드 실루엣을 흐린 것, 카드 둘레에 카드 폭 절반씩 여백
+    Assets/Resources/UI/Fx/card_mask.png        카드 모양(모서리 둥근 흰 판). 공개 순간 앞면이 번쩍이는 덮개
 """
 import math
 import subprocess
@@ -32,10 +33,15 @@ BASE_SIZE = 62
 BG_W, BG_H = 1080, 2340
 STAGE_Y = 1330           # 빛줄기가 엇갈리는 높이 = 결과 카드 가운데 (1080×2278 기준)
 LAMP_Y = 145             # 조명 높이. 제목(32~92)을 피해 재화 줄(100~190) 뒤에 숨긴다
-FX_SIZE = 256
-FX_BORDER = 96           # 9-슬라이스 테두리. Unity 메타의 spriteBorder 와 같다
-RIM_EDGE = 64            # card_rim 에서 카드 모서리가 놓이는 자리 (바깥에서부터)
-FX_CORNER = 18
+CARD_CORNER = 46 / CW     # 카드 모서리 반지름 (카드 폭 비율)
+SPILL_W, SPILL_H = 256, 512
+SPILL_SLIT = 1 / 1.5     # 새는 빛 그림 높이 중 틈(광원을 늘어놓는 줄)이 차지하는 비율
+SPILL_REACH = 0.9        # 그림 폭이 가장 넓게 펴졌을 때의 길이 (카드 폭 단위). 둥근 정도를 이 비율로 맞춘다
+SPILL_HALF_HEIGHT = 1.05 # 그림 높이의 절반 (같은 단위). 세로 ÷ 가로 = 2.1 / 0.9 는 Unity 의 SpillAspect 와 같다
+BLOOM_CARD_W = 180       # 번짐 그림에서 카드 폭(픽셀)
+BLOOM_MARGIN = 0.5       # 카드 둘레 여백 (카드 폭 비율). Unity 의 BloomMarginRatio 와 같다
+MASK_W = 280
+LINEAR_ALPHA_GAMMA = 2.2  # Unity 는 선형 색 공간에서 섞어 옅은 알파가 밝게 뜬다. 빛 알파를 미리 제곱해 감마 공간에서 본 번짐과 맞춘다
 
 
 def f(v):
@@ -73,27 +79,16 @@ def card_back():
 
 
 def swipe_arrow():
-    """두꺼운 화살표(몸통 64) + 몸통 앞에 끊어진 막대 셋. 막대는 왼쪽으로 갈수록 가늘어져 꼬리가 흩어지는 느낌을 낸다"""
-    top, bottom = 38, 102
+    """두꺼운 화살표(몸통 76) + 몸통 앞에 끊어진 막대 셋. 막대는 왼쪽으로 갈수록 가늘어져 꼬리가 흩어지는 느낌을 낸다"""
+    top, bottom = 42, 118
     parts = []
     for x, w in ((0, 14), (26, 24), (62, 36)):
         parts.append(f'M{x},{top} L{x + w},{top} L{x + w},{bottom} L{x},{bottom} Z')
-    parts.append(f'M110,{top} L218,{top} L218,8 L330,70 L218,132 L218,{bottom} L110,{bottom} Z')
+    parts.append(f'M110,{top} L214,{top} L214,10 L330,80 L214,150 L214,{bottom} L110,{bottom} Z')
     body = " ".join(parts)
     return ('<defs><filter id="b" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="4"/></filter></defs>'
             f'<path d="{body}" fill="#000" fill-opacity="0.4" filter="url(#b)" transform="translate(3 5)"/>'
             f'<path d="{body}" fill="#fff" fill-opacity="0.95" stroke-linejoin="round"/>')
-
-
-def rounded_rect_distance(size, inset, corner):
-    """정사각형 그림 안 둥근 사각형(가장자리에서 inset 만큼 안쪽)까지의 부호 있는 거리. 바깥 +, 안쪽 -"""
-    ys, xs = np.mgrid[0:size, 0:size].astype(np.float32) + 0.5
-    half = size / 2 - inset - corner
-    qx = np.abs(xs - size / 2) - half
-    qy = np.abs(ys - size / 2) - half
-    outside = np.hypot(np.maximum(qx, 0), np.maximum(qy, 0))
-    inside = np.minimum(np.maximum(qx, qy), 0)
-    return outside + inside - corner
 
 
 def save_alpha(path, alpha):
@@ -105,18 +100,65 @@ def save_alpha(path, alpha):
     print(f"  {path.relative_to(UI)} {alpha.shape[1]}x{alpha.shape[0]}")
 
 
-def card_glow():
-    """카드 뒤 빛 번짐. 카드 모서리(테두리 안쪽 끝)에서 가장 밝고 바깥 테두리로 갈수록 0. 가운데는 카드에 가려져 꽉 채운다"""
-    d = rounded_rect_distance(FX_SIZE, FX_BORDER, FX_CORNER)
-    t = np.clip(d / FX_BORDER, 0, 1)
-    return np.where(d <= 0, 1.0, (1 - t) ** 2.2)
+def rounded_rect_mask(width, height, rect_w, rect_h, corner):
+    """width×height 그림 한가운데 rect_w×rect_h 둥근 사각형. 가장자리 1픽셀을 부드럽게 깎는다"""
+    ys, xs = np.mgrid[0:height, 0:width].astype(np.float32) + 0.5
+    qx = np.abs(xs - width / 2) - (rect_w / 2 - corner)
+    qy = np.abs(ys - height / 2) - (rect_h / 2 - corner)
+    outside = np.hypot(np.maximum(qx, 0), np.maximum(qy, 0))
+    inside = np.minimum(np.maximum(qx, qy), 0)
+    return np.clip(0.5 - (outside + inside - corner), 0, 1)
 
 
-def card_rim():
-    """카드 테두리 빛. 카드 모서리(바깥에서 RIM_EDGE)를 중심으로 안팎으로 번지는 띠. 가운데 칸은 비운다"""
-    d = rounded_rect_distance(FX_SIZE, RIM_EDGE, FX_CORNER)
-    band = np.exp(-(d / 10.0) ** 2) * 0.95 + np.exp(-(d / 26.0) ** 2) * 0.45
-    return np.clip(band, 0, 1)
+def gaussian_blur(image, sigma):
+    radius = int(sigma * 3.2)
+    taps = np.arange(-radius, radius + 1, dtype=np.float32)
+    kernel = np.exp(-0.5 * (taps / sigma) ** 2)
+    kernel /= kernel.sum()
+    padded = np.pad(image, radius)
+    rows = np.apply_along_axis(lambda v: np.convolve(v, kernel, "valid"), 1, padded)
+    return np.apply_along_axis(lambda v: np.convolve(v, kernel, "valid"), 0, rows)
+
+
+def card_spill():
+    """들린 가장자리(오른쪽 변 = 카드 높이만큼의 틈)에서 바닥으로 새는 빛. 틈을 따라 점광원을 늘어놓고 더한다.
+    틈 가운데가 가장 밝고 위아래 끝으로 갈수록 약해 빛 웅덩이가 네모가 아닌 타원으로 번진다.
+    광원마다 가까이 진한 빛 + 멀리 옅은 빛을 섞고, 옆(바깥)으로 더 멀리 뻗게 한다"""
+    ys, xs = np.mgrid[0:SPILL_H, 0:SPILL_W].astype(np.float32) + 0.5
+    dx = (SPILL_W - xs) / SPILL_W * SPILL_REACH
+    dy = (ys - SPILL_H / 2) / (SPILL_H / 2) * SPILL_HALF_HEIGHT
+    gap_half = SPILL_HALF_HEIGHT * SPILL_SLIT
+    light = np.zeros_like(dx)
+    for t in np.linspace(-1, 1, 81):
+        weight = (1 - t * t) ** 0.7
+        distance = np.maximum(np.hypot(dx, dy - t * gap_half), 1e-4)
+        sideways = dx / distance
+        light += weight * (0.5 * np.exp(-distance / 0.08) + 0.5 * np.exp(-distance / 0.3)) * (0.3 + 0.7 * sideways)
+    light /= light.max()
+    fade_far = 1 - np.clip((dx / SPILL_REACH - 0.75) / 0.25, 0, 1) ** 2
+    fade_edge = 1 - np.clip((np.abs(dy) / SPILL_HALF_HEIGHT - 0.85) / 0.15, 0, 1) ** 2
+    return np.clip(light * fade_far * fade_edge, 0, 1) ** (0.8 * LINEAR_ALPHA_GAMMA)
+
+
+def card_bloom():
+    """카드 실루엣을 좁게 · 넓게 두 번 흐려 섞는다. 가까이는 진하고 멀리까지 옅게 남아 네모 테두리가 생기지 않는다"""
+    card_w = BLOOM_CARD_W
+    card_h = round(card_w * CH / CW)
+    margin = round(card_w * BLOOM_MARGIN)
+    width, height = card_w + margin * 2, card_h + margin * 2
+    silhouette = rounded_rect_mask(width, height, card_w, card_h, card_w * CARD_CORNER)
+    near = gaussian_blur(silhouette, card_w * 0.06)
+    far = gaussian_blur(silhouette, card_w * 0.15)
+    bloom = 0.6 * near + 0.4 * far
+    bloom /= bloom[height // 2, width // 2]
+    fade = rounded_rect_mask(width, height, width - 4, height - 4, margin)
+    return (np.clip(bloom, 0, 1) * gaussian_blur(fade, 3)) ** LINEAR_ALPHA_GAMMA
+
+
+def card_mask():
+    """카드 모양 흰 판. 모서리는 카드 그림과 같은 반지름"""
+    height = round(MASK_W * CH / CW)
+    return rounded_rect_mask(MASK_W, height, MASK_W, height, MASK_W * CARD_CORNER)
 
 
 def beam(corner_x, direction, target_y, length, spread, opacity):
@@ -181,7 +223,8 @@ def render(path, body, width, height, scale=1):
 
 if __name__ == "__main__":
     render(UI / "Card" / "card_back.png", card_back(), CW, CH)
-    render(UI / "Gacha" / "swipe_arrow.png", swipe_arrow(), 330, 140, 2)
+    render(UI / "Gacha" / "swipe_arrow.png", swipe_arrow(), 330, 164, 2)
     render(UI / "Gacha" / "gacha_bg.png", gacha_bg(), BG_W, BG_H)
-    save_alpha(UI / "Fx" / "card_glow.png", card_glow())
-    save_alpha(UI / "Fx" / "card_rim.png", card_rim())
+    save_alpha(UI / "Fx" / "card_spill.png", card_spill())
+    save_alpha(UI / "Fx" / "card_bloom.png", card_bloom())
+    save_alpha(UI / "Fx" / "card_mask.png", card_mask())

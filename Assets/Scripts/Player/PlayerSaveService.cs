@@ -46,6 +46,7 @@ public class PlayerSaveService
 
             NormalPityCount = GachaManager.Instance.NormalPityCount,
             SignaturePityCount = GachaManager.Instance.SignaturePityCount,
+            GachaHistory = ToHistorySaveData(GachaManager.Instance.History),
 
             Cards = new CardInstanceSaveData[cards.Count],
             LineUp = BuildLineUpSaveData()
@@ -99,6 +100,7 @@ public class PlayerSaveService
         }
 
         GachaManager.Instance.RestorePityCounts(saveData.NormalPityCount, saveData.SignaturePityCount);
+        GachaManager.Instance.RestoreHistory(ToHistoryEntries(saveData.GachaHistory));
 
         RestoreLineUp(saveData.LineUp);
 
@@ -281,6 +283,54 @@ public class PlayerSaveService
     {
         return new CardInstance(cardData.InstanceId, cardData.CardId, cardData.EnhanceLevel,
             cardData.TrainLevel, cardData.BreakthroughUsed, cardData.TrainDelta, cardData.IsLocked);
+    }
+
+    //뽑기 기록 -> 저장 형태
+    private static GachaHistorySaveData[] ToHistorySaveData(IReadOnlyList<GachaHistoryEntry> history)
+    {
+        GachaHistorySaveData[] historyData = new GachaHistorySaveData[history.Count];
+
+        for (int i = 0; i < history.Count; i++)
+        {
+            historyData[i] = new GachaHistorySaveData
+            {
+                CardId = history[i].CardId,
+                GachaType = (int)history[i].GachaType,
+                RolledAtUtcTicks = history[i].RolledAtUtcTicks
+            };
+        }
+
+        return historyData;
+    }
+
+    //저장 형태 -> 뽑기 기록. 기록은 진행에 영향이 없으므로 깨진 줄만 버리고 나머지는 살린다
+    private static List<GachaHistoryEntry> ToHistoryEntries(GachaHistorySaveData[] historyData)
+    {
+        if (historyData == null)
+            return new List<GachaHistoryEntry>();
+
+        List<GachaHistoryEntry> entries = new List<GachaHistoryEntry>(historyData.Length);
+
+        foreach (GachaHistorySaveData entryData in historyData)
+        {
+            if (!IsValidHistory(entryData))
+            {
+                Debug.LogError("[PlayerSaveService]: 세이브의 뽑기 기록 1줄이 올바르지 않아 버립니다");
+                continue;
+            }
+
+            entries.Add(new GachaHistoryEntry(entryData.CardId, (GachaType)entryData.GachaType, entryData.RolledAtUtcTicks));
+        }
+
+        return entries;
+    }
+
+    //뽑기 종류가 일반 · 시그니쳐이고 시각이 DateTime 범위 안인지
+    private static bool IsValidHistory(GachaHistorySaveData entryData)
+    {
+        return entryData != null
+               && (entryData.GachaType == (int)GachaType.Normal || entryData.GachaType == (int)GachaType.Signature)
+               && entryData.RolledAtUtcTicks >= 0 && entryData.RolledAtUtcTicks <= DateTime.MaxValue.Ticks;
     }
 
     //현재 라인업 -> 저장 형태
