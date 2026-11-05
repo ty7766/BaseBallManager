@@ -1,15 +1,15 @@
 """
-뽑기 화면 아트 — 카드 뒷면 · 밀어서 뒤집기 화살표 · 공개 이펙트(빛 번짐 · 고리) · 구장 조명 배경
+뽑기 화면 아트 — 카드 뒷면 · 밀어서 뒤집기 화살표 · 카드 모양 빛(뒤 번짐 · 테두리) · 구장 조명 배경
 
 사용법
     python Design/ui_assets/render_gacha_art.py
 
 출력
     Assets/Resources/UI/Card/card_back.png      카드 뒷면 1398×1957 (어두운 회색 + 은색 테두리 + 내야 다이아몬드 문장)
-    Assets/Resources/UI/Gacha/swipe_arrow.png   꼬리(왼쪽)로 갈수록 옅어지는 두꺼운 화살표 360×110 → 2배
+    Assets/Resources/UI/Gacha/swipe_arrow.png   두꺼운 화살표 + 끊어진 꼬리 막대 셋(왼쪽으로 갈수록 가늘다) 330×140 → 2배
     Assets/Resources/UI/Gacha/gacha_bg.png      구장 조명 배경 1080×2340 (위 양쪽 모서리에서 카드 자리로 엇갈리는 빛줄기)
-    Assets/Resources/UI/Fx/glow_soft.png        흰 원형 빛 번짐 256 (등급색으로 틴트)
-    Assets/Resources/UI/Fx/ring.png             흰 고리 256 (공개 순간 퍼지는 충격파)
+    Assets/Resources/UI/Fx/card_glow.png        카드 뒤에서 번지는 빛 256 · 9-슬라이스 96 (가운데 = 카드, 테두리 = 바깥으로 옅어짐)
+    Assets/Resources/UI/Fx/card_rim.png         카드 테두리가 달아오르는 빛 256 · 9-슬라이스 96 (카드 모서리는 바깥에서 64)
 """
 import math
 import subprocess
@@ -17,6 +17,7 @@ import tempfile
 import time
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,6 +32,10 @@ BASE_SIZE = 62
 BG_W, BG_H = 1080, 2340
 STAGE_Y = 1330           # 빛줄기가 엇갈리는 높이 = 결과 카드 가운데 (1080×2278 기준)
 LAMP_Y = 145             # 조명 높이. 제목(32~92)을 피해 재화 줄(100~190) 뒤에 숨긴다
+FX_SIZE = 256
+FX_BORDER = 96           # 9-슬라이스 테두리. Unity 메타의 spriteBorder 와 같다
+RIM_EDGE = 64            # card_rim 에서 카드 모서리가 놓이는 자리 (바깥에서부터)
+FX_CORNER = 18
 
 
 def f(v):
@@ -68,27 +73,50 @@ def card_back():
 
 
 def swipe_arrow():
-    """두꺼운 화살표. 몸통은 왼쪽 끝에서 투명 → 화살촉으로 갈수록 진해지고, 아래에 옅은 그림자를 깔아 밝은 뒷면에서도 보인다"""
-    body = 'M0,38 L238,38 L238,10 L352,55 L238,100 L238,72 L0,72 Z'
-    return ('<defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
-            '<stop offset="0.55" stop-color="#fff" stop-opacity="0.75"/><stop offset="1" stop-color="#fff" stop-opacity="1"/></linearGradient>'
-            '<linearGradient id="s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0"/>'
-            '<stop offset="1" stop-color="#000" stop-opacity="0.45"/></linearGradient>'
-            '<filter id="b" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="4"/></filter></defs>'
-            f'<path d="{body}" fill="url(#s)" filter="url(#b)" transform="translate(3 5)"/>'
-            f'<path d="{body}" fill="url(#a)" stroke-linejoin="round"/>')
+    """두꺼운 화살표(몸통 64) + 몸통 앞에 끊어진 막대 셋. 막대는 왼쪽으로 갈수록 가늘어져 꼬리가 흩어지는 느낌을 낸다"""
+    top, bottom = 38, 102
+    parts = []
+    for x, w in ((0, 14), (26, 24), (62, 36)):
+        parts.append(f'M{x},{top} L{x + w},{top} L{x + w},{bottom} L{x},{bottom} Z')
+    parts.append(f'M110,{top} L218,{top} L218,8 L330,70 L218,132 L218,{bottom} L110,{bottom} Z')
+    body = " ".join(parts)
+    return ('<defs><filter id="b" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="4"/></filter></defs>'
+            f'<path d="{body}" fill="#000" fill-opacity="0.4" filter="url(#b)" transform="translate(3 5)"/>'
+            f'<path d="{body}" fill="#fff" fill-opacity="0.95" stroke-linejoin="round"/>')
 
 
-def glow_soft():
-    return ('<defs><radialGradient id="g" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff" stop-opacity="1"/>'
-            '<stop offset="0.45" stop-color="#fff" stop-opacity="0.45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>'
-            '<rect width="256" height="256" fill="url(#g)"/>')
+def rounded_rect_distance(size, inset, corner):
+    """정사각형 그림 안 둥근 사각형(가장자리에서 inset 만큼 안쪽)까지의 부호 있는 거리. 바깥 +, 안쪽 -"""
+    ys, xs = np.mgrid[0:size, 0:size].astype(np.float32) + 0.5
+    half = size / 2 - inset - corner
+    qx = np.abs(xs - size / 2) - half
+    qy = np.abs(ys - size / 2) - half
+    outside = np.hypot(np.maximum(qx, 0), np.maximum(qy, 0))
+    inside = np.minimum(np.maximum(qx, qy), 0)
+    return outside + inside - corner
 
 
-def ring():
-    return ('<defs><filter id="b"><feGaussianBlur stdDeviation="3"/></filter></defs>'
-            '<circle cx="128" cy="128" r="112" fill="none" stroke="#fff" stroke-width="10" filter="url(#b)"/>'
-            '<circle cx="128" cy="128" r="112" fill="none" stroke="#fff" stroke-width="4"/>')
+def save_alpha(path, alpha):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rgba = np.zeros((alpha.shape[0], alpha.shape[1], 4), np.uint8)
+    rgba[..., :3] = 255
+    rgba[..., 3] = np.clip(alpha * 255 + 0.5, 0, 255).astype(np.uint8)
+    Image.fromarray(rgba, "RGBA").save(path, optimize=True)
+    print(f"  {path.relative_to(UI)} {alpha.shape[1]}x{alpha.shape[0]}")
+
+
+def card_glow():
+    """카드 뒤 빛 번짐. 카드 모서리(테두리 안쪽 끝)에서 가장 밝고 바깥 테두리로 갈수록 0. 가운데는 카드에 가려져 꽉 채운다"""
+    d = rounded_rect_distance(FX_SIZE, FX_BORDER, FX_CORNER)
+    t = np.clip(d / FX_BORDER, 0, 1)
+    return np.where(d <= 0, 1.0, (1 - t) ** 2.2)
+
+
+def card_rim():
+    """카드 테두리 빛. 카드 모서리(바깥에서 RIM_EDGE)를 중심으로 안팎으로 번지는 띠. 가운데 칸은 비운다"""
+    d = rounded_rect_distance(FX_SIZE, RIM_EDGE, FX_CORNER)
+    band = np.exp(-(d / 10.0) ** 2) * 0.95 + np.exp(-(d / 26.0) ** 2) * 0.45
+    return np.clip(band, 0, 1)
 
 
 def beam(corner_x, direction, target_y, length, spread, opacity):
@@ -153,7 +181,7 @@ def render(path, body, width, height, scale=1):
 
 if __name__ == "__main__":
     render(UI / "Card" / "card_back.png", card_back(), CW, CH)
-    render(UI / "Gacha" / "swipe_arrow.png", swipe_arrow(), 360, 110, 2)
+    render(UI / "Gacha" / "swipe_arrow.png", swipe_arrow(), 330, 140, 2)
     render(UI / "Gacha" / "gacha_bg.png", gacha_bg(), BG_W, BG_H)
-    render(UI / "Fx" / "glow_soft.png", glow_soft(), 256, 256)
-    render(UI / "Fx" / "ring.png", ring(), 256, 256)
+    save_alpha(UI / "Fx" / "card_glow.png", card_glow())
+    save_alpha(UI / "Fx" / "card_rim.png", card_rim())
