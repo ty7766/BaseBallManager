@@ -49,6 +49,7 @@ HEAD_MARGIN = 0.03       # 머리(모자·헬멧 포함) 위 최소 여백
 FACE_RATIO = 0.155       # 얼굴 박스 높이 / 출력 높이. 눈 아래로 얼굴 5.1개 = 허벅지까지 보인다
 FADE_START = 0.87       # 이 높이부터 아래로 알파가 0까지 떨어진다 (카드 하단 이름 그림자에 녹아든다)
 MAX_SHRINK = 0.85        # 모자·헬멧이 여백을 넘을 때 줄일 수 있는 한계. 더 필요하면 줄이지 않고 경고만 한다
+FACE_SCORE_MARGIN = 0.08  # 주인공 후보 = 가장 확실한 얼굴과 신뢰도 차이가 이 안인 얼굴. 그중 가장 큰 것을 고른다
 BODY_PULL = 0.6          # 얼굴 대신 몸통 쪽으로 가로 중심을 당기는 비율. 달리는 자세처럼 몸이 한쪽에 쏠린 사진용
 MAX_BODY_SHIFT = 0.18    # 가로로 옮기는 한계 (출력 폭 비율). 얼굴이 32~68% 안에 머문다
 #자동 정렬 뒤 사진별로 손보는 가로 보정. 선수를 오른쪽(+)·왼쪽(-)으로 옮긴다 (출력 폭 비율)
@@ -171,9 +172,12 @@ def load_rgb(path):
 
 
 def pick_face(faces, detector, rgb):
-    """가장 크고 확실한 얼굴을 주인공으로 고르고, 다시 찾아 정밀한 눈·입 좌표를 얻는다"""
+    """확실한 얼굴들 중 가장 큰 것을 주인공으로 고르고, 다시 찾아 정밀한 눈·입 좌표를 얻는다.
+    크기 × 신뢰도로 고르면 뒤쪽 광고판 큰 글자(한준수 사진의 "원", 신뢰도 0.74)가 진짜 얼굴(0.92)을 이긴다"""
     areas = faces[:, 2] * faces[:, 3]
-    main = int(np.argmax(areas * faces[:, 14]))
+    scores = faces[:, 14]
+    sure = scores >= scores.max() - FACE_SCORE_MARGIN
+    main = int(np.argmax(np.where(sure, areas, -1.0)))
     f = detector.refine(rgb, faces[main])
     return {
         "eye": (f[4:6] + f[6:8]) / 2,
