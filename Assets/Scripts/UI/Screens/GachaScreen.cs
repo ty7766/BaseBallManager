@@ -23,9 +23,11 @@ public class GachaScreen : UiScreenBehaviour
     private const float TabHeight = 96f;
     private const float TabInset = 8f;
     private const float SliceScale = 2f;
-    //뽑기권 모양 버튼. 절취선 왼쪽은 카드 그림 칸이라 글자는 그 오른쪽 가운데에 둔다
-    private const string TicketSprite = "Gacha/ticket_normal";
-    private const string TicketGoldSprite = "Gacha/ticket_gold";
+    //뽑기권 모양 버튼. 절취선 왼쪽은 카드 그림 칸이라 글자는 그 오른쪽 가운데에 둔다. 일반 뽑기는 파랑, 시그니쳐는 분홍
+    private const string TicketOnceBlueSprite = "Gacha/ticket_once_blue";
+    private const string TicketTenBlueSprite = "Gacha/ticket_ten_blue";
+    private const string TicketOncePinkSprite = "Gacha/ticket_once_pink";
+    private const string TicketTenPinkSprite = "Gacha/ticket_ten_pink";
     private const float TicketStubWidth = 150f;
     private const float DisabledAlpha = 0.4f;
     //뽑기 버튼 · 그 아래 줄 오른쪽 끝 네모난 기록 보기
@@ -80,6 +82,10 @@ public class GachaScreen : UiScreenBehaviour
         CurrencyType ticketType = GetTicketType();
         int tickets = CurrencyManager.Instance == null ? 0 : CurrencyManager.Instance.GetAmount(ticketType);
 
+        bool signature = _gachaType == GachaType.Signature;
+
+        SetTicketSprite(_rollOnceButton, signature ? TicketOncePinkSprite : TicketOnceBlueSprite);
+        SetTicketSprite(_rollTenButton, signature ? TicketTenPinkSprite : TicketTenBlueSprite);
         SetTicketEnabled(_rollOnceButton, _rollOnceLabel, tickets >= 1);
         SetTicketEnabled(_rollTenButton, _rollTenLabel, tickets >= TenRollCount);
 
@@ -125,10 +131,8 @@ public class GachaScreen : UiScreenBehaviour
         _signatureTabButton = CreateTab("SignatureTab", "시그니쳐 뽑기", 540f, () => SelectType(GachaType.Signature),
             out _signatureTabLabel);
 
-        _rollOnceButton = CreateTicket("RollOnce", "1회", TicketSprite, UiPalette.Text1, 32f, RollOnce,
-            out _rollOnceLabel);
-        _rollTenButton = CreateTicket("RollTen", "10회", TicketGoldSprite, UiPalette.ButtonPrimaryText, 548f, RollTen,
-            out _rollTenLabel);
+        _rollOnceButton = CreateTicket("RollOnce", "1회", TicketOnceBlueSprite, 32f, RollOnce, out _rollOnceLabel);
+        _rollTenButton = CreateTicket("RollTen", "10회", TicketTenBlueSprite, 548f, RollTen, out _rollTenLabel);
 
         _historyButton = UiBuilder.CreateButton(Root, "HistoryButton", "기록\n보기", 30f, false, OpenHistory);
         UiBuilder.Place(_historyButton.GetComponent<RectTransform>(), 1048f - HistoryButtonSize, HistoryRowTop,
@@ -174,7 +178,7 @@ public class GachaScreen : UiScreenBehaviour
     }
 
     //뽑기권 모양 버튼. 글자는 절취선 오른쪽 칸 가운데
-    private Button CreateTicket(string name, string label, string spritePath, Color labelColor, float x,
+    private Button CreateTicket(string name, string label, string spritePath, float x,
         UnityAction onClick, out TextMeshProUGUI labelText)
     {
         Button ticket = UiBuilder.CreateButton(Root, name, label, 56f, false, onClick, out labelText);
@@ -183,7 +187,7 @@ public class GachaScreen : UiScreenBehaviour
         background.sprite = UiSprites.Get(spritePath);
         background.type = Image.Type.Simple;
         background.color = Color.white;
-        labelText.color = labelColor;
+        labelText.color = UiPalette.Text1;
         labelText.rectTransform.offsetMin = new Vector2(TicketStubWidth, 0f);
         UiBuilder.Place(ticket.GetComponent<RectTransform>(), x, RollTop, 500f, RollHeight);
 
@@ -194,6 +198,12 @@ public class GachaScreen : UiScreenBehaviour
     {
         tab.targetGraphic.color = selected ? Color.white : UiPalette.WithAlpha(Color.white, 0f);
         label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
+    }
+
+    //고른 뽑기 종류의 색으로 바꾼다
+    private static void SetTicketSprite(Button ticket, string spritePath)
+    {
+        ((Image)ticket.targetGraphic).sprite = UiSprites.Get(spritePath);
     }
 
     //뽑기권이 모자라면 누를 수 없고 흐리게 보인다
