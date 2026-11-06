@@ -50,8 +50,8 @@ public class GachaManager : SingletonBehaviour<GachaManager>
     private int _pityLimit = 50;
 
     [Header("기록")]
-    [SerializeField, Tooltip("뽑기 기록 보관 개수. 넘으면 오래된 기록부터 지운다")]
-    private int _historyLimit = 500;
+    [SerializeField, Tooltip("뽑기 기록 보관 개수 (기록 보기 10쪽 × 10줄). 넘으면 오래된 기록부터 지워 남기지 않는다")]
+    private int _historyLimit = 100;
 
     private int _normalPityCount;
     private int _signaturePityCount;

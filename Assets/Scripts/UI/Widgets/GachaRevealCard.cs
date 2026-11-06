@@ -5,18 +5,29 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 뽑기 결과 카드 1장. 뒷면으로 깔렸다가 누르거나 오른쪽으로 밀면 그쪽으로 넘어가며 뒤집힌다.
-/// 앞면이 빛난다고 보고, 들리는 왼쪽 틈으로 등급색 빛이 새어 나와 넘길수록 커진다 (뒤집기 전에 기대를 걸게 한다)
+/// 앞면이 빛난다고 보고, 들리는 왼쪽 틈으로 등급색 빛이 새어 나온다 — 바닥 웅덩이 · 카드 윤곽 빛 · 떠오르는 빛 알갱이.
+/// 빛은 모두 가산 합성(덮지 않고 더해짐)이고, 넘길수록 · 등급이 높을수록 세다 (뒤집기 전에 기대를 걸게 한다)
 /// </summary>
 public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     private const string BackSprite = "Card/card_back";
     private const string SpillSprite = "Fx/card_spill";
     private const string BloomSprite = "Fx/card_bloom";
+    private const string RimSprite = "Fx/card_rimlight";
+    private const string LightMaterialPath = "UI/Materials/AdditiveLight";
     private const string MaskSprite = "Fx/card_mask";
     private const string ArrowSprite = "Gacha/swipe_arrow";
     //새는 빛 그림의 세로 ÷ 가로(그림 그대로 키워 타원이 막대로 늘지 않게) · 번짐 그림의 카드 둘레 여백(카드 폭 비율). 그림과 짝이 맞아야 한다
     private const float SpillAspect = 2.1f / 0.9f;
     private const float BloomMarginRatio = 0.5f;
+    private const float RimMarginRatio = 0.3f;
+    //바닥 웅덩이 세기 · 윤곽 빛이 가득 차는 들림 정도 · 빛 알갱이가 새는 틈 길이(카드 높이 비율)
+    private const float SpillStrength = 0.85f;
+    private const float RimFullLift = 0.6f;
+    private const float GapHeightRatio = 0.9f;
+    //가장 센 카드(시그 · 골글)가 활짝 들렸을 때 초당 새는 알갱이 · 공개 순간 터지는 알갱이
+    private const float MoteMaxRate = 34f;
+    private const int MoteBurstMax = 36;
     //밀기 안내 화살표 폭(카드 폭 비율). 그림 비율 330×164 를 따른다
     private const float ArrowWidthRatio = 0.55f;
     private const float ArrowAspect = 164f / 330f;
@@ -55,6 +66,7 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     private CardView _front;
     private Image _back;
     private Image _spill;
+    private Image _rim;
     private Image _bloom;
     private Image _flash;
     private Image _hintArrow;
@@ -75,6 +87,24 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     private UiTween _flipTween;
     private UiTween _bloomTween;
     private UiTween _dealTween;
+    private GachaLightMotes _motes;
+    private float _emitRate;
+    private Vector2 _gapStart;
+    private Vector2 _gapEnd;
+    private Vector2 _outward;
+
+    private static Material _lightMaterial;
+
+    //틈이 열려 있는 동안 빛 알갱이를 내보내고, 떠 있는 알갱이를 움직인다
+    private void Update()
+    {
+        float deltaTime = Time.unscaledDeltaTime;
+
+        if (_emitRate > 0f)
+            _motes.Emit(deltaTime, _emitRate, _gapStart, _gapEnd, _outward);
+
+        _motes.Tick(deltaTime);
+    }
 
     /// <summary>
     /// 카드 1장을 만든다. 폭은 화면에 보일 폭, spillReach 는 새는 빛이 가장 멀리 닿는 거리다
@@ -106,6 +136,8 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         _flipping = false;
         IsFaceUp = false;
         GetTier(info, out _tierColor, out _tierStrength, out _tierShakes);
+        _motes.Clear();
+        _motes.SetColor(_tierColor);
 
         _front.SetDisplayWidth(_width);
         _front.SetCard(info);
@@ -227,11 +259,14 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         if (!IsFaceUp && _tierShakes)
             shake = Mathf.Sin(Time.unscaledTime * ShakeSpeed) * _width * ShakeRatio * lift;
 
-        SetSpill(IsFaceUp ? 0f : lift, squash);
+        float tiltDegrees = -lift * TiltDegrees;
+        Vector2 center = new Vector2(lift * _width * SlideRatio + shake, 0f);
 
         _pivot.localScale = new Vector3(Mathf.Max(0.02f, squash), 1f, 1f);
-        _tilt.anchoredPosition = new Vector2(lift * _width * SlideRatio + shake, 0f);
-        _tilt.localEulerAngles = new Vector3(0f, 0f, -lift * TiltDegrees);
+        _tilt.anchoredPosition = center;
+        _tilt.localEulerAngles = new Vector3(0f, 0f, tiltDegrees);
+
+        SetLeakLight(IsFaceUp ? 0f : lift, squash, center, tiltDegrees);
 
         bool showFront = progress >= 0.5f;
 
@@ -239,23 +274,34 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         _back.gameObject.SetActive(!showFront);
     }
 
-    //들린 왼쪽 가장자리 아래에서 바닥으로 새는 빛. 들린 만큼 밝고 멀리 뻗으며, 등급이 높을수록 세다
-    private void SetSpill(float lift, float squash)
+    //들린 왼쪽 가장자리 밑에서 새는 빛: 바닥 웅덩이 · 카드 윤곽 빛 · 빛 알갱이가 나오는 틈. 들린 만큼, 등급이 높을수록 세다
+    private void SetLeakLight(float lift, float squash, Vector2 center, float tiltDegrees)
     {
-        float alpha = Mathf.Clamp01(lift * _tierStrength);
-        bool lit = alpha > 0.005f;
+        float light = lift * _tierStrength;
+        bool lit = light > 0.005f;
 
         _spill.gameObject.SetActive(lit);
+        _rim.gameObject.SetActive(lit);
+        _emitRate = lit ? MoteMaxRate * light : 0f;
 
         if (!lit)
             return;
 
         float reach = _spillReach * (0.55f + 0.45f * _tierStrength) * (0.35f + 0.65f * lift);
-        RectTransform rect = _spill.rectTransform;
+        float edgeX = -_width * 0.5f * squash;
+        RectTransform spillRect = _spill.rectTransform;
 
-        rect.sizeDelta = new Vector2(reach, reach * SpillAspect);
-        rect.anchoredPosition = new Vector2(-_width * 0.5f * squash, 0f);
-        _spill.color = UiPalette.WithAlpha(_tierColor, alpha);
+        spillRect.sizeDelta = new Vector2(reach, reach * SpillAspect);
+        spillRect.anchoredPosition = new Vector2(edgeX, 0f);
+        _spill.color = UiPalette.WithAlpha(_tierColor, light * SpillStrength);
+        _rim.color = UiPalette.WithAlpha(_tierColor, _tierStrength * Mathf.SmoothStep(0f, 1f, lift / RimFullLift));
+
+        Quaternion rotation = Quaternion.Euler(0f, 0f, tiltDegrees);
+        float gapHalf = _height * 0.5f * GapHeightRatio;
+
+        _gapStart = center + (Vector2)(rotation * new Vector3(edgeX, -gapHalf, 0f));
+        _gapEnd = center + (Vector2)(rotation * new Vector3(edgeX, gapHalf, 0f));
+        _outward = rotation * Vector3.left;
     }
 
     //손을 뗀 자리에서 끝까지 넘기거나 원래대로 돌아간다. 남은 거리만큼만 시간을 쓴다
@@ -287,14 +333,14 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         _onRevealed?.Invoke(this);
     }
 
-    //앞면이 등급색으로 번쩍이고 카드에서 빛이 번진다 · 파티클. 5성 이상은 번짐이 남고 카드가 튀어 오른다
+    //앞면이 등급색으로 빛나고 카드에서 빛이 번지며 둘레로 빛 알갱이가 퍼진다. 5성 이상은 번짐이 남고 카드가 튀어 오른다
     private void PlayRevealEffect()
     {
         bool rare = _tierStrength >= RareStrength;
 
         PlayFlash();
         PlayBloom(rare);
-        UiEffects.Burst(Root, GetBurstKind(_info));
+        _motes.Burst(Mathf.RoundToInt(MoteBurstMax * _tierStrength), new Vector2(_width, _height) * 0.5f);
 
         if (rare)
             UiEffects.Pop(_pivot, 0.9f, 0.32f);
@@ -333,7 +379,7 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         }, UiEase.Linear);
     }
 
-    //Root(제자리) > Body(나눠 주기) > Tilt(쏠림 · 기울기) > [새는 빛, Pivot(눌림) > [번짐, 앞면, 뒷면, 번쩍임]]
+    //Root(제자리) > [빛 알갱이, Body(나눠 주기) > Tilt(쏠림 · 기울기) > [바닥 웅덩이, Pivot(눌림) > [번짐, 윤곽 빛, 앞면, 뒷면, 번쩍임]]]
     private void BuildCard(float width, float spillReach)
     {
         _width = width;
@@ -342,6 +388,10 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
 
         UiBuilder.Place(Root, 0f, 0f, width, _height);
         _fade = gameObject.AddComponent<CanvasGroup>();
+
+        Material lightMaterial = GetLightMaterial();
+
+        _motes = new GachaLightMotes(Root, lightMaterial, width);
 
         _body = UiBuilder.CreateRect(Root, "Body");
         UiBuilder.Stretch(_body, 0f, 0f, 0f, 0f);
@@ -353,6 +403,7 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         _spill.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
         _spill.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
         _spill.rectTransform.pivot = new Vector2(1f, 0.5f);
+        _spill.material = lightMaterial;
         _spill.gameObject.SetActive(false);
 
         _pivot = UiBuilder.CreateRect(_tilt, "Pivot");
@@ -362,7 +413,15 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
 
         _bloom = UiBuilder.CreateImage(_pivot, "Bloom", Color.white, BloomSprite);
         UiBuilder.Stretch(_bloom.rectTransform, -bloomMargin, -bloomMargin, -bloomMargin, -bloomMargin);
+        _bloom.material = lightMaterial;
         _bloom.gameObject.SetActive(false);
+
+        float rimMargin = width * RimMarginRatio;
+
+        _rim = UiBuilder.CreateImage(_pivot, "RimLight", Color.white, RimSprite);
+        UiBuilder.Stretch(_rim.rectTransform, -rimMargin, -rimMargin, -rimMargin, -rimMargin);
+        _rim.material = lightMaterial;
+        _rim.gameObject.SetActive(false);
 
         _front = CardView.Bake(_pivot, width, false);
         UiBuilder.Stretch(_front.Root, 0f, 0f, 0f, 0f);
@@ -384,6 +443,7 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
 
         _flash = UiBuilder.CreateImage(_pivot, "Flash", UiPalette.WithAlpha(Color.white, 0f), MaskSprite);
         UiBuilder.Stretch(_flash.rectTransform, 0f, 0f, 0f, 0f);
+        _flash.material = lightMaterial;
     }
 
     //화면 좌표를 카드 기준 가로 위치로. 카드 자체(Root)는 움직이지 않아 기준이 흔들리지 않는다
@@ -408,13 +468,12 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         };
     }
 
-    private static UiEffectKind GetBurstKind(CardDisplayInfo info)
+    //빛 레이어가 함께 쓰는 가산 합성 머티리얼. 색은 정점색으로만 바꾸므로 복제하지 않는다
+    private static Material GetLightMaterial()
     {
-        return info.CardType switch
-        {
-            CardType.Signature => UiEffectKind.RevealSignature,
-            CardType.GoldenGlove => UiEffectKind.RevealGoldenGlove,
-            _ => info.CardGrade == CardGrade.Star5 ? UiEffectKind.RevealRare : UiEffectKind.Reveal
-        };
+        if (_lightMaterial == null)
+            _lightMaterial = Resources.Load<Material>(LightMaterialPath);
+
+        return _lightMaterial;
     }
 }

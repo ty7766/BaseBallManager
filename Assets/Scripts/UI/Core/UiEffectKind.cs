@@ -8,10 +8,6 @@ public enum UiEffectKind
     GradeUp,        //조합 승급
     Enhance,        //강화 성공
     Craft,          //골든글러브 제작
-    Reveal,         //뽑기 공개 (3·4성)
-    RevealRare,     //뽑기 공개 5성
-    RevealSignature,    //뽑기 공개 시그니쳐
-    RevealGoldenGlove,  //뽑기 공개 골든글러브
     Champion,       //우승
     Steal           //도루 성공
 }

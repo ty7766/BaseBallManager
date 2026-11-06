@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
@@ -15,12 +16,24 @@ public class GachaScreen : UiScreenBehaviour
     private const string StageSprite = "Gacha/gacha_bg";
     private const float StageWidth = 1080f;
     private const float StageHeight = 2340f;
-    //뽑기 버튼 · 그 아래 결과 줄(왼쪽 결과 글 · 오른쪽 네모난 기록 보기)
+    //탭: 어두운 알약 안에서 고른 쪽에 흰 알약이 깔린다. 2배 그림이라 9-슬라이스 테두리를 반으로 줄여 쓴다
+    private const string TabTrackSprite = "Gacha/tab_track";
+    private const string TabPillSprite = "Gacha/tab_pill";
+    private const float TabTop = 210f;
+    private const float TabHeight = 96f;
+    private const float TabInset = 8f;
+    private const float SliceScale = 2f;
+    //뽑기권 모양 버튼. 절취선 왼쪽은 카드 그림 칸이라 글자는 그 오른쪽 가운데에 둔다
+    private const string TicketSprite = "Gacha/ticket_normal";
+    private const string TicketGoldSprite = "Gacha/ticket_gold";
+    private const float TicketStubWidth = 150f;
+    private const float DisabledAlpha = 0.4f;
+    //뽑기 버튼 · 그 아래 줄 오른쪽 끝 네모난 기록 보기
     private const float RollTop = 326f;
     private const float RollHeight = 130f;
-    private const float ResultRowTop = 472f;
+    private const float HistoryRowTop = 472f;
     private const float HistoryButtonSize = 104f;
-    private const float ResultAreaTop = ResultRowTop + HistoryButtonSize + 16f;
+    private const float ResultAreaTop = HistoryRowTop + HistoryButtonSize + 16f;
     private const float ResultAreaBottom = 184f;
 
     private Action _onBack;
@@ -30,10 +43,13 @@ public class GachaScreen : UiScreenBehaviour
     [SerializeField] private CurrencyBarView _currencyBar;
     [SerializeField] private Button _normalTabButton;
     [SerializeField] private Button _signatureTabButton;
+    [SerializeField] private TextMeshProUGUI _normalTabLabel;
+    [SerializeField] private TextMeshProUGUI _signatureTabLabel;
     [SerializeField] private Button _rollOnceButton;
     [SerializeField] private Button _rollTenButton;
+    [SerializeField] private TextMeshProUGUI _rollOnceLabel;
+    [SerializeField] private TextMeshProUGUI _rollTenLabel;
     [SerializeField] private Button _historyButton;
-    [SerializeField] private TextMeshProUGUI _resultText;
     [SerializeField] private RectTransform _resultArea;
     [SerializeField] private TextMeshProUGUI _emptyText;
 
@@ -64,11 +80,11 @@ public class GachaScreen : UiScreenBehaviour
         CurrencyType ticketType = GetTicketType();
         int tickets = CurrencyManager.Instance == null ? 0 : CurrencyManager.Instance.GetAmount(ticketType);
 
-        _rollOnceButton.interactable = tickets >= 1;
-        _rollTenButton.interactable = tickets >= TenRollCount;
+        SetTicketEnabled(_rollOnceButton, _rollOnceLabel, tickets >= 1);
+        SetTicketEnabled(_rollTenButton, _rollTenLabel, tickets >= TenRollCount);
 
-        UiTabStyle.Apply(_normalTabButton, _gachaType == GachaType.Normal);
-        UiTabStyle.Apply(_signatureTabButton, _gachaType == GachaType.Signature);
+        SetTabSelected(_normalTabButton, _normalTabLabel, _gachaType == GachaType.Normal);
+        SetTabSelected(_signatureTabButton, _signatureTabLabel, _gachaType == GachaType.Signature);
     }
 
     protected override void BindEvents()
@@ -100,26 +116,22 @@ public class GachaScreen : UiScreenBehaviour
         _currencyBar = CurrencyBarView.Bake(Root);
         UiBuilder.Place(_currencyBar.Root, 24f, 100f, 1032f, CurrencyBarView.BarHeight);
 
-        _normalTabButton = UiBuilder.CreateButton(Root, "NormalTab", "일반 뽑기", 36f, true,
-            () => SelectType(GachaType.Normal));
-        UiBuilder.Place(_normalTabButton.GetComponent<RectTransform>(), 32f, 210f, 500f, 96f);
+        Image tabTrack = UiBuilder.CreateImage(Root, "TabTrack", Color.white, TabTrackSprite, Image.Type.Sliced);
+        tabTrack.pixelsPerUnitMultiplier = SliceScale;
+        UiBuilder.Place(tabTrack.rectTransform, 32f, TabTop, 1016f, TabHeight);
 
-        _signatureTabButton = UiBuilder.CreateButton(Root, "SignatureTab", "시그니쳐 뽑기", 36f, false,
-            () => SelectType(GachaType.Signature));
-        UiBuilder.Place(_signatureTabButton.GetComponent<RectTransform>(), 548f, 210f, 500f, 96f);
+        _normalTabButton = CreateTab("NormalTab", "일반 뽑기", 32f, () => SelectType(GachaType.Normal),
+            out _normalTabLabel);
+        _signatureTabButton = CreateTab("SignatureTab", "시그니쳐 뽑기", 540f, () => SelectType(GachaType.Signature),
+            out _signatureTabLabel);
 
-        _rollOnceButton = UiBuilder.CreateButton(Root, "RollOnce", "1회", 52f, false, RollOnce);
-        UiBuilder.Place(_rollOnceButton.GetComponent<RectTransform>(), 32f, RollTop, 500f, RollHeight);
-
-        _rollTenButton = UiBuilder.CreateButton(Root, "RollTen", "10회", 52f, true, RollTen);
-        UiBuilder.Place(_rollTenButton.GetComponent<RectTransform>(), 548f, RollTop, 500f, RollHeight);
-
-        _resultText = UiBuilder.CreateText(Root, "ResultTitle", 34f, UiPalette.Text3);
-        UiBuilder.Place(_resultText.rectTransform, 32f, ResultRowTop, 1016f - HistoryButtonSize - 24f, HistoryButtonSize);
-        _resultText.text = "결과";
+        _rollOnceButton = CreateTicket("RollOnce", "1회", TicketSprite, UiPalette.Text1, 32f, RollOnce,
+            out _rollOnceLabel);
+        _rollTenButton = CreateTicket("RollTen", "10회", TicketGoldSprite, UiPalette.ButtonPrimaryText, 548f, RollTen,
+            out _rollTenLabel);
 
         _historyButton = UiBuilder.CreateButton(Root, "HistoryButton", "기록\n보기", 30f, false, OpenHistory);
-        UiBuilder.Place(_historyButton.GetComponent<RectTransform>(), 1048f - HistoryButtonSize, ResultRowTop,
+        UiBuilder.Place(_historyButton.GetComponent<RectTransform>(), 1048f - HistoryButtonSize, HistoryRowTop,
             HistoryButtonSize, HistoryButtonSize);
 
         _resultArea = UiBuilder.CreateRect(Root, "Result");
@@ -143,6 +155,55 @@ public class GachaScreen : UiScreenBehaviour
     {
         Refresh();
         _reveal?.ResumeHint();
+    }
+
+    //알약 탭 하나. 바탕(흰 알약)은 고른 탭에서만 보인다
+    private Button CreateTab(string name, string label, float x, UnityAction onClick,
+        out TextMeshProUGUI labelText)
+    {
+        Button tab = UiBuilder.CreateButton(Root, name, label, 36f, false, onClick, out labelText);
+        Image pill = (Image)tab.targetGraphic;
+
+        pill.sprite = UiSprites.Get(TabPillSprite);
+        pill.type = Image.Type.Sliced;
+        pill.pixelsPerUnitMultiplier = SliceScale;
+        UiBuilder.Place(tab.GetComponent<RectTransform>(), x + TabInset, TabTop + TabInset,
+            508f - TabInset * 2f, TabHeight - TabInset * 2f);
+
+        return tab;
+    }
+
+    //뽑기권 모양 버튼. 글자는 절취선 오른쪽 칸 가운데
+    private Button CreateTicket(string name, string label, string spritePath, Color labelColor, float x,
+        UnityAction onClick, out TextMeshProUGUI labelText)
+    {
+        Button ticket = UiBuilder.CreateButton(Root, name, label, 56f, false, onClick, out labelText);
+        Image background = (Image)ticket.targetGraphic;
+
+        background.sprite = UiSprites.Get(spritePath);
+        background.type = Image.Type.Simple;
+        background.color = Color.white;
+        labelText.color = labelColor;
+        labelText.rectTransform.offsetMin = new Vector2(TicketStubWidth, 0f);
+        UiBuilder.Place(ticket.GetComponent<RectTransform>(), x, RollTop, 500f, RollHeight);
+
+        return ticket;
+    }
+
+    private static void SetTabSelected(Button tab, TextMeshProUGUI label, bool selected)
+    {
+        tab.targetGraphic.color = selected ? Color.white : UiPalette.WithAlpha(Color.white, 0f);
+        label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
+    }
+
+    //뽑기권이 모자라면 누를 수 없고 흐리게 보인다
+    private static void SetTicketEnabled(Button ticket, TextMeshProUGUI label, bool enabled)
+    {
+        float alpha = enabled ? 1f : DisabledAlpha;
+
+        ticket.interactable = enabled;
+        ticket.targetGraphic.color = UiPalette.WithAlpha(Color.white, alpha);
+        label.alpha = alpha;
     }
 
     private void SelectType(GachaType gachaType)
@@ -214,9 +275,6 @@ public class GachaScreen : UiScreenBehaviour
 
         _emptyText.gameObject.SetActive(_resultCards.Count == 0);
         _reveal.Show(_resultCards, OnResultClicked);
-        _resultText.text = $"결과  {_resultInstanceIds.Count}장" +
-                           (_resultInstanceIds.Count < rolledCount ? "  (인벤토리가 꽉 차 일부를 받지 못했습니다)" : string.Empty);
-
         if (_resultInstanceIds.Count < rolledCount)
             _onNotify?.Invoke("인벤토리가 꽉 차 일부 카드를 받지 못했습니다", false);
 

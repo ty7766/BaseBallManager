@@ -11,6 +11,13 @@
     Assets/Resources/UI/Fx/card_spill.png       들린 카드 틈에서 바닥으로 새는 빛 256×512. 오른쪽 변 = 카드 가장자리, 왼쪽으로 타원으로 옅어진다
     Assets/Resources/UI/Fx/card_bloom.png       앞면이 드러날 때 카드에서 번지는 빛. 카드 실루엣을 흐린 것, 카드 둘레에 카드 폭 절반씩 여백
     Assets/Resources/UI/Fx/card_mask.png        카드 모양(모서리 둥근 흰 판). 공개 순간 앞면이 번쩍이는 덮개
+    Assets/Resources/UI/Fx/card_rimlight.png    카드 밑에서 가장자리로 새는 윤곽 빛. 들린 왼쪽이 밝고 경첩 쪽(오른쪽)은 거의 꺼진다
+    Assets/Resources/UI/Fx/light_mote.png       틈에서 떠오르는 빛 알갱이 64
+    (빛 그림은 모두 가산 합성(BaseBallManager/UI/AdditiveLight)으로 그린다)
+    Assets/Resources/UI/Gacha/tab_track.png     탭 바탕 알약 200×96 → 2배 · 9-슬라이스 96
+    Assets/Resources/UI/Gacha/tab_pill.png      고른 탭 흰 알약 200×80 → 2배 · 9-슬라이스 80
+    Assets/Resources/UI/Gacha/ticket_normal.png 1회 뽑기권 500×130 → 2배 (양옆 홈 · 절취선 · 카드 뒷면 1장)
+    Assets/Resources/UI/Gacha/ticket_gold.png   10회 금빛 뽑기권 500×130 → 2배 (카드 뒷면 3장 부채꼴)
 """
 import math
 import subprocess
@@ -41,6 +48,10 @@ SPILL_HALF_HEIGHT = 1.05 # 그림 높이의 절반 (같은 단위). 세로 ÷ �
 BLOOM_CARD_W = 180       # 번짐 그림에서 카드 폭(픽셀)
 BLOOM_MARGIN = 0.5       # 카드 둘레 여백 (카드 폭 비율). Unity 의 BloomMarginRatio 와 같다
 MASK_W = 280
+TICKET_W, TICKET_H = 500, 130
+TICKET_STUB = 150        # 절취선 왼쪽 그림 칸. Unity 의 TicketStubWidth 와 같다
+TICKET_NOTCH = 20
+RIM_MARGIN = 0.3         # 윤곽 빛 그림의 카드 둘레 여백 (카드 폭 비율). Unity 의 RimMarginRatio 와 같다
 LINEAR_ALPHA_GAMMA = 2.2  # Unity 는 선형 색 공간에서 섞어 옅은 알파가 밝게 뜬다. 빛 알파를 미리 제곱해 감마 공간에서 본 번짐과 맞춘다
 
 
@@ -155,10 +166,77 @@ def card_bloom():
     return (np.clip(bloom, 0, 1) * gaussian_blur(fade, 3)) ** LINEAR_ALPHA_GAMMA
 
 
+def card_rimlight():
+    """카드 밑에서 가장자리로 새는 빛. 카드 둘레에 바짝 붙은 좁은 번짐 + 조금 넓은 번짐을 섞고,
+    들린 왼쪽 변에서 가장 밝고 경첩인 오른쪽으로 갈수록 꺼진다 (카드 안쪽은 카드에 가려 보이지 않는다)"""
+    card_w = BLOOM_CARD_W
+    card_h = round(card_w * CH / CW)
+    margin = round(card_w * RIM_MARGIN)
+    width, height = card_w + margin * 2, card_h + margin * 2
+    silhouette = rounded_rect_mask(width, height, card_w, card_h, card_w * CARD_CORNER)
+    glow = 0.65 * gaussian_blur(silhouette, card_w * 0.03) + 0.35 * gaussian_blur(silhouette, card_w * 0.09)
+    glow /= glow[height // 2, width // 2]
+    across = (np.arange(width, dtype=np.float32) - margin) / card_w
+    ramp = 0.08 + 0.92 * (1 - np.clip(across / 0.85, 0, 1)) ** 1.6
+    fade = rounded_rect_mask(width, height, width - 4, height - 4, margin)
+    return (np.clip(glow, 0, 1) * ramp[None, :] * gaussian_blur(fade, 3)) ** LINEAR_ALPHA_GAMMA
+
+
+def light_mote():
+    """빛 알갱이. 밝은 심 + 부드러운 번짐"""
+    size = 64
+    ys, xs = np.mgrid[0:size, 0:size].astype(np.float32) + 0.5
+    r = np.hypot(xs - size / 2, ys - size / 2) / (size / 2)
+    dot = 0.7 * np.exp(-(r / 0.16) ** 2) + 0.3 * np.exp(-(r / 0.45) ** 2)
+    dot *= np.clip((1 - r) / 0.12, 0, 1)
+    return (dot / dot.max()) ** (LINEAR_ALPHA_GAMMA * 0.6)
+
+
 def card_mask():
     """카드 모양 흰 판. 모서리는 카드 그림과 같은 반지름"""
     height = round(MASK_W * CH / CW)
     return rounded_rect_mask(MASK_W, height, MASK_W, height, MASK_W * CARD_CORNER)
+
+
+def tab_track():
+    """탭 두 개를 담는 어두운 알약"""
+    return '<rect x="1.5" y="1.5" width="197" height="93" rx="46.5" fill="#191A1C" fill-opacity="0.92" stroke="#3C4044" stroke-width="3"/>'
+
+
+def tab_pill():
+    """고른 탭에 깔리는 흰 알약"""
+    return '<rect width="200" height="80" rx="40" fill="#F3F6FA"/>'
+
+
+def mini_card(x, y, w, stroke, rotate=0):
+    h = w * 1.4
+    d = w * 0.28
+    cx, cy = x + w / 2, y + h / 2
+    return (f'<g transform="rotate({rotate} {f(cx)} {f(cy)})"><rect x="{f(x)}" y="{f(y)}" width="{f(w)}" height="{f(h)}" '
+            f'rx="{f(w * 0.12)}" fill="#2A2D33" stroke="{stroke}" stroke-width="2.5"/>'
+            f'<polygon points="{f(cx)},{f(cy - d)} {f(cx + d)},{f(cy)} {f(cx)},{f(cy + d)} {f(cx - d)},{f(cy)}" '
+            f'fill="none" stroke="{stroke}" stroke-width="2"/></g>')
+
+
+def ticket(gold):
+    """뽑기권 모양: 양옆 가운데 반원 홈 + 절취선. 왼쪽 칸에 카드 뒷면 아이콘 (1회 1장 · 10회 3장 부채꼴)"""
+    w, h, n, r = TICKET_W - 3, TICKET_H - 3, TICKET_NOTCH, 18
+    x0, y0 = 1.5, 1.5
+    path = (f'M{x0 + r},{y0} H{x0 + w - r} Q{x0 + w},{y0} {x0 + w},{y0 + r} V{y0 + h / 2 - n} '
+            f'A{n},{n} 0 0 0 {x0 + w},{y0 + h / 2 + n} V{y0 + h - r} Q{x0 + w},{y0 + h} {x0 + w - r},{y0 + h} '
+            f'H{x0 + r} Q{x0},{y0 + h} {x0},{y0 + h - r} V{y0 + h / 2 + n} A{n},{n} 0 0 0 {x0},{y0 + h / 2 - n} '
+            f'V{y0 + r} Q{x0},{y0} {x0 + r},{y0} Z')
+    defs = ('<defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE7A0"/>'
+            '<stop offset="0.5" stop-color="#F2C14E"/><stop offset="1" stop-color="#C98A1E"/></linearGradient></defs>')
+    fill, stroke = ("url(#gold)", "#8A5A10") if gold else ("#212325", "#6E7C92")
+    out = [defs, f'<path d="{path}" fill="{fill}" stroke="{stroke}" stroke-width="3"/>',
+           f'<line x1="{TICKET_STUB}" y1="14" x2="{TICKET_STUB}" y2="{TICKET_H - 14}" stroke="{stroke}" '
+           f'stroke-width="3" stroke-dasharray="8 8" opacity="0.6"/>']
+    if gold:
+        out += [mini_card(34, 30, 44, "#FFE7A0", -12), mini_card(54, 26, 44, "#FFE7A0"), mini_card(74, 30, 44, "#FFE7A0", 12)]
+    else:
+        out.append(mini_card(50, 30, 50, "#C9D1DC"))
+    return "".join(out)
 
 
 def beam(corner_x, direction, target_y, length, spread, opacity):
@@ -225,6 +303,12 @@ if __name__ == "__main__":
     render(UI / "Card" / "card_back.png", card_back(), CW, CH)
     render(UI / "Gacha" / "swipe_arrow.png", swipe_arrow(), 330, 164, 2)
     render(UI / "Gacha" / "gacha_bg.png", gacha_bg(), BG_W, BG_H)
+    render(UI / "Gacha" / "tab_track.png", tab_track(), 200, 96, 2)
+    render(UI / "Gacha" / "tab_pill.png", tab_pill(), 200, 80, 2)
+    render(UI / "Gacha" / "ticket_normal.png", ticket(False), TICKET_W, TICKET_H, 2)
+    render(UI / "Gacha" / "ticket_gold.png", ticket(True), TICKET_W, TICKET_H, 2)
     save_alpha(UI / "Fx" / "card_spill.png", card_spill())
     save_alpha(UI / "Fx" / "card_bloom.png", card_bloom())
     save_alpha(UI / "Fx" / "card_mask.png", card_mask())
+    save_alpha(UI / "Fx" / "card_rimlight.png", card_rimlight())
+    save_alpha(UI / "Fx" / "light_mote.png", light_mote())
