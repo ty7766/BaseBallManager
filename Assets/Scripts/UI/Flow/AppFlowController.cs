@@ -520,10 +520,14 @@ public class AppFlowController : MonoBehaviour
         _router.ShowOverlay(_cardDetailScreen);
     }
 
+    //상세 보기에서 잠금을 바꿨을 수 있으니 아래에 깔린 인벤토리는 다시 그린다
     private void CloseCardDetail()
     {
         _router.HideOverlay(_cardDetailScreen);
         PlayerPhotoProvider.UnloadAll();
+
+        if (_inventoryScreen.gameObject.activeSelf)
+            _inventoryScreen.Refresh();
     }
 
     private void ShowToast(string message, bool success)

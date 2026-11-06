@@ -234,6 +234,46 @@ public static class UiBuilder
     }
 
     /// <summary>
+    /// 세로 스크롤 영역 오른쪽 바깥(gap 만큼 띄워)에 스크롤바를 붙인다. 내용이 영역보다 짧으면 숨는다
+    /// </summary>
+    public static Scrollbar AddVerticalScrollbar(ScrollRect scroll, float gap, float width)
+    {
+        RectTransform viewport = (RectTransform)scroll.transform;
+        RectTransform bar = CreateRect(viewport.parent, "Scrollbar");
+
+        bar.anchorMin = new Vector2(1f, 0f);
+        bar.anchorMax = new Vector2(1f, 1f);
+        bar.pivot = new Vector2(0f, 0.5f);
+        bar.offsetMin = new Vector2(gap, viewport.offsetMin.y);
+        bar.offsetMax = new Vector2(gap + width, viewport.offsetMax.y);
+
+        Image track = bar.gameObject.AddComponent<Image>();
+
+        track.sprite = UiSprites.Get(UiSprites.ScrollHandle);
+        track.type = Image.Type.Sliced;
+        track.color = UiPalette.WithAlpha(Color.white, 0.08f);
+
+        RectTransform slidingArea = CreateRect(bar, "SlidingArea");
+        Stretch(slidingArea, 0f, 0f, 0f, 0f);
+
+        Image handle = CreateImage(slidingArea, "Handle", UiPalette.WithAlpha(Color.white, 0.5f),
+            UiSprites.ScrollHandle, Image.Type.Sliced);
+        Stretch(handle.rectTransform, 0f, 0f, 0f, 0f);
+
+        Scrollbar scrollbar = bar.gameObject.AddComponent<Scrollbar>();
+
+        scrollbar.handleRect = handle.rectTransform;
+        scrollbar.targetGraphic = handle;
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scrollbar.transition = Selectable.Transition.None;
+
+        scroll.verticalScrollbar = scrollbar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+
+        return scrollbar;
+    }
+
+    /// <summary>
     /// 가로·세로 둘 다 스크롤되는 영역 (박스스코어 표)
     /// </summary>
     public static ScrollRect CreateTableScroll(Transform parent, string name, out RectTransform content)

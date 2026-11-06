@@ -17,6 +17,9 @@ public class CardGridView : UiWidgetBehaviour
     //화면 좌우 여백 32 를 뺀 설계 폭. 가운데 정렬 기준이다
     private const float GridWidth = 1016f;
     private const float CenterNudgeUp = 60f;
+    //스크롤바는 칸 오른쪽 바깥(화면 여백)에 붙인다
+    private const float ScrollbarGap = 12f;
+    private const float ScrollbarWidth = 8f;
 
     /// <summary>
     /// 현재 깔려 있는 카드 수
@@ -35,6 +38,7 @@ public class CardGridView : UiWidgetBehaviour
     private Action<int> _onCardClicked;
     private Func<CardDisplayInfo, string> _blockedReason;
     private Action<int> _onCardLongPressed;
+    private Scrollbar _scrollbar;
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
@@ -106,6 +110,8 @@ public class CardGridView : UiWidgetBehaviour
     /// </summary>
     public void SetCards(IReadOnlyList<int> instanceIds)
     {
+        EnsureScrollbar();
+
         int used = 0;
         float cellWidth = _cellWidth > 0f ? _cellWidth : DefaultCellWidth;
         float cellHeight = cellWidth * CardView.BaseHeight / CardView.BaseWidth;
@@ -176,6 +182,18 @@ public class CardGridView : UiWidgetBehaviour
     public void SetEmptyMessage(string message)
     {
         _emptyText.text = message;
+    }
+
+    //오른쪽 맨 끝 열에서도 어디까지 내렸는지 보이게 한다. 이미 구운 화면 프리팹도 다시 굽지 않게 처음 깔 때 만든다
+    private void EnsureScrollbar()
+    {
+        if (_scrollbar != null)
+            return;
+
+        ScrollRect scroll = GetComponentInChildren<ScrollRect>(true);
+
+        if (scroll != null)
+            _scrollbar = UiBuilder.AddVerticalScrollbar(scroll, ScrollbarGap, ScrollbarWidth);
     }
 
     //타일은 필요한 만큼만 만들고 다음 갱신에서 재사용한다

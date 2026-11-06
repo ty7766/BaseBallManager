@@ -5,17 +5,20 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 보유 카드 목록. 필터 · 상세 보기 · 용량 확장을 담당한다
+/// 보유 카드 목록. 필터(깔때기 → 체크박스 창) · 상세 보기 · 용량 확장을 담당한다
 /// </summary>
 public class InventoryScreen : UiScreenBehaviour
 {
+    //제목 아래 줄: 왼쪽 표시 장수 · 오른쪽 필터 버튼
+    private const float FilterRowTop = 112f;
+
     private Action _onBack;
     private Action<int> _onCardSelected;
     private Action<string, bool> _onNotify;
 
     [SerializeField] private TextMeshProUGUI _capacityText;
     [SerializeField] private TextMeshProUGUI _countText;
-    [SerializeField] private CardFilterBarView _filterBar;
+    [SerializeField] private CardFilterButtonView _filterButton;
     [SerializeField] private CardGridView _grid;
     [SerializeField] private Button _expandButton;
     [SerializeField] private TextMeshProUGUI _expandLabel;
@@ -42,7 +45,7 @@ public class InventoryScreen : UiScreenBehaviour
 
         _visibleInstanceIds.Clear();
 
-        List<CardInstance> filtered = InventoryManager.Instance.GetFiltered(_filterBar.CurrentFilter);
+        List<CardInstance> filtered = InventoryManager.Instance.GetFiltered(_filterButton.CurrentFilter);
 
         foreach (CardInstance card in filtered)
             _visibleInstanceIds.Add(card.InstanceId);
@@ -54,7 +57,9 @@ public class InventoryScreen : UiScreenBehaviour
 
         _capacityText.text = $"{count} / {capacity}";
         _capacityText.color = count >= capacity ? UiPalette.StateOut : UiPalette.Text2;
-        _countText.text = $"{_grid.Count}장 표시";
+        _countText.text = _filterButton.CurrentFilter.SelectedCount > 0
+            ? $"필터 적용 · {_grid.Count}장 표시"
+            : $"{_grid.Count}장 표시";
 
         _expandLabel.text = $"칸 확장  +{InventoryManager.Instance.ExpandUnit}\n골드 {InventoryManager.Instance.ExpandGoldCost}";
         _expandButton.interactable = CurrencyManager.Instance != null
@@ -63,7 +68,7 @@ public class InventoryScreen : UiScreenBehaviour
 
     protected override void BindEvents()
     {
-        _filterBar.SetChangedHandler(Refresh);
+        _filterButton.SetChangedHandler(Refresh);
         _grid.SetClickHandler(OnCardClicked);
         Bind(_expandButton, OnExpandClicked);
         BindButton("BackButton", OnBackClicked);
@@ -78,15 +83,16 @@ public class InventoryScreen : UiScreenBehaviour
         _capacityText = UiBuilder.CreateText(Root, "Capacity", 36f, UiPalette.Text2, TextAlignmentOptions.Right);
         UiBuilder.PlaceRight(_capacityText.rectTransform, 32f, 40f, 320f, 48f);
 
-        _countText = UiBuilder.CreateText(Root, "Count", 28f, UiPalette.Text3);
-        UiBuilder.Place(_countText.rectTransform, 32f, 96f, 400f, 40f);
+        _countText = UiBuilder.CreateText(Root, "Count", 30f, UiPalette.Text3);
+        UiBuilder.Place(_countText.rectTransform, 32f, FilterRowTop, 600f, CardFilterButtonView.ButtonHeight);
 
-        _filterBar = CardFilterBarView.Bake(Root);
-        UiBuilder.Place(_filterBar.Root, 32f, 144f, 1016f, CardFilterBarView.BarHeight);
-        _filterBar.SetChangedHandler(Refresh);
+        _filterButton = CardFilterButtonView.Bake(Root);
+        UiBuilder.PlaceRight(_filterButton.Root, 32f, FilterRowTop, CardFilterButtonView.ButtonWidth,
+            CardFilterButtonView.ButtonHeight);
+        _filterButton.SetChangedHandler(Refresh);
 
         _grid = CardGridView.Bake(Root);
-        UiBuilder.Stretch(_grid.Root, 32f, 144f + CardFilterBarView.BarHeight + 16f, 32f, 200f);
+        UiBuilder.Stretch(_grid.Root, 32f, FilterRowTop + CardFilterButtonView.ButtonHeight + 20f, 32f, 200f);
         _grid.SetClickHandler(OnCardClicked);
         _grid.SetEmptyMessage("조건에 맞는 카드가 없습니다");
 

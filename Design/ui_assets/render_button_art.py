@@ -1,5 +1,5 @@
 """
-공용 버튼 모양 — 왼쪽 위 · 오른쪽 아래는 각지고, 왼쪽 아래 · 오른쪽 위는 둥근 사각형 (9-슬라이스)
+공용 버튼 모양 — 왼쪽 위 · 오른쪽 아래는 각지고, 왼쪽 아래 · 오른쪽 위는 둥근 사각형 (9-슬라이스) · 공용 조작 아이콘
 
 사용법
     python Design/ui_assets/render_button_art.py
@@ -9,6 +9,10 @@
     Assets/Resources/UI/Match/button_normal.png     보조 버튼 흰 테두리 (색은 Image 색으로 틴트)
     Assets/Resources/UI/Match/button_disabled.png   비활성 버튼
     Assets/Resources/UI/Match/tab_on.png            켜진 탭 (어두운 채움 + 아래 흰 줄)
+    Assets/Resources/UI/Common/icon_filter.png      깔때기 필터 아이콘 48 → 2배
+    Assets/Resources/UI/Common/checkbox_off.png     빈 체크박스 (흰 테 — Image 색으로 틴트) 48 → 2배
+    Assets/Resources/UI/Common/checkbox_on.png      체크된 체크박스 (흰 채움 + 남색 체크) 48 → 2배
+    Assets/Resources/UI/Common/scroll_handle.png    스크롤바 손잡이 · 홈 (둥근 막대, 9-슬라이스 10px) 12×24 → 2배
 """
 import subprocess
 import tempfile
@@ -50,6 +54,36 @@ def tab_on():
     return clip + filled("#18233A") + f'<rect y="{SIZE - 5}" width="{SIZE}" height="5" fill="#F3F6FA" clip-path="url(#c)"/>'
 
 
+def icon_filter():
+    """깔때기: 위가 넓은 사다리꼴 + 아래로 좁은 목"""
+    return ('<path d="M6,9 H42 L28,25 V38 L20,42 V25 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="3" '
+            'stroke-linejoin="round"/>')
+
+
+def checkbox(checked):
+    """체크박스 칸. 공용 버튼과 같은 모서리 (반지름 10)"""
+    def box(inset):
+        a, b, r = inset, 48 - inset, max(0.0, 10 - inset)
+        return (f'M{a},{a} H{b - r} A{r},{r} 0 0 1 {b},{a + r} V{b} H{a + r} '
+                f'A{r},{r} 0 0 1 {a},{b - r} Z')
+    if checked:
+        return (f'<path d="{box(0)}" fill="#F3F6FA"/>'
+                '<path d="M12,25 L21,34 L37,15" fill="none" stroke="#0A111D" stroke-width="5.5" '
+                'stroke-linecap="round" stroke-linejoin="round"/>')
+    return f'<path d="{box(2)}" fill="none" stroke="#FFFFFF" stroke-width="4"/>'
+
+
+def scroll_handle():
+    return '<rect width="12" height="24" rx="6" fill="#FFFFFF"/>'
+
+
+ICONS = {
+    "icon_filter": (icon_filter(), 48, 48),
+    "checkbox_off": (checkbox(False), 48, 48),
+    "checkbox_on": (checkbox(True), 48, 48),
+    "scroll_handle": (scroll_handle(), 12, 24),
+}
+
 SPRITES = {
     "button_primary": filled("#F3F6FA"),
     "button_normal": ringed(None, 3, "#FFFFFF"),
@@ -58,11 +92,11 @@ SPRITES = {
 }
 
 
-def render(name, body):
+def render(name, body, folder="Match", width=SIZE, height=SIZE):
     """SVG 한 장을 투명 PNG로 (Edge 헤드리스 스크린샷)"""
     WORK.mkdir(parents=True, exist_ok=True)
-    path = UI / "Match" / f"{name}.png"
-    svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="{SIZE}" height="{SIZE}" viewBox="0 0 {SIZE} {SIZE}">{body}</svg>'
+    path = UI / folder / f"{name}.png"
+    svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">{body}</svg>'
     html, shot = WORK / f"{name}.html", WORK / f"{name}_shot.png"
     html.write_text(f'<html><body style="margin:0;background:transparent">{svg}</body></html>', encoding="utf-8")
     if shot.exists():
@@ -77,7 +111,7 @@ def render(name, body):
             break
         time.sleep(0.1)
     with Image.open(shot) as im:
-        png = im.convert("RGBA").crop((0, 0, SIZE * SCALE, SIZE * SCALE))
+        png = im.convert("RGBA").crop((0, 0, width * SCALE, height * SCALE))
     png.save(path, optimize=True)
     print(f"  {path.name} {png.size[0]}x{png.size[1]}")
 
@@ -85,3 +119,5 @@ def render(name, body):
 if __name__ == "__main__":
     for sprite, svg_body in SPRITES.items():
         render(sprite, svg_body)
+    for icon, (svg_body, icon_width, icon_height) in ICONS.items():
+        render(icon, svg_body, "Common", icon_width, icon_height)
