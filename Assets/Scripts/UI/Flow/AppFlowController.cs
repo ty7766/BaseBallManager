@@ -177,7 +177,7 @@ public class AppFlowController : MonoBehaviour
 
         _inventoryScreen.Initialize(ShowLobby, OpenCardDetail, ShowToast);
         _gachaScreen.Initialize(ShowLobby, OpenCardDetail, ShowToast);
-        _lineUpScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast);
+        _lineUpScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
         _enhanceScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
         _trainScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
         _combineScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);

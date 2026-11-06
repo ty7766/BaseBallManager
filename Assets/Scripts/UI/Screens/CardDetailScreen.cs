@@ -4,19 +4,19 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 카드 상세 보기 오버레이. 카드를 누르면 뒤집히고, 잠금을 토글할 수 있다
+/// 카드 상세 보기 오버레이. 카드를 누르면 뒤집히고, 카드 왼쪽 아래 자물쇠로 잠금을 토글한다
 /// </summary>
 public class CardDetailScreen : UiScreenBehaviour
 {
     private const float CardWidth = 700f;
+    private const string HintFront = "카드를 누르면 뒷면 · 왼쪽 아래 자물쇠로 잠금";
+    private const string HintBack = "다시 누르면 앞면으로 돌아갑니다";
 
     private Action _onClose;
     private Action<string, bool> _onNotify;
 
     [SerializeField] private CardView _cardView;
     [SerializeField] private TextMeshProUGUI _hintText;
-    [SerializeField] private Button _lockButton;
-    [SerializeField] private TextMeshProUGUI _lockLabel;
 
     private int _instanceId = InventoryManager.InvalidInstanceId;
     private bool _showBack;
@@ -44,14 +44,12 @@ public class CardDetailScreen : UiScreenBehaviour
         _cardView.SetFlipped(false);
         _cardView.SetCard(info);
         _cardView.PlayAppear();
-
-        RefreshLockLabel(info.IsLocked);
     }
 
     protected override void BindEvents()
     {
         _cardView.SetClickHandler(Flip);
-        Bind(_lockButton, ToggleLock);
+        _cardView.SetLockToggleHandler(ToggleLock);
         BindButton("CloseButton", OnCloseClicked);
         BindButton("BackButton", OnCloseClicked);
     }
@@ -66,19 +64,11 @@ public class CardDetailScreen : UiScreenBehaviour
         UiBuilder.Place(_cardView.Root, (UiBuilder.DesignSize.x - CardWidth) * 0.5f, 180f,
             CardWidth, CardWidth * CardView.BaseHeight / CardView.BaseWidth);
         _cardView.SetClickHandler(Flip);
+        _cardView.SetLockToggleHandler(ToggleLock);
 
         _hintText = UiBuilder.CreateText(Root, "Hint", 30f, UiPalette.Text3, TextAlignmentOptions.Center);
         UiBuilder.Place(_hintText.rectTransform, 40f, 110f, 1000f, 44f);
-        _hintText.text = "카드를 누르면 뒷면이 보입니다";
-
-        _lockButton = UiBuilder.CreateButton(Root, "LockButton", "잠금", 34f, false, ToggleLock, out _lockLabel);
-        RectTransform lockRect = _lockButton.GetComponent<RectTransform>();
-
-        lockRect.anchorMin = new Vector2(0f, 0f);
-        lockRect.anchorMax = new Vector2(0.5f, 0f);
-        lockRect.pivot = new Vector2(0f, 0f);
-        lockRect.offsetMin = new Vector2(40f, 40f);
-        lockRect.offsetMax = new Vector2(-12f, 140f);
+        _hintText.text = HintFront;
 
         //왼쪽 위 뒤로가기 (기기 뒤로가기 키와 같은 동작)
         Button backButton = UiBuilder.CreateButton(Root, "BackButton", "←", 44f, false, OnCloseClicked);
@@ -87,10 +77,10 @@ public class CardDetailScreen : UiScreenBehaviour
         Button closeButton = UiBuilder.CreateButton(Root, "CloseButton", "닫기", 34f, true, OnCloseClicked);
         RectTransform closeRect = closeButton.GetComponent<RectTransform>();
 
-        closeRect.anchorMin = new Vector2(0.5f, 0f);
+        closeRect.anchorMin = new Vector2(0f, 0f);
         closeRect.anchorMax = new Vector2(1f, 0f);
-        closeRect.pivot = new Vector2(0f, 0f);
-        closeRect.offsetMin = new Vector2(12f, 40f);
+        closeRect.pivot = new Vector2(0.5f, 0f);
+        closeRect.offsetMin = new Vector2(40f, 40f);
         closeRect.offsetMax = new Vector2(-40f, 140f);
     }
 
@@ -98,7 +88,7 @@ public class CardDetailScreen : UiScreenBehaviour
     {
         _showBack = !_showBack;
         _cardView.PlayFlip(_showBack);
-        _hintText.text = _showBack ? "다시 누르면 앞면으로 돌아갑니다" : "카드를 누르면 뒷면이 보입니다";
+        _hintText.text = _showBack ? HintBack : HintFront;
     }
 
     private void ToggleLock()
@@ -114,14 +104,8 @@ public class CardDetailScreen : UiScreenBehaviour
             return;
         }
 
-        RefreshLockLabel(nextLocked);
+        _cardView.SetLocked(nextLocked);
         _onNotify?.Invoke(nextLocked ? "카드를 잠갔습니다" : "잠금을 풀었습니다", true);
-    }
-
-    private void RefreshLockLabel(bool locked)
-    {
-        _lockLabel.text = locked ? "잠금 해제" : "잠금";
-        _lockLabel.color = locked ? UiPalette.AccentGold : UiPalette.Text1;
     }
 
     private void OnCloseClicked()

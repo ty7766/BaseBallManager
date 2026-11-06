@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 목록·그리드에 깔리는 카드 1장. 실제 카드 그림(<see cref="CardView"/>)을 그대로 쓰고
-/// 선택 테두리 · 잠금 · 흐리게만 더한다. 뒷면은 만들지 않아 노드 수를 절반으로 줄인다
+/// 선택 테두리 · 흐리게만 더한다 (잠금 자물쇠는 카드가 직접 그린다). 뒷면은 만들지 않아 노드 수를 절반으로 줄인다
 /// </summary>
 public class CardCellView
 {
@@ -15,7 +15,6 @@ public class CardCellView
     public const float CellHeight = CellWidth * CardView.BaseHeight / CardView.BaseWidth;
 
     private const float BorderThickness = 5f;
-    private const float LockSize = 52f;
     private const float BlockedDimAlpha = 0.68f;
 
     public RectTransform Root => _root;
@@ -25,7 +24,6 @@ public class CardCellView
     private readonly CardView _card;
     private readonly CanvasGroup _group;
     private readonly Image _border;
-    private readonly Image _lockIcon;
     private readonly Image _blockedDim;
     private readonly TMPro.TextMeshProUGUI _blockedText;
 
@@ -48,11 +46,6 @@ public class CardCellView
             -BorderThickness, -BorderThickness, -BorderThickness, -BorderThickness);
         _border.raycastTarget = false;
         _border.gameObject.SetActive(false);
-
-        _lockIcon = UiBuilder.CreateImage(_root, "Lock", UiPalette.Text1, UiSprites.IconLock);
-        UiBuilder.PlaceRight(_lockIcon.rectTransform, 10f, 10f, LockSize, LockSize);
-        _lockIcon.raycastTarget = false;
-        _lockIcon.gameObject.SetActive(false);
 
         _blockedDim = UiBuilder.CreateImage(_root, "BlockedDim",
             UiPalette.WithAlpha(Color.black, BlockedDimAlpha));
@@ -107,8 +100,6 @@ public class CardCellView
         _card.SetCard(info);
         _card.SetClickHandler(_onClick == null ? null : OnClicked);
         _card.SetLongPressHandler(_onLongPress == null ? null : OnLongPressed);
-
-        _lockIcon.gameObject.SetActive(info.IsLocked);
 
         SetSelected(false);
         SetDimmed(false);
