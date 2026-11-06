@@ -69,6 +69,7 @@ public class LineUpScreen : UiScreenBehaviour
     private Action _onBack;
     private Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> _onPickCard;
     private Action<string, bool> _onNotify;
+    private Action<int> _onOpenDetail;
 
     [SerializeField] private TextMeshProUGUI _stateText;
     [SerializeField] private Button _hitterTabButton;
@@ -88,11 +89,12 @@ public class LineUpScreen : UiScreenBehaviour
     /// </summary>
     public void Initialize(Action onBack,
         Action<string, int, Func<CardDisplayInfo, bool>, Action<List<int>>> onPickCard,
-        Action<string, bool> onNotify)
+        Action<string, bool> onNotify, Action<int> onOpenDetail)
     {
         _onBack = onBack;
         _onPickCard = onPickCard;
         _onNotify = onNotify;
+        _onOpenDetail = onOpenDetail;
     }
 
     private enum Tab
@@ -223,7 +225,7 @@ public class LineUpScreen : UiScreenBehaviour
         for (int i = 0; i <= DhSlotIndex; i++)
         {
             _fieldSlots.Add(new FieldSlot(_formation, HitterSlotLabels[i],
-                HitterSlotPoints[i].x, HitterSlotPoints[i].y, SlotCardWidth));
+                HitterSlotPoints[i].x, HitterSlotPoints[i].y, SlotCardWidth, OpenDetail));
         }
 
         //벤치 5장은 야구장 아래에 간격을 두고 가로 한 줄로
@@ -233,7 +235,7 @@ public class LineUpScreen : UiScreenBehaviour
         for (int i = 0; i < BenchSlotCount; i++)
         {
             _benchSlots.Add(new FieldSlot(_formation, $"벤치 {i + 1}",
-                left + i * step, FormationHeight + BenchGap, SmallCardWidth, false));
+                left + i * step, FormationHeight + BenchGap, SmallCardWidth, OpenDetail, false));
         }
     }
 
@@ -315,7 +317,7 @@ public class LineUpScreen : UiScreenBehaviour
             string slotLabel = count == 1 ? label : $"{label} {i + 1}";
 
             _pitcherSlots.Add(new FieldSlot(_pitcherFormation, slotLabel,
-                left + i * step, top, PitcherCardWidth, false));
+                left + i * step, top, PitcherCardWidth, OpenDetail, false));
         }
     }
 
@@ -437,6 +439,12 @@ public class LineUpScreen : UiScreenBehaviour
         Refresh();
     }
 
+    //카드를 꾹 누르면 상세 보기 (뽑기 결과의 상세 보기와 같은 화면)
+    private void OpenDetail(int instanceId)
+    {
+        _onOpenDetail?.Invoke(instanceId);
+    }
+
     private void ClearHitter(HitterPosition slot)
     {
         LineUpManager.Instance.RemoveHitter(slot);
@@ -526,6 +534,8 @@ public class LineUpScreen : UiScreenBehaviour
         private readonly Button _orderUpButton;
         private readonly Button _clearButton;
 
+        private readonly Action<int> _onOpenDetail;
+
         private Action _onPick;
         private Action _onClear;
         private Action<int> _onOrderChanged;
@@ -534,9 +544,10 @@ public class LineUpScreen : UiScreenBehaviour
         private readonly bool _hasOrder;
 
         public FieldSlot(Transform parent, string label, float x, float y, float width,
-            bool withOrder = true)
+            Action<int> onOpenDetail, bool withOrder = true)
         {
             _hasOrder = withOrder;
+            _onOpenDetail = onOpenDetail;
 
             float cardHeight = width * CardView.BaseHeight / CardView.BaseWidth;
             float height = SlotLabelHeight + SlotGap + cardHeight
@@ -598,6 +609,7 @@ public class LineUpScreen : UiScreenBehaviour
                 _card.SetEmpty("비어 있음");
 
             _card.SetClickHandler(onPick);
+            _card.SetLongPressHandler(filled ? () => _onOpenDetail?.Invoke(instanceId) : null);
 
             _clearButton.gameObject.SetActive(filled);
 

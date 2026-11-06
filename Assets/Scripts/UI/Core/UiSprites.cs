@@ -42,7 +42,6 @@ public static class UiSprites
     public const string CardStarBack = "Card/card_star_back";
     public const string CardStarFill = "Card/card_star_fill";
     public const string CardSlotEmpty = "Card/card_slot_empty";
-    public const string IconLock = "Card/icon_lock";
     public const string Spinner = "Common/spinner_00";
 
     private const string ResourceRoot = "UI/";

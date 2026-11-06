@@ -113,6 +113,19 @@ public sealed class CardStyle
         };
     }
 
+    /// <summary>
+    /// 희귀도 색. 시그 분홍 · 골글 노랑, 노말은 별 색 (뽑기 빛 · 뽑기 기록)
+    /// </summary>
+    public static Color GetRarityColor(CardType cardType, CardGrade cardGrade)
+    {
+        return cardType switch
+        {
+            CardType.Signature => UiPalette.CardSignature,
+            CardType.GoldenGlove => UiPalette.CardGoldenGlove,
+            _ => GetStarColor(cardGrade)
+        };
+    }
+
     private static Color Hex(string html)
     {
         return ColorUtility.TryParseHtmlString(html, out Color parsed) ? parsed : Color.white;

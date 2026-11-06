@@ -5,8 +5,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 카드 1장 (명세 1-2 레이어 구조 · 6-6 좌표). 누르면 앞면/뒷면이 바뀐다.
-/// 좌표는 1398×1957 기준으로 적고 생성 시 폭에 맞춰 일괄 축소한다
+/// 카드 1장 (명세 1-2 레이어 구조 · 6-6 좌표). 누르면 앞면/뒷면이 바뀌고, 꾹 누르면 원형 게이지가 차서 상세 보기로 넘긴다.
+/// 왼쪽 아래 자물쇠는 잠금 토글(상세 보기) 또는 잠금 표시다. 좌표는 1398×1957 기준으로 적고 생성 시 폭에 맞춰 일괄 축소한다
 /// </summary>
 public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
 {
@@ -44,8 +44,19 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private const float OvrWidth = 320f;
     //조합 결과 자리에 띄우는 물음표 크기 (카드 좌표계)
     private const float UnknownMarkSize = 520f;
-    //이만큼 누르고 있으면 상세 보기로 넘긴다
-    private const float LongPressSeconds = 2f;
+    //이만큼 누르고 있으면 상세 보기로 넘긴다. 짧게 누를 때 게이지가 깜빡이지 않도록 조금 지나서 띄운다
+    private const float LongPressSeconds = 0.8f;
+    private const float PressGaugeDelay = 0.15f;
+    //게이지 지름 (카드 폭 비율)
+    private const float PressGaugeRatio = 0.42f;
+    private const string PressRingSprite = "Common/press_ring";
+    private const string PressDiscSprite = "Common/press_disc";
+    //왼쪽 아래 자물쇠 (카드 좌표)
+    private const float LockLeft = 36f;
+    private const float LockTop = 1747f;
+    private const float LockSize = 176f;
+    private const string LockClosedSprite = "Card/lock_closed";
+    private const string LockOpenSprite = "Card/lock_open";
     //화면 폭이 이 이하인 카드는 썸네일 사진(320×400)으로 충분하다
     private const float ThumbMaxDisplayWidth = 360f;
 
@@ -96,6 +107,14 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private bool _cardFontApplied;
     private float _ovrMaxWidth;
     [SerializeField] private bool _hasBack;
+    //게이지 · 자물쇠는 처음 쓸 때 만든다. 이미 구운 화면 프리팹을 다시 굽지 않아도 된다
+    private RectTransform _pressGauge;
+    private Image _pressFill;
+    private Button _lockButton;
+    private Image _lockIcon;
+    private Action _onLockToggle;
+    private bool _locked;
+    private bool _showsCard;
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
@@ -180,7 +199,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _enhanceText = CreateCardText(_front, "EnhanceText", EnhanceFontSize, 1076f, 372f, 240f, 208f,
             TextAlignmentOptions.Center);
 
-        _nameText = CreateCardText(_front, "Name", 138f, 40f, 1712f, 1318f, 170f, TextAlignmentOptions.Center);
+        _nameText = CreateCardText(_front, "Name", 138f, 40f, 1728f, 1318f, 170f, TextAlignmentOptions.Center);
 
         _shine = CreateHiddenLayer(_front, "Shine", 0f, 0f, BaseWidth, BaseHeight);
 
@@ -282,6 +301,9 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
         if (_hasBack)
             FillBack(info, typeColor);
+
+        _showsCard = true;
+        SetLocked(info.IsLocked);
     }
 
     /// <summary>
@@ -318,6 +340,9 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
         _emptyText.gameObject.SetActive(true);
         _emptyText.text = label;
+
+        _showsCard = false;
+        RefreshLock();
     }
 
     /// <summary>
@@ -326,6 +351,25 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     public void SetLongPressHandler(Action onLongPress)
     {
         _onLongPress = onLongPress;
+    }
+
+    /// <summary>
+    /// 왼쪽 아래 자물쇠를 누를 때의 동작. 있으면 잠김 · 풀림을 오가는 버튼이 되고,
+    /// null 이면 잠긴 카드에만 닫힌 자물쇠가 표시로 보인다
+    /// </summary>
+    public void SetLockToggleHandler(Action onToggle)
+    {
+        _onLockToggle = onToggle;
+        RefreshLock();
+    }
+
+    /// <summary>
+    /// 자물쇠 모양만 다시 그린다 (토글 직후)
+    /// </summary>
+    public void SetLocked(bool locked)
+    {
+        _locked = locked;
+        RefreshLock();
     }
 
     void IPointerDownHandler.OnPointerDown(PointerEventData eventData)
@@ -338,25 +382,29 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     void IPointerUpHandler.OnPointerUp(PointerEventData eventData)
     {
         _pressing = false;
+        HidePressGauge();
     }
 
     void IPointerExitHandler.OnPointerExit(PointerEventData eventData)
     {
         _pressing = false;
+        HidePressGauge();
     }
 
-    //길게 누르는 동안만 센다. 한 번 터지면 손을 뗄 때까지 다시 터지지 않는다
+    //길게 누르는 동안만 세며 게이지를 채운다. 한 번 터지면 손을 뗄 때까지 다시 터지지 않는다
     private void Update()
     {
         if (!_pressing || _longPressFired || _onLongPress == null)
             return;
 
         _pressSeconds += Time.unscaledDeltaTime;
+        ShowPressGauge(Mathf.InverseLerp(PressGaugeDelay, LongPressSeconds, _pressSeconds));
 
         if (_pressSeconds < LongPressSeconds)
             return;
 
         _longPressFired = true;
+        HidePressGauge();
         _onLongPress();
     }
 
@@ -661,8 +709,96 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         };
     }
 
+    //길게 눌러 상세 보기로 넘긴 손을 뗄 때 딸려 오는 클릭은 버린다
     private void OnClicked()
     {
+        if (_longPressFired)
+            return;
+
         _onClick?.Invoke();
+    }
+
+    //카드 가운데 원형 게이지. 어두운 원판 위 흐린 고리를 금색으로 시계 방향 채운다
+    private void ShowPressGauge(float fill)
+    {
+        if (fill <= 0f)
+            return;
+
+        if (_pressGauge == null)
+            CreatePressGauge();
+
+        float pop = Mathf.Lerp(0.7f, 1f, Mathf.Clamp01(fill * 5f));
+
+        _pressGauge.gameObject.SetActive(true);
+        _pressGauge.localScale = new Vector3(pop, pop, 1f);
+        _pressFill.fillAmount = fill;
+    }
+
+    private void HidePressGauge()
+    {
+        if (_pressGauge != null)
+            _pressGauge.gameObject.SetActive(false);
+    }
+
+    private void CreatePressGauge()
+    {
+        float size = Root.rect.width * PressGaugeRatio;
+
+        _pressGauge = UiBuilder.CreateRect(Root, "PressGauge");
+        _pressGauge.anchorMin = new Vector2(0.5f, 0.5f);
+        _pressGauge.anchorMax = new Vector2(0.5f, 0.5f);
+        _pressGauge.sizeDelta = new Vector2(size, size);
+
+        Image disc = UiBuilder.CreateImage(_pressGauge, "Disc", UiPalette.WithAlpha(Color.black, 0.55f), PressDiscSprite);
+        UiBuilder.Stretch(disc.rectTransform, 0f, 0f, 0f, 0f);
+
+        Image track = UiBuilder.CreateImage(_pressGauge, "Track", UiPalette.WithAlpha(Color.white, 0.22f), PressRingSprite);
+        UiBuilder.Stretch(track.rectTransform, 0f, 0f, 0f, 0f);
+
+        _pressFill = UiBuilder.CreateImage(_pressGauge, "Fill", UiPalette.AccentGold, PressRingSprite, Image.Type.Filled);
+        UiBuilder.Stretch(_pressFill.rectTransform, 0f, 0f, 0f, 0f);
+        _pressFill.fillMethod = Image.FillMethod.Radial360;
+        _pressFill.fillOrigin = (int)Image.Origin360.Top;
+        _pressFill.fillClockwise = true;
+        _pressFill.fillAmount = 0f;
+    }
+
+    //토글이 있으면 늘 보이며 눌린다. 없으면 잠긴 카드에만 표시로 보이고 누름은 카드로 지나간다
+    private void RefreshLock()
+    {
+        bool toggle = _onLockToggle != null;
+        bool shown = _showsCard && (_locked || toggle);
+
+        if (!shown)
+        {
+            if (_lockButton != null)
+                _lockButton.gameObject.SetActive(false);
+
+            return;
+        }
+
+        if (_lockButton == null)
+            CreateLockButton();
+
+        _lockButton.gameObject.SetActive(true);
+        _lockButton.interactable = toggle;
+        _lockIcon.raycastTarget = toggle;
+        _lockIcon.sprite = UiSprites.Get(_locked ? LockClosedSprite : LockOpenSprite);
+    }
+
+    private void CreateLockButton()
+    {
+        _lockIcon = UiBuilder.CreateImage(Root, "Lock", Color.white, LockClosedSprite);
+        Place(_lockIcon.rectTransform, LockLeft, LockTop, LockSize, LockSize);
+
+        _lockButton = _lockIcon.gameObject.AddComponent<Button>();
+        _lockButton.targetGraphic = _lockIcon;
+        _lockButton.transition = Selectable.Transition.None;
+        _lockButton.onClick.AddListener(OnLockClicked);
+    }
+
+    private void OnLockClicked()
+    {
+        _onLockToggle?.Invoke();
     }
 }

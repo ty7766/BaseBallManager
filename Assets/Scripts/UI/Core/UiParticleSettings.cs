@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// 파티클 1회 분사의 설정. 종류별 프리셋을 여기서 고른다.
@@ -83,10 +83,6 @@ public readonly struct UiParticleSettings
             UiEffectKind.Craft => new UiParticleSettings(36, SpriteRoot + "star",
                 UiPalette.CardGoldenGlove, UiPalette.AccentGold,
                 360f, 820f, 820f, 1.2f, 16f, 34f, 360f, 0.2f, true),
-
-            UiEffectKind.Reveal => new UiParticleSettings(12, SpriteRoot + "spark",
-                UiPalette.Text1, UiPalette.CardNormal,
-                200f, 420f, 600f, 0.55f, 8f, 18f, 360f, 0.1f, false),
 
             UiEffectKind.Champion => new UiParticleSettings(64, SpriteRoot + "confetti",
                 UiPalette.AccentGold, UiPalette.CardSignature,
