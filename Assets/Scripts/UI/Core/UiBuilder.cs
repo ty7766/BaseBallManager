@@ -143,7 +143,7 @@ public static class UiBuilder
     }
 
     /// <summary>
-    /// 주 버튼(흰 채움 + 남색 글자) 또는 보조 버튼(테두리만)
+    /// 주 버튼(흰 채움 + 남색 글자) 또는 보조 버튼(테두리만). 누르면 살짝 눌리는 반응이 붙는다
     /// </summary>
     public static Button CreateButton(Transform parent, string name, string label,
         float fontSize, bool primary, UnityAction onClick)
@@ -175,6 +175,7 @@ public static class UiBuilder
 
         button.targetGraphic = background;
         button.transition = Selectable.Transition.None;
+        rect.gameObject.AddComponent<UiPressFeedback>();
 
         if (onClick != null)
             button.onClick.AddListener(onClick);

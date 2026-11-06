@@ -718,7 +718,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _onClick?.Invoke();
     }
 
-    //카드 가운데 원형 게이지. 어두운 원판 위 흐린 고리를 금색으로 시계 방향 채운다
+    //카드 가운데 원형 게이지. 어두운 원판 위 흐린 고리를 흰색으로 시계 방향 채운다
     private void ShowPressGauge(float fill)
     {
         if (fill <= 0f)
@@ -752,10 +752,10 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         Image disc = UiBuilder.CreateImage(_pressGauge, "Disc", UiPalette.WithAlpha(Color.black, 0.55f), PressDiscSprite);
         UiBuilder.Stretch(disc.rectTransform, 0f, 0f, 0f, 0f);
 
-        Image track = UiBuilder.CreateImage(_pressGauge, "Track", UiPalette.WithAlpha(Color.white, 0.22f), PressRingSprite);
+        Image track = UiBuilder.CreateImage(_pressGauge, "Track", UiPalette.WithAlpha(Color.white, 0.16f), PressRingSprite);
         UiBuilder.Stretch(track.rectTransform, 0f, 0f, 0f, 0f);
 
-        _pressFill = UiBuilder.CreateImage(_pressGauge, "Fill", UiPalette.AccentGold, PressRingSprite, Image.Type.Filled);
+        _pressFill = UiBuilder.CreateImage(_pressGauge, "Fill", Color.white, PressRingSprite, Image.Type.Filled);
         UiBuilder.Stretch(_pressFill.rectTransform, 0f, 0f, 0f, 0f);
         _pressFill.fillMethod = Image.FillMethod.Radial360;
         _pressFill.fillOrigin = (int)Image.Origin360.Top;
