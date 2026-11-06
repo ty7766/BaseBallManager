@@ -60,6 +60,7 @@ public class LineupRowView : UiWidgetBehaviour
         _button.transition = Selectable.Transition.None;
         _button.interactable = false;
         _button.onClick.AddListener(OnClicked);
+        Root.gameObject.AddComponent<UiPressFeedback>();
 
         _border = UiBuilder.CreateImage(Root, "Border", UiPalette.ButtonPrimary,
             UiSprites.TagOutline, Image.Type.Sliced);

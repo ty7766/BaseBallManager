@@ -795,6 +795,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _lockButton.targetGraphic = _lockIcon;
         _lockButton.transition = Selectable.Transition.None;
         _lockButton.onClick.AddListener(OnLockClicked);
+        _lockIcon.gameObject.AddComponent<UiPressFeedback>();
     }
 
     private void OnLockClicked()

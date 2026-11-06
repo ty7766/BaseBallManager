@@ -16,8 +16,8 @@
     Assets/Resources/UI/Fx/card_rimlight.png    카드 밑에서 가장자리로 새는 윤곽 빛. 들린 왼쪽이 밝고 경첩 쪽(오른쪽)은 거의 꺼진다
     Assets/Resources/UI/Fx/light_mote.png       틈에서 떠오르는 빛 알갱이 64
     (빛 그림은 모두 가산 합성(BaseBallManager/UI/AdditiveLight)으로 그린다)
-    Assets/Resources/UI/Gacha/tab_track.png     탭 바탕 알약 200×96 → 2배 · 9-슬라이스 96
-    Assets/Resources/UI/Gacha/tab_pill.png      고른 탭 흰 알약 200×80 → 2배 · 9-슬라이스 80
+    Assets/Resources/UI/Gacha/tab_track.png     탭 바탕 48 → 2배 · 9-슬라이스 36 (공용 버튼 모양: 왼쪽 위 · 오른쪽 아래 직각)
+    Assets/Resources/UI/Gacha/tab_pill.png      고른 탭 흰 바탕 48 → 2배 · 9-슬라이스 36
     Assets/Resources/UI/Gacha/ticket_once_blue.png · ticket_ten_blue.png    일반 뽑기 1회(어두운 바탕 + 파란 테) · 10회(파란 채움 + 빛 띠) 500×130 → 2배
     Assets/Resources/UI/Gacha/ticket_once_pink.png · ticket_ten_pink.png    시그니쳐 뽑기 — 같은 모양에 분홍
 """
@@ -205,14 +205,21 @@ def card_mask():
     return rounded_rect_mask(MASK_W, height, MASK_W, height, MASK_W * CARD_CORNER)
 
 
+def button_corner_path(size, inset, radius):
+    """공용 버튼 모양: 왼쪽 위 · 오른쪽 아래는 직각, 오른쪽 위 · 왼쪽 아래만 둥글다 (render_button_art.py 와 같다)"""
+    a, b, r = inset, size - inset, max(0.0, radius - inset)
+    return f'M{a},{a} H{b - r} A{r},{r} 0 0 1 {b},{a + r} V{b} H{a + r} A{r},{r} 0 0 1 {a},{b - r} Z'
+
+
 def tab_track():
-    """탭 두 개를 담는 어두운 알약"""
-    return '<rect x="1.5" y="1.5" width="197" height="93" rx="46.5" fill="#191A1C" fill-opacity="0.92" stroke="#3C4044" stroke-width="3"/>'
+    """탭 두 개를 담는 어두운 바탕"""
+    return (f'<path d="{button_corner_path(48, 0, 16)}" fill="#191A1C" fill-opacity="0.92"/>'
+            f'<path d="{button_corner_path(48, 1.5, 16)}" fill="none" stroke="#3C4044" stroke-width="3"/>')
 
 
 def tab_pill():
-    """고른 탭에 깔리는 흰 알약"""
-    return '<rect width="200" height="80" rx="40" fill="#F3F6FA"/>'
+    """고른 탭에 깔리는 흰 바탕"""
+    return f'<path d="{button_corner_path(48, 0, 16)}" fill="#F3F6FA"/>'
 
 
 def mini_card(x, y, w, stroke, rotate=0):
@@ -226,15 +233,16 @@ def mini_card(x, y, w, stroke, rotate=0):
 
 
 def ticket(color, ten):
-    """뽑기권 모양: 양옆 가운데 반원 홈 + 절취선. 왼쪽 칸에 카드 뒷면 아이콘 (1회 1장 · 10회 3장 부채꼴).
+    """뽑기권 모양: 양옆 가운데 반원 홈 + 절취선. 모서리는 공용 버튼처럼 왼쪽 위 · 오른쪽 아래 직각.
+    왼쪽 칸에 카드 뒷면 아이콘 (1회 1장 · 10회 3장 부채꼴).
     1회는 어두운 바탕 + 색 테, 10회는 색 채움 + 비스듬한 빛 띠"""
     rim, top, bottom = TICKET_COLORS[color]
     w, h, n, r = TICKET_W - 3, TICKET_H - 3, TICKET_NOTCH, 18
     x0, y0 = 1.5, 1.5
-    path = (f'M{x0 + r},{y0} H{x0 + w - r} Q{x0 + w},{y0} {x0 + w},{y0 + r} V{y0 + h / 2 - n} '
-            f'A{n},{n} 0 0 0 {x0 + w},{y0 + h / 2 + n} V{y0 + h - r} Q{x0 + w},{y0 + h} {x0 + w - r},{y0 + h} '
+    path = (f'M{x0},{y0} H{x0 + w - r} Q{x0 + w},{y0} {x0 + w},{y0 + r} V{y0 + h / 2 - n} '
+            f'A{n},{n} 0 0 0 {x0 + w},{y0 + h / 2 + n} V{y0 + h} '
             f'H{x0 + r} Q{x0},{y0 + h} {x0},{y0 + h - r} V{y0 + h / 2 + n} A{n},{n} 0 0 0 {x0},{y0 + h / 2 - n} '
-            f'V{y0 + r} Q{x0},{y0} {x0 + r},{y0} Z')
+            f'V{y0} Z')
     defs = (f'<defs><linearGradient id="fill" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{top}"/>'
             f'<stop offset="1" stop-color="{bottom}"/></linearGradient>'
             '<linearGradient id="shine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
@@ -319,8 +327,8 @@ if __name__ == "__main__":
     render(UI / "Card" / "card_back.png", card_back(), CW, CH)
     render(UI / "Gacha" / "swipe_arrow.png", swipe_arrow(), 330, 164, 2)
     render(UI / "Gacha" / "gacha_bg.png", gacha_bg(), BG_W, BG_H)
-    render(UI / "Gacha" / "tab_track.png", tab_track(), 200, 96, 2)
-    render(UI / "Gacha" / "tab_pill.png", tab_pill(), 200, 80, 2)
+    render(UI / "Gacha" / "tab_track.png", tab_track(), 48, 48, 2)
+    render(UI / "Gacha" / "tab_pill.png", tab_pill(), 48, 48, 2)
     for color in TICKET_COLORS:
         render(UI / "Gacha" / f"ticket_once_{color}.png", ticket(color, False), TICKET_W, TICKET_H, 2)
         render(UI / "Gacha" / f"ticket_ten_{color}.png", ticket(color, True), TICKET_W, TICKET_H, 2)

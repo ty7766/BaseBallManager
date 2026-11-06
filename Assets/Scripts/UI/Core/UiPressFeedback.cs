@@ -88,7 +88,7 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerUpHan
         _selectable.targetGraphic.CrossFadeColor(new Color(shade, shade, shade, 1f), instant ? 0f : PressSeconds, true, true);
     }
 
-    //배치는 왼쪽 위 기준이라 그대로 줄이면 한쪽으로 쏠린다. 누를 때 위치는 두고 기준점만 가운데로 옮긴다
+    //가운데로 줄어들도록 기준점을 옮기고, 그 때문에 밀리는 거리(sizeDelta × 이동량 — 늘어나는 버튼은 실제 크기가 아니다)를 되돌린다
     private void CenterPivot()
     {
         RectTransform rect = (RectTransform)transform;
@@ -97,7 +97,7 @@ public class UiPressFeedback : MonoBehaviour, IPointerDownHandler, IPointerUpHan
         if (rect.pivot == center)
             return;
 
-        Vector2 shift = Vector2.Scale(center - rect.pivot, rect.rect.size);
+        Vector2 shift = Vector2.Scale(center - rect.pivot, rect.sizeDelta);
 
         rect.pivot = center;
         rect.anchoredPosition += shift;

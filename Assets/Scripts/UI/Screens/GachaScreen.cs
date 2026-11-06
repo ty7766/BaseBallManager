@@ -16,13 +16,12 @@ public class GachaScreen : UiScreenBehaviour
     private const string StageSprite = "Gacha/gacha_bg";
     private const float StageWidth = 1080f;
     private const float StageHeight = 2340f;
-    //탭: 어두운 알약 안에서 고른 쪽에 흰 알약이 깔린다. 2배 그림이라 9-슬라이스 테두리를 반으로 줄여 쓴다
+    //탭: 어두운 바탕 안에서 고른 쪽에 흰 바탕이 깔린다 (공용 버튼과 같은 모서리)
     private const string TabTrackSprite = "Gacha/tab_track";
     private const string TabPillSprite = "Gacha/tab_pill";
     private const float TabTop = 210f;
     private const float TabHeight = 96f;
     private const float TabInset = 8f;
-    private const float SliceScale = 2f;
     //뽑기권 모양 버튼. 절취선 왼쪽은 카드 그림 칸이라 글자는 그 오른쪽 가운데에 둔다. 일반 뽑기는 파랑, 시그니쳐는 분홍
     private const string TicketOnceBlueSprite = "Gacha/ticket_once_blue";
     private const string TicketTenBlueSprite = "Gacha/ticket_ten_blue";
@@ -123,7 +122,6 @@ public class GachaScreen : UiScreenBehaviour
         UiBuilder.Place(_currencyBar.Root, 24f, 100f, 1032f, CurrencyBarView.BarHeight);
 
         Image tabTrack = UiBuilder.CreateImage(Root, "TabTrack", Color.white, TabTrackSprite, Image.Type.Sliced);
-        tabTrack.pixelsPerUnitMultiplier = SliceScale;
         UiBuilder.Place(tabTrack.rectTransform, 32f, TabTop, 1016f, TabHeight);
 
         _normalTabButton = CreateTab("NormalTab", "일반 뽑기", 32f, () => SelectType(GachaType.Normal),
@@ -170,7 +168,6 @@ public class GachaScreen : UiScreenBehaviour
 
         pill.sprite = UiSprites.Get(TabPillSprite);
         pill.type = Image.Type.Sliced;
-        pill.pixelsPerUnitMultiplier = SliceScale;
         UiBuilder.Place(tab.GetComponent<RectTransform>(), x + TabInset, TabTop + TabInset,
             508f - TabInset * 2f, TabHeight - TabInset * 2f);
 
