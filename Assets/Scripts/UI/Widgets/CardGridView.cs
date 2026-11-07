@@ -20,6 +20,10 @@ public class CardGridView : UiWidgetBehaviour
     //스크롤바는 칸 오른쪽 바깥(화면 여백)에 붙인다
     private const float ScrollbarGap = 12f;
     private const float ScrollbarWidth = 8f;
+    //칸 위아래 바깥에 흰 실선을 그어 스크롤 영역을 가른다
+    private const float EdgeLineGap = 14f;
+    private const float EdgeLineThickness = 4f;
+    private const float EdgeLineAlpha = 0.85f;
 
     /// <summary>
     /// 현재 깔려 있는 카드 수
@@ -40,6 +44,9 @@ public class CardGridView : UiWidgetBehaviour
     private Action<int> _onCardLongPressed;
     private Scrollbar _scrollbar;
     private ScrollRect _scroll;
+    private readonly List<RectTransform> _leadingTiles = new List<RectTransform>(2);
+    private bool _checkSelection;
+    private bool _edgeLinesBuilt;
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
@@ -112,7 +119,9 @@ public class CardGridView : UiWidgetBehaviour
     public void SetCards(IReadOnlyList<int> instanceIds)
     {
         EnsureScrollbar();
+        EnsureEdgeLines();
 
+        int leading = _leadingTiles.Count;
         int used = 0;
         float cellWidth = _cellWidth > 0f ? _cellWidth : DefaultCellWidth;
         float cellHeight = cellWidth * CardView.BaseHeight / CardView.BaseWidth;
@@ -122,11 +131,17 @@ public class CardGridView : UiWidgetBehaviour
 
         if (_centerInHeight > 0f && instanceIds != null && instanceIds.Count > 0)
         {
-            int plannedRows = (instanceIds.Count + _columns - 1) / _columns;
+            int plannedRows = (instanceIds.Count + leading + _columns - 1) / _columns;
             float blockHeight = plannedRows * (cellHeight + RowGap) - RowGap;
 
             //가운데에서 살짝 위로 올린다
             offsetY = Mathf.Max(0f, (_centerInHeight - blockHeight) * 0.5f - CenterNudgeUp);
+        }
+
+        for (int i = 0; i < leading; i++)
+        {
+            CardCellView.PlaceInGrid(_leadingTiles[i], i % _columns, i / _columns, ColumnGap, RowGap,
+                cellWidth, offsetX, offsetY);
         }
 
         if (instanceIds != null)
@@ -137,10 +152,11 @@ public class CardGridView : UiWidgetBehaviour
                     continue;
 
                 CardCellView cell = EnsureCell(used);
+                int slot = leading + used;
 
                 cell.SetVisible(true);
                 cell.SetCard(info);
-                cell.SetGridPosition(used % _columns, used / _columns, ColumnGap, RowGap,
+                cell.SetGridPosition(slot % _columns, slot / _columns, ColumnGap, RowGap,
                     cellWidth, offsetX, offsetY);
                 cell.SetSelected(_selected.Contains(info.InstanceId));
                 cell.SetBlocked(_blockedReason == null ? null : _blockedReason(info));
@@ -154,10 +170,64 @@ public class CardGridView : UiWidgetBehaviour
 
         Count = used;
 
-        int rows = (used + _columns - 1) / _columns;
+        int rows = (leading + used + _columns - 1) / _columns;
 
         _content.sizeDelta = new Vector2(0f, offsetY + rows * (cellHeight + RowGap));
-        _emptyText.gameObject.SetActive(used == 0);
+        _emptyText.gameObject.SetActive(leading + used == 0);
+    }
+
+    /// <summary>
+    /// 카드 앞 칸에 카드가 아닌 타일을 끼운다 (강화 전용 카드). 타일은 CardCellView 규격으로 조립해 둔다
+    /// </summary>
+    public void SetLeadingTiles(IReadOnlyList<RectTransform> tiles)
+    {
+        foreach (RectTransform tile in _leadingTiles)
+        {
+            if (tile != null)
+                tile.gameObject.SetActive(false);
+        }
+
+        _leadingTiles.Clear();
+
+        if (tiles == null)
+            return;
+
+        foreach (RectTransform tile in tiles)
+        {
+            if (tile == null)
+                continue;
+
+            tile.SetParent(_content, false);
+            tile.SetAsFirstSibling();
+            tile.gameObject.SetActive(true);
+            _leadingTiles.Add(tile);
+        }
+    }
+
+    /// <summary>
+    /// 선택 표시를 테두리 대신 어둡게 덮고 가운데 체크로 한다
+    /// </summary>
+    public void SetCheckSelection(bool checkSelection)
+    {
+        _checkSelection = checkSelection;
+
+        foreach (CardCellView cell in _cells)
+            cell.SetCheckStyle(checkSelection);
+    }
+
+    /// <summary>
+    /// 깔린 카드의 고를 수 없는 사유만 다시 계산한다 (선택이 바뀌어 한도가 찼을 때)
+    /// </summary>
+    public void RefreshBlocked()
+    {
+        for (int i = 0; i < Count; i++)
+        {
+            string reason = _blockedReason != null && CardDisplayInfo.TryCreate(_cells[i].InstanceId, out CardDisplayInfo info)
+                ? _blockedReason(info)
+                : null;
+
+            _cells[i].SetBlocked(reason);
+        }
     }
 
     /// <summary>
@@ -174,7 +244,7 @@ public class CardGridView : UiWidgetBehaviour
         }
 
         for (int i = 0; i < Count; i++)
-            _cells[i].SetSelected(_selected.Contains(_cells[i].InstanceId));
+            _cells[i].SetSelected(_selected.Contains(_cells[i].InstanceId), true);
     }
 
     /// <summary>
@@ -208,6 +278,32 @@ public class CardGridView : UiWidgetBehaviour
             _scrollbar = UiBuilder.AddVerticalScrollbar(scroll, ScrollbarGap, ScrollbarWidth);
     }
 
+    //모든 카드 목록에 공통. 구운 화면을 다시 굽지 않게 처음 깔 때 만든다
+    private void EnsureEdgeLines()
+    {
+        if (_edgeLinesBuilt)
+            return;
+
+        _edgeLinesBuilt = true;
+        CreateEdgeLine("GridTopLine", true);
+        CreateEdgeLine("GridBottomLine", false);
+    }
+
+    //칸 바로 바깥에 붙는다. 칸이 늘거나 옮겨지면 같이 따라간다
+    private void CreateEdgeLine(string lineName, bool top)
+    {
+        Image line = UiBuilder.CreateImage(Root, lineName, UiPalette.WithAlpha(UiPalette.Text1, EdgeLineAlpha));
+        RectTransform rect = line.rectTransform;
+        float edge = top ? 1f : 0f;
+
+        rect.anchorMin = new Vector2(0f, edge);
+        rect.anchorMax = new Vector2(1f, edge);
+        rect.pivot = new Vector2(0.5f, top ? 0f : 1f);
+        rect.anchoredPosition = new Vector2(0f, top ? EdgeLineGap : -EdgeLineGap);
+        rect.sizeDelta = new Vector2(0f, EdgeLineThickness);
+        line.raycastTarget = false;
+    }
+
     //스크롤 영역은 베이크 때 만들어지고 참조는 직렬화하지 않았으므로 처음 쓸 때 찾아 둔다
     private ScrollRect GetScroll()
     {
@@ -226,6 +322,7 @@ public class CardGridView : UiWidgetBehaviour
 
             created.SetClickHandler(_onCardClicked == null ? null : OnCellClicked);
             created.SetLongPressHandler(_onCardLongPressed);
+            created.SetCheckStyle(_checkSelection);
             _cells.Add(created);
         }
 

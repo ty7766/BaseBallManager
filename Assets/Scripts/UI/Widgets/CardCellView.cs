@@ -16,6 +16,10 @@ public class CardCellView
 
     private const float BorderThickness = 5f;
     private const float BlockedDimAlpha = 0.68f;
+    //체크 방식 선택 표시 — 카드를 어둡게 덮고 가운데 동그라미 체크
+    private const float CheckDimAlpha = 0.55f;
+    private const float CheckSize = 150f;
+    private const string CheckSprite = "Common/check_circle";
 
     public RectTransform Root => _root;
     public int InstanceId { get; private set; }
@@ -29,6 +33,10 @@ public class CardCellView
 
     private Action<int> _onClick;
     private Action<int> _onLongPress;
+    private Image _checkDim;
+    private Image _checkMark;
+    private bool _checkStyle;
+    private bool _selected;
 
     public CardCellView(Transform parent)
     {
@@ -77,14 +85,22 @@ public class CardCellView
     public void SetGridPosition(int column, int row, float columnGap, float rowGap,
         float width, float offsetX, float offsetY)
     {
-        //카드 속 좌표는 조립할 때 굳으므로 크기는 스케일로 바꾼다
+        _card.SetDisplayWidth(width);
+        PlaceInGrid(_root, column, row, columnGap, rowGap, width, offsetX, offsetY);
+    }
+
+    /// <summary>
+    /// 타일 규격(CellWidth)으로 조립한 칸을 그리드 자리에 놓는다. 카드 속 좌표는 조립할 때 굳으므로 크기는 스케일로 바꾼다
+    /// </summary>
+    public static void PlaceInGrid(RectTransform root, int column, int row, float columnGap, float rowGap,
+        float width, float offsetX, float offsetY)
+    {
         float scale = width / CellWidth;
         float height = CellHeight * scale;
 
-        _root.localScale = new Vector3(scale, scale, 1f);
-        _card.SetDisplayWidth(width);
+        root.localScale = new Vector3(scale, scale, 1f);
 
-        UiBuilder.Place(_root,
+        UiBuilder.Place(root,
             offsetX + column * (width + columnGap),
             offsetY + row * (height + rowGap),
             CellWidth, CellHeight);
@@ -107,11 +123,23 @@ public class CardCellView
     }
 
     /// <summary>
-    /// 선택 테두리
+    /// 선택 표시. animate 면 새로 골라졌을 때 체크가 튀어나온다
     /// </summary>
-    public void SetSelected(bool selected)
+    public void SetSelected(bool selected, bool animate = false)
     {
-        _border.gameObject.SetActive(selected);
+        bool turnedOn = selected && !_selected;
+
+        _selected = selected;
+        ApplySelection(animate && turnedOn);
+    }
+
+    /// <summary>
+    /// 선택 표시 방식. true 면 테두리 대신 어둡게 덮고 가운데 체크 (강화 재료)
+    /// </summary>
+    public void SetCheckStyle(bool checkStyle)
+    {
+        _checkStyle = checkStyle;
+        ApplySelection(false);
     }
 
     /// <summary>
@@ -140,6 +168,38 @@ public class CardCellView
     private void OnLongPressed()
     {
         _onLongPress?.Invoke(InstanceId);
+    }
+
+    private void ApplySelection(bool animate)
+    {
+        bool check = _selected && _checkStyle;
+
+        _border.gameObject.SetActive(_selected && !_checkStyle);
+
+        if (check)
+            EnsureCheckMark();
+
+        if (_checkDim != null)
+            _checkDim.gameObject.SetActive(check);
+
+        if (check && animate)
+            UiEffects.Pop(_checkMark.transform, 0.5f, 0.22f);
+    }
+
+    //체크 표시는 체크 방식 목록에서 처음 고를 때 만든다
+    private void EnsureCheckMark()
+    {
+        if (_checkDim != null)
+            return;
+
+        _checkDim = UiBuilder.CreateImage(_root, "CheckDim", UiPalette.WithAlpha(Color.black, CheckDimAlpha));
+        UiBuilder.Stretch(_checkDim.rectTransform, 0f, 0f, 0f, 0f);
+        _checkDim.raycastTarget = false;
+
+        _checkMark = UiBuilder.CreateImage(_checkDim.transform, "Check", Color.white, CheckSprite);
+        UiBuilder.CenterPivot(UiBuilder.Place(_checkMark.rectTransform, (CellWidth - CheckSize) * 0.5f,
+            (CellHeight - CheckSize) * 0.5f, CheckSize, CheckSize));
+        _checkMark.raycastTarget = false;
     }
 
     public void SetVisible(bool visible)

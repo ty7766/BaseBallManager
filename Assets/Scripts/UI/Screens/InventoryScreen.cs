@@ -11,12 +11,9 @@ public class InventoryScreen : UiScreenBehaviour
 {
     //제목 아래 줄 오른쪽 필터 버튼
     private const float FilterRowTop = 112f;
-    //카드 목록 칸(위아래 여백)과 칸 위아래를 가르는 흰 선
+    //카드 목록 칸. 위아래 흰 선(목록이 직접 긋는다)이 들어갈 여백을 둔다
     private const float GridTop = FilterRowTop + CardFilterButtonView.ButtonHeight + 36f;
     private const float GridBottom = 224f;
-    private const float EdgeLineGap = 14f;
-    private const float EdgeLineThickness = 2f;
-    private const float EdgeLineAlpha = 0.55f;
 
     private Action _onBack;
     private Action<int> _onCardSelected;
@@ -92,18 +89,6 @@ public class InventoryScreen : UiScreenBehaviour
 
         _grid = CardGridView.Bake(Root);
         UiBuilder.Stretch(_grid.Root, 32f, GridTop, 32f, GridBottom);
-
-        Image topLine = UiBuilder.CreateImage(Root, "GridTopLine", UiPalette.WithAlpha(UiPalette.Text1, EdgeLineAlpha));
-        UiBuilder.PlaceRow(topLine.rectTransform, GridTop - EdgeLineGap - EdgeLineThickness, EdgeLineThickness, 32f);
-
-        Image bottomLine = UiBuilder.CreateImage(Root, "GridBottomLine", UiPalette.WithAlpha(UiPalette.Text1, EdgeLineAlpha));
-        RectTransform bottomRect = bottomLine.rectTransform;
-
-        bottomRect.anchorMin = new Vector2(0f, 0f);
-        bottomRect.anchorMax = new Vector2(1f, 0f);
-        bottomRect.pivot = new Vector2(0.5f, 0f);
-        bottomRect.offsetMin = new Vector2(32f, GridBottom - EdgeLineGap - EdgeLineThickness);
-        bottomRect.offsetMax = new Vector2(-32f, GridBottom - EdgeLineGap);
         _grid.SetClickHandler(OnCardClicked);
         _grid.SetEmptyMessage("조건에 맞는 카드가 없습니다");
 
