@@ -1,4 +1,4 @@
-"""
+﻿"""
 공용 버튼 모양 — 왼쪽 위 · 오른쪽 아래는 각지고, 왼쪽 아래 · 오른쪽 위는 둥근 사각형 (9-슬라이스) · 공용 조작 아이콘
 
 사용법
@@ -13,6 +13,8 @@
     Assets/Resources/UI/Common/checkbox_off.png     빈 체크박스 (흰 테 — Image 색으로 틴트) 48 → 2배
     Assets/Resources/UI/Common/checkbox_on.png      체크된 체크박스 (흰 채움 + 남색 체크) 48 → 2배
     Assets/Resources/UI/Common/scroll_handle.png    스크롤바 손잡이 · 홈 (둥근 막대, 9-슬라이스 10px) 12×24 → 2배
+    Assets/Resources/UI/Common/check_circle.png     선택 표시 — 채움 없이 굵은 흰 선 원 + 체크 (강화 재료) 96 → 2배
+    Assets/Resources/UI/Common/icon_minus.png       빼기 막대 (Image 색으로 틴트) 48 → 2배
 """
 import subprocess
 import tempfile
@@ -77,11 +79,24 @@ def scroll_handle():
     return '<rect width="12" height="24" rx="6" fill="#FFFFFF"/>'
 
 
+def check_circle():
+    """어둡게 덮인 카드 위 선택 표시 — 채움 없이 굵은 흰 선 원 + 체크"""
+    return ('<circle cx="48" cy="48" r="41" fill="none" stroke="#FFFFFF" stroke-width="8"/>'
+            '<path d="M28,49 L42,63 L68,34" fill="none" stroke="#FFFFFF" stroke-width="10" '
+            'stroke-linecap="round" stroke-linejoin="round"/>')
+
+
+def icon_minus():
+    return '<rect x="8" y="20" width="32" height="8" rx="4" fill="#FFFFFF"/>'
+
+
 ICONS = {
     "icon_filter": (icon_filter(), 48, 48),
     "checkbox_off": (checkbox(False), 48, 48),
     "checkbox_on": (checkbox(True), 48, 48),
     "scroll_handle": (scroll_handle(), 12, 24),
+    "check_circle": (check_circle(), 96, 96),
+    "icon_minus": (icon_minus(), 48, 48),
 }
 
 SPRITES = {
@@ -117,7 +132,11 @@ def render(name, body, folder="Match", width=SIZE, height=SIZE):
 
 
 if __name__ == "__main__":
+    import sys
+    only = set(sys.argv[1:])
     for sprite, svg_body in SPRITES.items():
-        render(sprite, svg_body)
+        if not only or sprite in only:
+            render(sprite, svg_body)
     for icon, (svg_body, icon_width, icon_height) in ICONS.items():
-        render(icon, svg_body, "Common", icon_width, icon_height)
+        if not only or icon in only:
+            render(icon, svg_body, "Common", icon_width, icon_height)

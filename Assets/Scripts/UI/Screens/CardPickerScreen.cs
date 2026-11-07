@@ -85,7 +85,7 @@ public class CardPickerScreen : UiScreenBehaviour
         _filterButton.SetChangedHandler(Refresh);
 
         _grid = CardGridView.Bake(Root);
-        UiBuilder.Stretch(_grid.Root, 32f, FilterRowTop + CardFilterButtonView.ButtonHeight + 20f, 32f, 200f);
+        UiBuilder.Stretch(_grid.Root, 32f, FilterRowTop + CardFilterButtonView.ButtonHeight + 36f, 32f, 200f);
         _grid.SetClickHandler(OnCardClicked);
         _grid.SetEmptyMessage("고를 수 있는 카드가 없습니다");
 

@@ -43,6 +43,20 @@ public static class UiBuilder
     }
 
     /// <summary>
+    /// 자리는 그대로 두고 피벗만 가운데로 옮긴다. 크기 연출(Pop)이 가운데를 축으로 일어나게 한다
+    /// </summary>
+    public static RectTransform CenterPivot(RectTransform rect)
+    {
+        Vector2 center = new Vector2(0.5f, 0.5f);
+        Vector2 shift = Vector2.Scale(center - rect.pivot, rect.sizeDelta);
+
+        rect.pivot = center;
+        rect.anchoredPosition += shift;
+
+        return rect;
+    }
+
+    /// <summary>
     /// 부모를 가득 채우되 네 변에 여백을 둔다. 세로가 긴 기기에서 늘어나는 영역에 쓴다
     /// </summary>
     public static RectTransform Stretch(RectTransform rect, float left, float top, float right, float bottom)
