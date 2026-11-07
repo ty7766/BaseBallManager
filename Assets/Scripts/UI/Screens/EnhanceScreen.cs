@@ -6,23 +6,24 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 카드 강화. 강화할 카드를 고르면 위 왼쪽에 놓이고 아래 목록이 재료(같은 카드 + 강화 전용 카드)로 바뀐다.
+/// 카드 강화. 위 절반은 강화 칸, 아래 절반은 카드 목록. 목록에서 카드를 고르면 위 왼쪽에 놓이고 목록이 재료로 바뀐다.
 /// 재료를 고를수록 오른쪽에 +3 → +5 처럼 오를 단계를 미리 보여 주고, 강화를 누르면 한 번에 올린다
 /// </summary>
 public class EnhanceScreen : UiScreenBehaviour
 {
     private const float SideMargin = 32f;
-    //고르기 단계 — 제목 아래 안내 · 필터 줄, 그 아래 카드 목록
-    private const float FilterRowTop = 112f;
-    private const float PickGridTop = FilterRowTop + CardFilterButtonView.ButtonHeight + 36f;
-    private const float GridBottom = 224f;
-    //재료 단계 — 위 왼쪽 대상 카드 · 오른쪽 미리보기, 그 아래 재료 목록
+    //위 강화 칸 — 왼쪽 대상 카드(처음엔 빈 자리) · 오른쪽 미리보기. 두 단계 모두 자리가 같다
     private const float TargetTop = 120f;
-    private const float TargetWidth = 300f;
+    private const float TargetWidth = 340f;
     private const float TargetHeight = TargetWidth * CardView.BaseHeight / CardView.BaseWidth;
-    private const float MaterialGridTop = TargetTop + TargetHeight + 52f;
     private const float PreviewLeft = SideMargin + TargetWidth + 32f;
     private const float PreviewWidth = 1080f - SideMargin - PreviewLeft;
+    private const float PreviewTop = TargetTop + 30f;
+    private const string EmptySlotSprite = "Card/card_slot_empty";
+    //아래 카드 목록 — 머리 줄(왼쪽 이름 · 오른쪽 필터) 아래로
+    private const float ListRowTop = TargetTop + TargetHeight + 24f;
+    private const float GridTop = ListRowTop + CardFilterButtonView.ButtonHeight + 36f;
+    private const float GridBottom = 224f;
     private const float MedalWidth = 168f;
     private const float MedalHeight = MedalWidth * 208f / 240f;
     private const float MedalFontSize = 76f;
@@ -31,7 +32,7 @@ public class EnhanceScreen : UiScreenBehaviour
     private const float ArrowHeight = ArrowWidth * 164f / 330f;
     private const float MedalGap = 24f;
     //재료가 없으면 지금 메달 하나만 가운데, 고르면 왼쪽으로 비켜서며 화살표 · 오를 메달이 나온다
-    private const float MedalTop = TargetTop + 72f;
+    private const float MedalTop = PreviewTop + 72f;
     private const float MedalRowWidth = MedalWidth * 2f + ArrowWidth + MedalGap * 2f;
     private const float MedalRowLeft = PreviewLeft + (PreviewWidth - MedalRowWidth) * 0.5f;
     private const float MedalSingleLeft = PreviewLeft + (PreviewWidth - MedalWidth) * 0.5f;
@@ -50,7 +51,9 @@ public class EnhanceScreen : UiScreenBehaviour
     private static readonly Color EmptyMedalColor = new Color(0.36f, 0.38f, 0.42f, 1f);
     private static readonly Color EmptyMedalInk = new Color(0.1f, 0.11f, 0.13f, 1f);
 
-    [SerializeField] private TextMeshProUGUI _hintText;
+    [SerializeField] private Image _emptySlot;
+    [SerializeField] private TextMeshProUGUI _emptyText;
+    [SerializeField] private TextMeshProUGUI _listLabel;
     [SerializeField] private CardFilterButtonView _filterButton;
     [SerializeField] private CardGridView _grid;
     [SerializeField] private RectTransform _targetPanel;
@@ -153,23 +156,29 @@ public class EnhanceScreen : UiScreenBehaviour
         Bind(_enhanceButton, OnEnhanceClicked);
     }
 
-    //제목 · 안내 · 필터 · 목록 · 대상 칸(숨김) · 아래 버튼 · 연출 중 입력 막이
+    //제목 · 빈 자리 안내 · 목록 머리 줄 · 목록 · 대상 칸(숨김) · 아래 버튼 · 연출 중 입력 막이
     protected override void Build()
     {
         TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
         UiBuilder.Place(title.rectTransform, SideMargin, 32f, 500f, 60f);
         title.text = "강화";
 
-        _hintText = UiBuilder.CreateText(Root, "Hint", 30f, UiPalette.Text3);
-        UiBuilder.Place(_hintText.rectTransform, SideMargin, FilterRowTop, 600f, CardFilterButtonView.ButtonHeight);
-        _hintText.text = "강화할 카드를 고르세요";
+        _emptySlot = UiBuilder.CreateImage(Root, "EmptySlot", Color.white, EmptySlotSprite);
+        UiBuilder.Place(_emptySlot.rectTransform, SideMargin, TargetTop, TargetWidth, TargetHeight);
+
+        _emptyText = UiBuilder.CreateText(Root, "EmptyText", 36f, UiPalette.Text2, TextAlignmentOptions.Center);
+        UiBuilder.Place(_emptyText.rectTransform, PreviewLeft, TargetTop, PreviewWidth, TargetHeight);
+        _emptyText.text = "강화할 카드를 선택하세요";
+
+        _listLabel = UiBuilder.CreateText(Root, "ListLabel", 32f, UiPalette.Text2);
+        UiBuilder.Place(_listLabel.rectTransform, SideMargin, ListRowTop, 600f, CardFilterButtonView.ButtonHeight);
 
         _filterButton = CardFilterButtonView.Bake(Root);
-        UiBuilder.PlaceRight(_filterButton.Root, SideMargin, FilterRowTop, CardFilterButtonView.ButtonWidth,
+        UiBuilder.PlaceRight(_filterButton.Root, SideMargin, ListRowTop, CardFilterButtonView.ButtonWidth,
             CardFilterButtonView.ButtonHeight);
 
         _grid = CardGridView.Bake(Root);
-        UiBuilder.Stretch(_grid.Root, SideMargin, PickGridTop, SideMargin, GridBottom);
+        UiBuilder.Stretch(_grid.Root, SideMargin, GridTop, SideMargin, GridBottom);
 
         BuildTargetPanel();
 
@@ -213,7 +222,7 @@ public class EnhanceScreen : UiScreenBehaviour
     private void BuildTargetPanel()
     {
         _targetPanel = UiBuilder.CreateRect(Root, "TargetPanel");
-        UiBuilder.PlaceRow(_targetPanel, 0f, MaterialGridTop);
+        UiBuilder.PlaceRow(_targetPanel, 0f, ListRowTop);
         _targetGroup = _targetPanel.gameObject.AddComponent<CanvasGroup>();
 
         _targetCard = CardView.Bake(_targetPanel, TargetWidth, false);
@@ -222,7 +231,7 @@ public class EnhanceScreen : UiScreenBehaviour
         _cardFlash = UiBuilder.CreateImage(_targetPanel, "CardFlash", UiPalette.WithAlpha(Color.white, 0f), CardMaskSprite);
         UiBuilder.Place(_cardFlash.rectTransform, SideMargin, TargetTop, TargetWidth, TargetHeight);
 
-        _targetName = CreatePreviewText("TargetName", 40f, UiPalette.Text1, TargetTop, 52f);
+        _targetName = CreatePreviewText("TargetName", 40f, UiPalette.Text1, PreviewTop, 52f);
 
         _currentMedal = CreateMedal("CurrentMedal", MedalRowLeft, MedalTop, out _currentMedalText);
 
@@ -307,16 +316,17 @@ public class EnhanceScreen : UiScreenBehaviour
         }
     }
 
+    //처음엔 위 칸이 비어 있고 아래는 보유 카드, 고르면 위 칸이 채워지고 아래는 재료 카드
     private void SetStep(bool materialStep)
     {
-        _hintText.gameObject.SetActive(!materialStep);
+        _emptySlot.gameObject.SetActive(!materialStep);
+        _emptyText.gameObject.SetActive(!materialStep);
         _filterButton.gameObject.SetActive(!materialStep);
         _backButton.gameObject.SetActive(!materialStep);
         _targetPanel.gameObject.SetActive(materialStep);
         _changeButton.gameObject.SetActive(materialStep);
         _enhanceButton.gameObject.SetActive(materialStep);
-
-        UiBuilder.Stretch(_grid.Root, SideMargin, materialStep ? MaterialGridTop : PickGridTop, SideMargin, GridBottom);
+        _listLabel.text = materialStep ? "재료 카드" : "보유 카드";
     }
 
     //보유 카드 전체. 더 못 올리는 카드는 흐리게 덮는다
