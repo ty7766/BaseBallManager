@@ -51,6 +51,14 @@ public class CardPickerScreen : UiScreenBehaviour
         Refresh();
     }
 
+    /// <summary>
+    /// 필터 창이 열려 있으면 그것부터 닫는다
+    /// </summary>
+    public override bool HandleBack()
+    {
+        return _filterButton.ClosePanel();
+    }
+
     protected override void BindEvents()
     {
         _filterButton.SetChangedHandler(Refresh);
@@ -98,6 +106,13 @@ public class CardPickerScreen : UiScreenBehaviour
         cancelRect.pivot = new Vector2(0f, 0f);
         cancelRect.offsetMin = new Vector2(12f, 40f);
         cancelRect.offsetMax = new Vector2(-32f, 160f);
+    }
+
+    //다음에 열 때는 필터 없이 맨 위부터
+    protected override void OnHidden()
+    {
+        _filterButton.ResetFilter();
+        _grid.ScrollToTop();
     }
 
     //필터를 통과하고 선택 가능한 카드만 깐다

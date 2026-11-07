@@ -68,14 +68,21 @@ public abstract class UiScreenBehaviour : MonoBehaviour
     }
 
     /// <summary>
-    /// 화면 표시 여부. 보여질 때마다 OnShown으로 데이터를 다시 채운다
+    /// 화면 표시 여부. 보여질 때마다 OnShown으로 데이터를 다시 채우고, 떠날 때 OnHidden으로 잠깐 상태를 비운다
     /// </summary>
     public void SetVisible(bool visible)
     {
+        bool wasVisible = gameObject.activeSelf;
+
         gameObject.SetActive(visible);
 
         if (!visible)
+        {
+            if (wasVisible)
+                OnHidden();
+
             return;
+        }
 
         OnShown();
         UiEffects.FadeIn(_fadeGroup, FadeInSeconds);
@@ -176,9 +183,24 @@ public abstract class UiScreenBehaviour : MonoBehaviour
     protected abstract void Build();
 
     /// <summary>
+    /// 뒤로가기(ESC)를 화면이 먼저 받는다. 열린 창을 닫았으면 true — 그러면 화면은 그대로 남는다
+    /// </summary>
+    public virtual bool HandleBack()
+    {
+        return false;
+    }
+
+    /// <summary>
     /// 화면이 보여질 때마다 호출된다. 데이터 갱신 지점
     /// </summary>
     protected virtual void OnShown()
+    {
+    }
+
+    /// <summary>
+    /// 화면을 떠날 때마다 호출된다. 고르던 필터 · 열린 창 · 스크롤 같은 잠깐 상태를 비워 다시 들어오면 처음 상태로 둔다
+    /// </summary>
+    protected virtual void OnHidden()
     {
     }
 }

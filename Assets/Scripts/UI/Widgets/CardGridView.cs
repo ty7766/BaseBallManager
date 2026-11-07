@@ -39,6 +39,7 @@ public class CardGridView : UiWidgetBehaviour
     private Func<CardDisplayInfo, string> _blockedReason;
     private Action<int> _onCardLongPressed;
     private Scrollbar _scrollbar;
+    private ScrollRect _scroll;
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
@@ -177,6 +178,17 @@ public class CardGridView : UiWidgetBehaviour
     }
 
     /// <summary>
+    /// 맨 위로 되돌린다 (화면을 떠날 때)
+    /// </summary>
+    public void ScrollToTop()
+    {
+        ScrollRect scroll = GetScroll();
+
+        if (scroll != null)
+            scroll.verticalNormalizedPosition = 1f;
+    }
+
+    /// <summary>
     /// 빈 목록일 때 보여줄 문구
     /// </summary>
     public void SetEmptyMessage(string message)
@@ -190,10 +202,19 @@ public class CardGridView : UiWidgetBehaviour
         if (_scrollbar != null)
             return;
 
-        ScrollRect scroll = GetComponentInChildren<ScrollRect>(true);
+        ScrollRect scroll = GetScroll();
 
         if (scroll != null)
             _scrollbar = UiBuilder.AddVerticalScrollbar(scroll, ScrollbarGap, ScrollbarWidth);
+    }
+
+    //스크롤 영역은 베이크 때 만들어지고 참조는 직렬화하지 않았으므로 처음 쓸 때 찾아 둔다
+    private ScrollRect GetScroll()
+    {
+        if (_scroll == null)
+            _scroll = GetComponentInChildren<ScrollRect>(true);
+
+        return _scroll;
     }
 
     //타일은 필요한 만큼만 만들고 다음 갱신에서 재사용한다

@@ -9,15 +9,20 @@ using UnityEngine.UI;
 /// </summary>
 public class InventoryScreen : UiScreenBehaviour
 {
-    //제목 아래 줄: 왼쪽 표시 장수 · 오른쪽 필터 버튼
+    //제목 아래 줄 오른쪽 필터 버튼
     private const float FilterRowTop = 112f;
+    //카드 목록 칸(위아래 여백)과 칸 위아래를 가르는 흰 선
+    private const float GridTop = FilterRowTop + CardFilterButtonView.ButtonHeight + 36f;
+    private const float GridBottom = 224f;
+    private const float EdgeLineGap = 14f;
+    private const float EdgeLineThickness = 2f;
+    private const float EdgeLineAlpha = 0.55f;
 
     private Action _onBack;
     private Action<int> _onCardSelected;
     private Action<string, bool> _onNotify;
 
     [SerializeField] private TextMeshProUGUI _capacityText;
-    [SerializeField] private TextMeshProUGUI _countText;
     [SerializeField] private CardFilterButtonView _filterButton;
     [SerializeField] private CardGridView _grid;
     [SerializeField] private Button _expandButton;
@@ -57,9 +62,6 @@ public class InventoryScreen : UiScreenBehaviour
 
         _capacityText.text = $"{count} / {capacity}";
         _capacityText.color = count >= capacity ? UiPalette.StateOut : UiPalette.Text2;
-        _countText.text = _filterButton.CurrentFilter.SelectedCount > 0
-            ? $"필터 적용 · {_grid.Count}장 표시"
-            : $"{_grid.Count}장 표시";
 
         _expandLabel.text = $"칸 확장  +{InventoryManager.Instance.ExpandUnit}\n골드 {InventoryManager.Instance.ExpandGoldCost}";
         _expandButton.interactable = CurrencyManager.Instance != null
@@ -83,16 +85,25 @@ public class InventoryScreen : UiScreenBehaviour
         _capacityText = UiBuilder.CreateText(Root, "Capacity", 36f, UiPalette.Text2, TextAlignmentOptions.Right);
         UiBuilder.PlaceRight(_capacityText.rectTransform, 32f, 40f, 320f, 48f);
 
-        _countText = UiBuilder.CreateText(Root, "Count", 30f, UiPalette.Text3);
-        UiBuilder.Place(_countText.rectTransform, 32f, FilterRowTop, 600f, CardFilterButtonView.ButtonHeight);
-
         _filterButton = CardFilterButtonView.Bake(Root);
         UiBuilder.PlaceRight(_filterButton.Root, 32f, FilterRowTop, CardFilterButtonView.ButtonWidth,
             CardFilterButtonView.ButtonHeight);
         _filterButton.SetChangedHandler(Refresh);
 
         _grid = CardGridView.Bake(Root);
-        UiBuilder.Stretch(_grid.Root, 32f, FilterRowTop + CardFilterButtonView.ButtonHeight + 20f, 32f, 200f);
+        UiBuilder.Stretch(_grid.Root, 32f, GridTop, 32f, GridBottom);
+
+        Image topLine = UiBuilder.CreateImage(Root, "GridTopLine", UiPalette.WithAlpha(UiPalette.Text1, EdgeLineAlpha));
+        UiBuilder.PlaceRow(topLine.rectTransform, GridTop - EdgeLineGap - EdgeLineThickness, EdgeLineThickness, 32f);
+
+        Image bottomLine = UiBuilder.CreateImage(Root, "GridBottomLine", UiPalette.WithAlpha(UiPalette.Text1, EdgeLineAlpha));
+        RectTransform bottomRect = bottomLine.rectTransform;
+
+        bottomRect.anchorMin = new Vector2(0f, 0f);
+        bottomRect.anchorMax = new Vector2(1f, 0f);
+        bottomRect.pivot = new Vector2(0.5f, 0f);
+        bottomRect.offsetMin = new Vector2(32f, GridBottom - EdgeLineGap - EdgeLineThickness);
+        bottomRect.offsetMax = new Vector2(-32f, GridBottom - EdgeLineGap);
         _grid.SetClickHandler(OnCardClicked);
         _grid.SetEmptyMessage("조건에 맞는 카드가 없습니다");
 
@@ -119,6 +130,21 @@ public class InventoryScreen : UiScreenBehaviour
     protected override void OnShown()
     {
         Refresh();
+    }
+
+    /// <summary>
+    /// 필터 창이 열려 있으면 그것부터 닫는다
+    /// </summary>
+    public override bool HandleBack()
+    {
+        return _filterButton.ClosePanel();
+    }
+
+    //다시 들어오면 필터 없이 맨 위부터
+    protected override void OnHidden()
+    {
+        _filterButton.ResetFilter();
+        _grid.ScrollToTop();
     }
 
     private void OnCardClicked(int instanceId)

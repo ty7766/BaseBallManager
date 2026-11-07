@@ -214,6 +214,12 @@ public class LineUpScreen : UiScreenBehaviour
         Refresh();
     }
 
+    //다시 들어오면 야수 탭부터
+    protected override void OnHidden()
+    {
+        _tab = Tab.Hitter;
+    }
+
 
     //야수 칸도 프리팹에 굽지 않고 런타임에 한 번만 만든다
     private void EnsureFieldSlots()

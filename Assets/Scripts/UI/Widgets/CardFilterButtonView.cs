@@ -51,6 +51,29 @@ public class CardFilterButtonView : UiWidgetBehaviour
         _onChanged = onChanged;
     }
 
+    /// <summary>
+    /// 고른 조건을 모두 비우고 열린 창을 닫는다 (화면을 떠날 때)
+    /// </summary>
+    public void ResetFilter()
+    {
+        CurrentFilter.Clear();
+        ClosePanel();
+        RefreshBadge();
+    }
+
+    /// <summary>
+    /// 열린 필터 창을 닫는다. 열려 있었으면 true (뒤로가기)
+    /// </summary>
+    public bool ClosePanel()
+    {
+        if (_panel == null || !_panel.gameObject.activeSelf)
+            return false;
+
+        _panel.Close();
+
+        return true;
+    }
+
     protected override void BindEvents()
     {
         Bind(_button, OpenPanel);

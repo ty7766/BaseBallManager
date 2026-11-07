@@ -94,7 +94,10 @@ public class CardFilterPanel : UiWidgetBehaviour
         RefreshOptions();
     }
 
-    private void Close()
+    /// <summary>
+    /// 고르던 것을 버리고 닫는다
+    /// </summary>
+    public void Close()
     {
         SetVisible(false);
     }

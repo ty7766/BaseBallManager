@@ -86,7 +86,7 @@ public class AppFlowController : MonoBehaviour
         return Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame;
     }
 
-    //덮어 띄운 화면을 먼저 닫고, 없으면 로비로. 로비·타이틀에서는 아무것도 하지 않는다
+    //덮어 띄운 화면 → 화면 안에 열린 창 순서로 먼저 닫고, 없으면 로비로. 로비·타이틀에서는 아무것도 하지 않는다
     private void GoBack()
     {
         if (_cardDetailScreen.gameObject.activeSelf)
@@ -97,11 +97,16 @@ public class AppFlowController : MonoBehaviour
 
         if (_cardPickerScreen.gameObject.activeSelf)
         {
-            CloseCardPicker();
+            if (!_cardPickerScreen.HandleBack())
+                CloseCardPicker();
+
             return;
         }
 
         if (_pauseScreen.gameObject.activeSelf)
+            return;
+
+        if (_router.Current != null && _router.Current.HandleBack())
             return;
 
         if (_router.Current == null
@@ -248,9 +253,11 @@ public class AppFlowController : MonoBehaviour
 
     // ---------------------------------------------------------------- 로비
 
+    //로비에는 카드가 없으므로 올려 둔 선수 사진을 이때 한꺼번에 내린다
     private void ShowLobby()
     {
         _router.Show(_lobbyScreen);
+        PlayerPhotoProvider.UnloadAll();
     }
 
     private void ShowScreen(UiScreenBehaviour screen)
@@ -520,11 +527,11 @@ public class AppFlowController : MonoBehaviour
         _router.ShowOverlay(_cardDetailScreen);
     }
 
-    //상세 보기에서 잠금을 바꿨을 수 있으니 아래에 깔린 인벤토리는 다시 그린다
+    //상세 보기에서 잠금을 바꿨을 수 있으니 아래에 깔린 인벤토리는 다시 그린다.
+    //사진은 내리지 않는다 — 아래 화면 카드가 같은 썸네일을 쓰고 있어 내리면 사라진다 (로비로 갈 때 내린다)
     private void CloseCardDetail()
     {
         _router.HideOverlay(_cardDetailScreen);
-        PlayerPhotoProvider.UnloadAll();
 
         if (_inventoryScreen.gameObject.activeSelf)
             _inventoryScreen.Refresh();
