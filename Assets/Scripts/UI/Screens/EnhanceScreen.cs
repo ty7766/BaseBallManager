@@ -1,29 +1,15 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 카드 강화. 위 절반은 강화 칸, 아래 절반은 카드 목록. 목록에서 카드를 고르면 위 왼쪽에 놓이고 목록이 재료로 바뀐다.
+/// 카드 강화. 카드를 고르면 아래 목록이 재료(같은 카드 + 강화 전용 카드)로 바뀐다.
 /// 재료를 고를수록 오른쪽에 +3 → +5 처럼 오를 단계를 미리 보여 주고, 강화를 누르면 한 번에 올린다
 /// </summary>
-public class EnhanceScreen : UiScreenBehaviour
+public class EnhanceScreen : CardWorkScreen
 {
-    private const float SideMargin = 32f;
-    //위 강화 칸 — 왼쪽 대상 카드(처음엔 빈 자리) · 오른쪽 미리보기. 두 단계 모두 자리가 같다
-    private const float TargetTop = 120f;
-    private const float TargetWidth = 340f;
-    private const float TargetHeight = TargetWidth * CardView.BaseHeight / CardView.BaseWidth;
-    private const float PreviewLeft = SideMargin + TargetWidth + 32f;
-    private const float PreviewWidth = 1080f - SideMargin - PreviewLeft;
-    private const float PreviewTop = TargetTop + 30f;
-    private const string EmptySlotSprite = "Card/card_slot_empty";
-    //아래 카드 목록 — 머리 줄(왼쪽 이름 · 오른쪽 필터) 아래로
-    private const float ListRowTop = TargetTop + TargetHeight + 24f;
-    private const float GridTop = ListRowTop + CardFilterButtonView.ButtonHeight + 36f;
-    private const float GridBottom = 224f;
     private const float MedalWidth = 168f;
     private const float MedalHeight = MedalWidth * 208f / 240f;
     private const float MedalFontSize = 76f;
@@ -44,22 +30,35 @@ public class EnhanceScreen : UiScreenBehaviour
     private const float StepSeconds = 0.3f;
     private const float SettleSeconds = 0.4f;
     private const string ArrowSprite = "Gacha/swipe_arrow";
-    private const string CardMaskSprite = "Fx/card_mask";
     private const string EnhancePlusTag = "<size=60%><voffset=0.12em>+</voffset></size>";
     private const string PreviewColorTag = "<color=#F2C14E>";
     private const string MaxReason = "최대 강화";
     private static readonly Color EmptyMedalColor = new Color(0.36f, 0.38f, 0.42f, 1f);
     private static readonly Color EmptyMedalInk = new Color(0.1f, 0.11f, 0.13f, 1f);
 
-    [SerializeField] private Image _emptySlot;
-    [SerializeField] private TextMeshProUGUI _emptyText;
-    [SerializeField] private TextMeshProUGUI _listLabel;
-    [SerializeField] private CardFilterButtonView _filterButton;
-    [SerializeField] private CardGridView _grid;
-    [SerializeField] private RectTransform _targetPanel;
-    [SerializeField] private CanvasGroup _targetGroup;
-    [SerializeField] private CardView _targetCard;
-    [SerializeField] private Image _cardFlash;
+    /// <summary>
+    /// 화면 제목 · 빈 칸 안내 · 실행 버튼
+    /// </summary>
+    protected override string Title => "강화";
+    protected override string EmptyMessage => "강화할 카드를 선택하세요";
+    protected override string ActionLabel => "강화";
+
+    /// <summary>
+    /// 카드를 고르면 목록이 재료로 바뀐다
+    /// </summary>
+    protected override string MaterialListLabel => "재료 카드";
+
+    /// <summary>
+    /// 재료가 없을 때 문구. 이미 최대면 따로 알린다
+    /// </summary>
+    protected override string MaterialEmptyMessage =>
+        IsTargetMaxed() ? "더 강화할 수 없는 카드입니다" : "카드가 없습니다";
+
+    /// <summary>
+    /// 고른 같은 카드
+    /// </summary>
+    protected override IReadOnlyCollection<int> MaterialSelection => _selectedMaterialIds;
+
     [SerializeField] private TextMeshProUGUI _targetName;
     [SerializeField] private Image _currentMedal;
     [SerializeField] private TextMeshProUGUI _currentMedalText;
@@ -70,27 +69,14 @@ public class EnhanceScreen : UiScreenBehaviour
     [SerializeField] private TextMeshProUGUI _ovrText;
     [SerializeField] private TextMeshProUGUI _statText;
     [SerializeField] private TextMeshProUGUI _materialText;
-    [SerializeField] private Button _backButton;
-    [SerializeField] private Button _changeButton;
-    [SerializeField] private Button _enhanceButton;
-    [SerializeField] private TextMeshProUGUI _enhanceLabel;
-    [SerializeField] private CanvasGroup _enhanceGroup;
-    [SerializeField] private Image _inputBlocker;
 
-    private readonly List<int> _listIds = new List<int>(64);
     private readonly List<CardInstance> _materials = new List<CardInstance>(16);
     private readonly List<int> _selectedMaterialIds = new List<int>(10);
-    private readonly List<RectTransform> _leadingTiles = new List<RectTransform>(1);
     private readonly List<Image> _pips = new List<Image>(10);
 
-    private Action _onBack;
-    private Action<string, bool> _onNotify;
-    private Action<int> _onShowCardDetail;
     private EnhanceCardTileView _enhanceCardTile;
-    private Coroutine _playRoutine;
     private UiTween _medalSlide;
     private bool _medalPairShown = true;
-    private int _targetInstanceId = InventoryManager.InvalidInstanceId;
     private int _selectedSets;
     private CurrencyType _enhanceCardType;
     private int _cardsPerLevel = 1;
@@ -98,144 +84,17 @@ public class EnhanceScreen : UiScreenBehaviour
     private int _shownGain;
     private bool _medalFontApplied;
 
-    private bool HasTarget => _targetInstanceId != InventoryManager.InvalidInstanceId;
     private int Gain => _selectedMaterialIds.Count + _selectedSets;
     private int MaxLevel => EnhanceManager.Instance != null ? EnhanceManager.Instance.MaxEnhanceLevel : 0;
 
-    /// <summary>
-    /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
-    /// </summary>
-    public void Initialize(Action onBack, Action<string, bool> onNotify, Action<int> onShowCardDetail)
+    //이름 · 지금 메달 → 오를 메달 · 단계 칸 · OVR · 세부 스탯 · 재료 요약
+    protected override void BuildWork()
     {
-        _onBack = onBack;
-        _onNotify = onNotify;
-        _onShowCardDetail = onShowCardDetail;
-    }
-
-    /// <summary>
-    /// 지금 단계를 다시 그린다. 고르던 재료 중 쓸 수 없게 된 것(잠금 등)은 빠진다
-    /// </summary>
-    public void Refresh()
-    {
-        if (InventoryManager.Instance == null || EnhanceManager.Instance == null)
-            return;
-
-        if (HasTarget && !CardDisplayInfo.TryCreate(_targetInstanceId, out CardDisplayInfo _))
-            ClearTarget();
-
-        if (HasTarget)
-            ShowMaterialStep();
-        else
-            ShowPickStep();
-    }
-
-    /// <summary>
-    /// 필터 창 → 재료 고르기 순으로 한 단계씩 물러난다. 연출 중에는 막는다
-    /// </summary>
-    public override bool HandleBack()
-    {
-        if (_playRoutine != null)
-            return true;
-
-        if (_filterButton.ClosePanel())
-            return true;
-
-        if (!HasTarget)
-            return false;
-
-        ReturnToPick();
-
-        return true;
-    }
-
-    protected override void BindEvents()
-    {
-        WireWidgets();
-        Bind(_backButton, OnBackClicked);
-        Bind(_changeButton, ReturnToPick);
-        Bind(_enhanceButton, OnEnhanceClicked);
-    }
-
-    //제목 · 빈 자리 안내 · 목록 머리 줄 · 목록 · 대상 칸(숨김) · 아래 버튼 · 연출 중 입력 막이
-    protected override void Build()
-    {
-        TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
-        UiBuilder.Place(title.rectTransform, SideMargin, 32f, 500f, 60f);
-        title.text = "강화";
-
-        _emptySlot = UiBuilder.CreateImage(Root, "EmptySlot", Color.white, EmptySlotSprite);
-        UiBuilder.Place(_emptySlot.rectTransform, SideMargin, TargetTop, TargetWidth, TargetHeight);
-
-        _emptyText = UiBuilder.CreateText(Root, "EmptyText", 36f, UiPalette.Text2, TextAlignmentOptions.Center);
-        UiBuilder.Place(_emptyText.rectTransform, PreviewLeft, TargetTop, PreviewWidth, TargetHeight);
-        _emptyText.text = "강화할 카드를 선택하세요";
-
-        _listLabel = UiBuilder.CreateText(Root, "ListLabel", 32f, UiPalette.Text2);
-        UiBuilder.Place(_listLabel.rectTransform, SideMargin, ListRowTop, 600f, CardFilterButtonView.ButtonHeight);
-
-        _filterButton = CardFilterButtonView.Bake(Root);
-        UiBuilder.PlaceRight(_filterButton.Root, SideMargin, ListRowTop, CardFilterButtonView.ButtonWidth,
-            CardFilterButtonView.ButtonHeight);
-
-        _grid = CardGridView.Bake(Root);
-        UiBuilder.Stretch(_grid.Root, SideMargin, GridTop, SideMargin, GridBottom);
-
-        BuildTargetPanel();
-
-        _backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
-        PlaceBottomButton(_backButton, 0f, 1f);
-
-        _changeButton = UiBuilder.CreateButton(Root, "ChangeButton", "뒤로", 34f, false, ReturnToPick);
-        PlaceBottomButton(_changeButton, 0f, 0.5f);
-
-        _enhanceButton = UiBuilder.CreateButton(Root, "EnhanceButton", "강화", 36f, true, OnEnhanceClicked,
-            out _enhanceLabel);
-        PlaceBottomButton(_enhanceButton, 0.5f, 1f);
-        _enhanceGroup = _enhanceButton.gameObject.AddComponent<CanvasGroup>();
-
-        _inputBlocker = UiBuilder.CreateImage(Root, "InputBlocker", UiPalette.WithAlpha(Color.black, 0f));
-        UiBuilder.Stretch(_inputBlocker.rectTransform, 0f, 0f, 0f, 0f);
-        _inputBlocker.raycastTarget = true;
-        _inputBlocker.gameObject.SetActive(false);
-
-        WireWidgets();
-        SetStep(false);
-    }
-
-    protected override void OnShown()
-    {
-        ApplyMedalFont();
-        Refresh();
-    }
-
-    //다시 들어오면 카드 고르기부터, 필터 없이 맨 위에서
-    protected override void OnHidden()
-    {
-        _playRoutine = null;
-        _inputBlocker.gameObject.SetActive(false);
-        ClearTarget();
-        _filterButton.ResetFilter();
-        _grid.ScrollToTop();
-    }
-
-    //대상 카드 · 단계 메달 → 메달 · 단계 칸 · OVR · 세부 스탯 · 재료 요약
-    private void BuildTargetPanel()
-    {
-        _targetPanel = UiBuilder.CreateRect(Root, "TargetPanel");
-        UiBuilder.PlaceRow(_targetPanel, 0f, ListRowTop);
-        _targetGroup = _targetPanel.gameObject.AddComponent<CanvasGroup>();
-
-        _targetCard = CardView.Bake(_targetPanel, TargetWidth, false);
-        UiBuilder.CenterPivot(UiBuilder.Place(_targetCard.Root, SideMargin, TargetTop, TargetWidth, TargetHeight));
-
-        _cardFlash = UiBuilder.CreateImage(_targetPanel, "CardFlash", UiPalette.WithAlpha(Color.white, 0f), CardMaskSprite);
-        UiBuilder.Place(_cardFlash.rectTransform, SideMargin, TargetTop, TargetWidth, TargetHeight);
-
         _targetName = CreatePreviewText("TargetName", 40f, UiPalette.Text1, PreviewTop, 52f);
 
         _currentMedal = CreateMedal("CurrentMedal", MedalRowLeft, MedalTop, out _currentMedalText);
 
-        _arrow = UiBuilder.CreateImage(_targetPanel, "Arrow", UiPalette.Text1, ArrowSprite);
+        _arrow = UiBuilder.CreateImage(WorkPanel, "Arrow", UiPalette.Text1, ArrowSprite);
         UiBuilder.CenterPivot(UiBuilder.Place(_arrow.rectTransform, MedalRowLeft + MedalWidth + MedalGap,
             MedalTop + (MedalHeight - ArrowHeight) * 0.5f, ArrowWidth, ArrowHeight));
         _arrow.preserveAspect = true;
@@ -245,7 +104,7 @@ public class EnhanceScreen : UiScreenBehaviour
 
         float pipTop = MedalTop + MedalHeight + 26f;
 
-        _pipRow = UiBuilder.CreateRect(_targetPanel, "LevelPips");
+        _pipRow = UiBuilder.CreateRect(WorkPanel, "LevelPips");
         UiBuilder.Place(_pipRow, PreviewLeft + (PreviewWidth - PipRowWidth) * 0.5f, pipTop, PipRowWidth, PipHeight);
 
         float ovrTop = pipTop + PipHeight + 18f;
@@ -256,53 +115,8 @@ public class EnhanceScreen : UiScreenBehaviour
         _materialText = CreatePreviewText("Material", 26f, UiPalette.Text3, ovrTop + 102f, 38f);
     }
 
-    private TextMeshProUGUI CreatePreviewText(string name, float fontSize, Color color, float top, float height)
-    {
-        TextMeshProUGUI text = UiBuilder.CreateText(_targetPanel, name, fontSize, color, TextAlignmentOptions.Center);
-
-        UiBuilder.Place(text.rectTransform, PreviewLeft, top, PreviewWidth, height);
-
-        return text;
-    }
-
-    //카드 앞면과 같은 육각 메달 + 새긴 숫자
-    private Image CreateMedal(string name, float left, float top, out TextMeshProUGUI label)
-    {
-        Image medal = UiBuilder.CreateImage(_targetPanel, name, Color.white, EnhanceBadgeStyle.GetSpritePath(1));
-        UiBuilder.CenterPivot(UiBuilder.Place(medal.rectTransform, left, top, MedalWidth, MedalHeight));
-
-        label = UiBuilder.CreateText(medal.transform, "Level", MedalFontSize, Color.black, TextAlignmentOptions.Center);
-        UiBuilder.Stretch(label.rectTransform, 0f, 0f, 0f, 0f);
-
-        return medal;
-    }
-
-    private void PlaceBottomButton(Button button, float anchorLeft, float anchorRight)
-    {
-        RectTransform rect = button.GetComponent<RectTransform>();
-        float leftInset = anchorLeft > 0f ? 12f : SideMargin;
-        float rightInset = anchorRight < 1f ? 12f : SideMargin;
-
-        rect.anchorMin = new Vector2(anchorLeft, 0f);
-        rect.anchorMax = new Vector2(anchorRight, 0f);
-        rect.pivot = new Vector2(0.5f, 0f);
-        rect.offsetMin = new Vector2(leftInset, 40f);
-        rect.offsetMax = new Vector2(-rightInset, 160f);
-    }
-
-    //프리팹에 저장되지 않는 위젯 콜백. 베이크 경로와 코드 조립 경로가 함께 쓴다
-    private void WireWidgets()
-    {
-        _filterButton.SetChangedHandler(OnFilterChanged);
-        _grid.SetClickHandler(OnGridClicked);
-        _grid.SetLongPressHandler(OnGridLongPressed);
-        _grid.SetBlockedReason(GetBlockedReason);
-        _grid.SetCheckSelection(true);
-        _targetCard.SetLongPressHandler(OnTargetLongPressed);
-    }
-
     //카드 앞면 글꼴은 런타임에 만들어지므로 처음 보일 때 입힌다
-    private void ApplyMedalFont()
+    protected override void OnWorkShown()
     {
         if (_medalFontApplied)
             return;
@@ -316,84 +130,23 @@ public class EnhanceScreen : UiScreenBehaviour
         }
     }
 
-    //처음엔 위 칸이 비어 있고 아래는 보유 카드, 고르면 위 칸이 채워지고 아래는 재료 카드
-    private void SetStep(bool materialStep)
+    protected override void OnTargetChanged()
     {
-        _emptySlot.gameObject.SetActive(!materialStep);
-        _emptyText.gameObject.SetActive(!materialStep);
-        _filterButton.gameObject.SetActive(!materialStep);
-        _backButton.gameObject.SetActive(!materialStep);
-        _targetPanel.gameObject.SetActive(materialStep);
-        _changeButton.gameObject.SetActive(materialStep);
-        _enhanceButton.gameObject.SetActive(materialStep);
-        _listLabel.text = materialStep ? "재료 카드" : "보유 카드";
+        _selectedMaterialIds.Clear();
+        _selectedSets = 0;
+        _shownGain = 0;
     }
 
-    //보유 카드 전체. 더 못 올리는 카드는 흐리게 덮는다
-    private void ShowPickStep()
+    //같은 카드(덜 키운 것부터) · 맨 앞 전용 카드 칸. 쓸 수 없게 된 선택은 빼고, 최대 단계를 넘는 만큼 덜어 낸다
+    protected override void CollectMaterials(List<int> instanceIds, List<RectTransform> leadingTiles)
     {
-        SetStep(false);
+        if (EnhanceManager.Instance == null)
+            return;
 
-        _listIds.Clear();
-
-        foreach (CardInstance card in InventoryManager.Instance.GetFiltered(_filterButton.CurrentFilter))
-            _listIds.Add(card.InstanceId);
-
-        _grid.SetLeadingTiles(null);
-        _grid.SetEmptyMessage(_filterButton.CurrentFilter.SelectedCount > 0 ? "조건에 맞는 카드가 없습니다" : "카드가 없습니다");
-        _grid.SetSelection(null);
-        _grid.SetCards(_listIds);
-    }
-
-    //위 왼쪽 대상 카드 + 아래 재료(전용 카드 칸이 맨 앞)
-    private void ShowMaterialStep()
-    {
-        SetStep(true);
-
-        if (CardDisplayInfo.TryCreate(_targetInstanceId, out CardDisplayInfo info))
-        {
-            _targetCard.SetCard(info);
-            _targetName.text = PlayerLabelFormat.NameWithYear(info.Name, info.Year);
-        }
-
-        RebuildMaterialList();
-        UpdatePreview(false);
-    }
-
-    private void RebuildMaterialList()
-    {
-        CollectMaterials();
-
-        _listIds.Clear();
-
-        foreach (CardInstance material in _materials)
-            _listIds.Add(material.InstanceId);
-
-        _leadingTiles.Clear();
-
-        if (ShowsEnhanceCardTile())
-        {
-            EnsureEnhanceCardTile();
-            _enhanceCardTile.SetCard(_enhanceCardType, _ownedEnhanceCards, _cardsPerLevel);
-            _enhanceCardTile.SetSelectedSets(_selectedSets, _cardsPerLevel);
-            _leadingTiles.Add(_enhanceCardTile.Root);
-        }
-
-        bool maxed = !EnhanceManager.Instance.CanEnhance(_targetInstanceId);
-
-        _grid.SetLeadingTiles(_leadingTiles);
-        _grid.SetEmptyMessage(maxed ? "더 강화할 수 없는 카드입니다" : "카드가 없습니다");
-        _grid.SetSelection(_selectedMaterialIds);
-        _grid.SetCards(_listIds);
-    }
-
-    //같은 카드(덜 키운 것부터) · 전용 카드 보유량. 쓸 수 없게 된 선택은 빼고, 최대 단계를 넘는 만큼 덜어 낸다
-    private void CollectMaterials()
-    {
         _materials.Clear();
 
-        if (EnhanceManager.Instance.CanEnhance(_targetInstanceId))
-            _materials.AddRange(EnhanceManager.Instance.GetIdenticalCards(_targetInstanceId));
+        if (!IsTargetMaxed())
+            _materials.AddRange(EnhanceManager.Instance.GetIdenticalCards(TargetInstanceId));
 
         _materials.Sort(CompareMaterial);
 
@@ -403,7 +156,7 @@ public class EnhanceScreen : UiScreenBehaviour
                 _selectedMaterialIds.RemoveAt(i);
         }
 
-        (CurrencyType enhanceCardType, int count) required = EnhanceManager.Instance.GetRequiredEnhanceCard(_targetInstanceId);
+        (CurrencyType enhanceCardType, int count) required = EnhanceManager.Instance.GetRequiredEnhanceCard(TargetInstanceId);
 
         _enhanceCardType = required.enhanceCardType;
         _cardsPerLevel = Mathf.Max(1, required.count);
@@ -419,6 +172,126 @@ public class EnhanceScreen : UiScreenBehaviour
             else
                 _selectedMaterialIds.RemoveAt(_selectedMaterialIds.Count - 1);
         }
+
+        foreach (CardInstance material in _materials)
+            instanceIds.Add(material.InstanceId);
+
+        if (!ShowsEnhanceCardTile())
+            return;
+
+        EnsureEnhanceCardTile();
+        _enhanceCardTile.SetCard(_enhanceCardType, _ownedEnhanceCards, _cardsPerLevel);
+        _enhanceCardTile.SetSelectedSets(_selectedSets, _cardsPerLevel);
+        leadingTiles.Add(_enhanceCardTile.Root);
+    }
+
+    protected override void OnMaterialClicked(int instanceId)
+    {
+        if (!_selectedMaterialIds.Remove(instanceId))
+        {
+            if (GetRemainingLevels() <= 0)
+            {
+                Notify($"+{MaxLevel} 까지만 올릴 수 있습니다", false);
+                return;
+            }
+
+            _selectedMaterialIds.Add(instanceId);
+        }
+
+        OnMaterialsChanged();
+    }
+
+    //이미 최대인 카드는 고를 수 없다
+    protected override string GetTargetBlockedReason(CardDisplayInfo info)
+    {
+        return info.EnhanceLevel >= MaxLevel ? MaxReason : null;
+    }
+
+    //단계가 다 차면 남은 재료를 막는다
+    protected override string GetMaterialBlockedReason(CardDisplayInfo info)
+    {
+        return GetRemainingLevels() <= 0 && !_selectedMaterialIds.Contains(info.InstanceId) ? MaxReason : null;
+    }
+
+    //지금 단계 → 오를 단계 메달, 단계 칸(채움 · 이번에 오를 칸 · 빈 칸), OVR 변화
+    protected override void RefreshWork(CardDisplayInfo target, bool animate)
+    {
+        int maxLevel = MaxLevel;
+        int current = target.EnhanceLevel;
+        int gain = Gain;
+        int next = Mathf.Min(maxLevel, current + gain);
+        bool hasGain = gain > 0;
+
+        _targetName.text = PlayerLabelFormat.NameWithYear(target.Name, target.Year);
+
+        ApplyMedal(_currentMedal, _currentMedalText, current);
+        ApplyMedal(_nextMedal, _nextMedalText, next);
+        SetMedalPair(hasGain, animate);
+        UpdatePips(current, next, maxLevel, animate);
+
+        int nextOvr = target.FinalOvr + GetOvrGain(target, gain);
+
+        _ovrText.text = hasGain
+            ? $"OVR  {target.FinalOvr}  →  {PreviewColorTag}{nextOvr}</color>"
+            : $"OVR  {target.FinalOvr}";
+        _statText.text = hasGain ? $"세부 스탯 각 +{CardStatsCalculator.CalculateFinalStat(0, gain, 0)}" : string.Empty;
+        _materialText.text = BuildMaterialSummary(current >= maxLevel);
+
+        SetAction(hasGain, hasGain ? $"강화  +{gain}" : ActionLabel);
+
+        if (animate && gain != _shownGain)
+        {
+            UiEffects.Pop(_nextMedal.transform, 0.7f, 0.26f);
+            UiEffects.Pop(_ovrText.transform, 0.88f, 0.22f);
+        }
+
+        _shownGain = gain;
+    }
+
+    protected override void OnActionClicked()
+    {
+        if (Gain <= 0 || EnhanceManager.Instance == null)
+            return;
+
+        if (!CardDisplayInfo.TryCreate(TargetInstanceId, out CardDisplayInfo before))
+            return;
+
+        if (!EnhanceManager.Instance.Enhance(TargetInstanceId, _selectedMaterialIds, _selectedSets))
+        {
+            Notify("강화하지 못했습니다", false);
+            Refresh();
+            return;
+        }
+
+        _selectedMaterialIds.Clear();
+        _selectedSets = 0;
+        PlaySequence(PlayEnhance(before));
+    }
+
+    private TextMeshProUGUI CreatePreviewText(string name, float fontSize, Color color, float top, float height)
+    {
+        TextMeshProUGUI text = UiBuilder.CreateText(WorkPanel, name, fontSize, color, TextAlignmentOptions.Center);
+
+        UiBuilder.Place(text.rectTransform, PreviewLeft, top, PreviewWidth, height);
+
+        return text;
+    }
+
+    //카드 앞면과 같은 육각 메달 + 새긴 숫자
+    private Image CreateMedal(string name, float left, float top, out TextMeshProUGUI label)
+    {
+        Image medal = UiBuilder.CreateImage(WorkPanel, name, Color.white, EnhanceBadgeStyle.GetSpritePath(1));
+        UiBuilder.CenterPivot(UiBuilder.Place(medal.rectTransform, left, top, MedalWidth, MedalHeight));
+
+        label = UiBuilder.CreateText(medal.transform, "Level", MedalFontSize, Color.black, TextAlignmentOptions.Center);
+        UiBuilder.Stretch(label.rectTransform, 0f, 0f, 0f, 0f);
+
+        return medal;
+    }
+
+    private bool IsTargetMaxed()
+    {
+        return EnhanceManager.Instance == null || !EnhanceManager.Instance.CanEnhance(TargetInstanceId);
     }
 
     private bool ContainsMaterial(int instanceId)
@@ -446,9 +319,7 @@ public class EnhanceScreen : UiScreenBehaviour
 
     private bool ShowsEnhanceCardTile()
     {
-        return _enhanceCardType != CurrencyType.None
-            && _ownedEnhanceCards >= _cardsPerLevel
-            && EnhanceManager.Instance.CanEnhance(_targetInstanceId);
+        return _enhanceCardType != CurrencyType.None && _ownedEnhanceCards >= _cardsPerLevel && !IsTargetMaxed();
     }
 
     //전용 카드 칸은 카드가 아니라 재화라 화면이 직접 만든다
@@ -457,13 +328,13 @@ public class EnhanceScreen : UiScreenBehaviour
         if (_enhanceCardTile != null)
             return;
 
-        _enhanceCardTile = new EnhanceCardTileView(_grid.Root);
+        _enhanceCardTile = new EnhanceCardTileView(Grid.Root);
         _enhanceCardTile.SetHandlers(OnAddEnhanceCard, OnRemoveEnhanceCard);
     }
 
     private int GetTargetLevel()
     {
-        CardInstance target = HasTarget ? InventoryManager.Instance.GetCard(_targetInstanceId) : null;
+        CardInstance target = HasTarget ? InventoryManager.Instance.GetCard(TargetInstanceId) : null;
 
         return target == null ? 0 : target.EnhanceLevel;
     }
@@ -473,95 +344,9 @@ public class EnhanceScreen : UiScreenBehaviour
         return MaxLevel - GetTargetLevel() - Gain;
     }
 
-    //고르기 단계는 이미 최대인 카드, 재료 단계는 단계가 다 찼을 때 남은 재료를 막는다
-    private string GetBlockedReason(CardDisplayInfo info)
-    {
-        if (!HasTarget)
-            return info.EnhanceLevel >= MaxLevel ? MaxReason : null;
-
-        return GetRemainingLevels() <= 0 && !_selectedMaterialIds.Contains(info.InstanceId) ? MaxReason : null;
-    }
-
-    private void OnFilterChanged()
-    {
-        if (!HasTarget)
-            ShowPickStep();
-    }
-
-    private void OnGridClicked(int instanceId)
-    {
-        if (_playRoutine != null)
-            return;
-
-        if (HasTarget)
-            ToggleMaterial(instanceId);
-        else
-            SelectTarget(instanceId);
-    }
-
-    private void OnGridLongPressed(int instanceId)
-    {
-        _onShowCardDetail?.Invoke(instanceId);
-    }
-
-    private void OnTargetLongPressed()
-    {
-        if (HasTarget)
-            _onShowCardDetail?.Invoke(_targetInstanceId);
-    }
-
-    //고른 카드가 위 왼쪽에 튀어나오고 아래가 재료 목록으로 바뀐다
-    private void SelectTarget(int instanceId)
-    {
-        _targetInstanceId = instanceId;
-        _selectedMaterialIds.Clear();
-        _selectedSets = 0;
-        _shownGain = 0;
-
-        ShowMaterialStep();
-        _grid.ScrollToTop();
-
-        UiEffects.FadeIn(_targetGroup, 0.2f);
-        UiEffects.Pop(_targetCard.Root, 0.86f, 0.28f);
-    }
-
-    private void ReturnToPick()
-    {
-        if (_playRoutine != null)
-            return;
-
-        ClearTarget();
-        ShowPickStep();
-        _grid.ScrollToTop();
-    }
-
-    private void ClearTarget()
-    {
-        _targetInstanceId = InventoryManager.InvalidInstanceId;
-        _selectedMaterialIds.Clear();
-        _selectedSets = 0;
-        _shownGain = 0;
-    }
-
-    private void ToggleMaterial(int instanceId)
-    {
-        if (!_selectedMaterialIds.Remove(instanceId))
-        {
-            if (GetRemainingLevels() <= 0)
-            {
-                Notify($"+{MaxLevel} 까지만 올릴 수 있습니다", false);
-                return;
-            }
-
-            _selectedMaterialIds.Add(instanceId);
-        }
-
-        OnMaterialsChanged();
-    }
-
     private void OnAddEnhanceCard()
     {
-        if (_playRoutine != null)
+        if (IsPlaying)
             return;
 
         if (GetRemainingLevels() <= 0)
@@ -582,7 +367,7 @@ public class EnhanceScreen : UiScreenBehaviour
 
     private void OnRemoveEnhanceCard()
     {
-        if (_playRoutine != null || _selectedSets <= 0)
+        if (IsPlaying || _selectedSets <= 0)
             return;
 
         _selectedSets--;
@@ -591,48 +376,11 @@ public class EnhanceScreen : UiScreenBehaviour
 
     private void OnMaterialsChanged()
     {
-        _grid.SetSelection(_selectedMaterialIds);
-        _grid.RefreshBlocked();
+        RefreshMaterialSelection();
         _enhanceCardTile?.SetSelectedSets(_selectedSets, _cardsPerLevel);
-        UpdatePreview(true);
-    }
 
-    //지금 단계 → 오를 단계 메달, 단계 칸(채움 · 이번에 오를 칸 · 빈 칸), OVR 변화
-    private void UpdatePreview(bool animate)
-    {
-        if (!CardDisplayInfo.TryCreate(_targetInstanceId, out CardDisplayInfo info))
-            return;
-
-        int maxLevel = MaxLevel;
-        int current = info.EnhanceLevel;
-        int gain = Gain;
-        int next = Mathf.Min(maxLevel, current + gain);
-        bool hasGain = gain > 0;
-
-        ApplyMedal(_currentMedal, _currentMedalText, current);
-        ApplyMedal(_nextMedal, _nextMedalText, next);
-        SetMedalPair(hasGain, animate);
-        UpdatePips(current, next, maxLevel, animate);
-
-        int nextOvr = info.FinalOvr + GetOvrGain(info, gain);
-
-        _ovrText.text = hasGain
-            ? $"OVR  {info.FinalOvr}  →  {PreviewColorTag}{nextOvr}</color>"
-            : $"OVR  {info.FinalOvr}";
-        _statText.text = hasGain ? $"세부 스탯 각 +{CardStatsCalculator.CalculateFinalStat(0, gain, 0)}" : string.Empty;
-        _materialText.text = BuildMaterialSummary(current >= maxLevel);
-
-        _enhanceButton.interactable = hasGain;
-        _enhanceGroup.alpha = hasGain ? 1f : 0.4f;
-        _enhanceLabel.text = hasGain ? $"강화  +{gain}" : "강화";
-
-        if (animate && gain != _shownGain)
-        {
-            UiEffects.Pop(_nextMedal.transform, 0.7f, 0.26f);
-            UiEffects.Pop(_ovrText.transform, 0.88f, 0.22f);
-        }
-
-        _shownGain = gain;
+        if (CardDisplayInfo.TryCreate(TargetInstanceId, out CardDisplayInfo target))
+            RefreshWork(target, true);
     }
 
     //+0 은 메달이 없으므로 회색 빈 메달
@@ -745,41 +493,17 @@ public class EnhanceScreen : UiScreenBehaviour
         return identical ?? enhanceCards;
     }
 
-    private void OnEnhanceClicked()
-    {
-        if (_playRoutine != null || !HasTarget || Gain <= 0 || EnhanceManager.Instance == null)
-            return;
-
-        if (!CardDisplayInfo.TryCreate(_targetInstanceId, out CardDisplayInfo before))
-            return;
-
-        if (!EnhanceManager.Instance.Enhance(_targetInstanceId, _selectedMaterialIds, _selectedSets))
-        {
-            Notify("강화하지 못했습니다", false);
-            Refresh();
-            return;
-        }
-
-        _selectedMaterialIds.Clear();
-        _selectedSets = 0;
-        _playRoutine = StartCoroutine(PlayEnhance(before));
-    }
-
     //재료가 사라지고, 메달이 한 단계씩 오르며 카드가 번쩍인 뒤 마지막에 크게 터진다
     private IEnumerator PlayEnhance(CardDisplayInfo before)
     {
-        _inputBlocker.gameObject.SetActive(true);
-
-        RebuildMaterialList();
-        _targetCard.SetCard(before);
+        RefreshList();
+        TargetCard.SetCard(before);
         SetMedalPair(false, true);
         _statText.text = string.Empty;
         _materialText.text = string.Empty;
-        _enhanceButton.interactable = false;
-        _enhanceGroup.alpha = 0.4f;
-        _enhanceLabel.text = "강화";
+        SetAction(false, ActionLabel);
 
-        CardDisplayInfo.TryCreate(_targetInstanceId, out CardDisplayInfo after);
+        CardDisplayInfo.TryCreate(TargetInstanceId, out CardDisplayInfo after);
 
         int maxLevel = MaxLevel;
         int steps = after.EnhanceLevel - before.EnhanceLevel;
@@ -794,32 +518,20 @@ public class EnhanceScreen : UiScreenBehaviour
             UiEffects.Pop(_currentMedal.transform, 0.7f, 0.24f);
             UpdatePips(level, level, maxLevel, false);
             UiEffects.Pop(_pips[level - 1].transform, 0.3f, 0.24f);
-            UiEffects.Flash(_cardFlash, UiPalette.WithAlpha(Color.white, 0.5f), 0.26f);
+            UiEffects.Flash(CardFlash, UiPalette.WithAlpha(Color.white, 0.5f), 0.26f);
         }
 
         yield return new WaitForSecondsRealtime(StepSeconds);
 
-        _targetCard.SetCard(after);
-        UiEffects.Pop(_targetCard.Root, 0.9f, 0.3f);
-        UiEffects.Flash(_cardFlash, UiPalette.WithAlpha(Color.white, 0.8f), 0.5f);
-        UiEffects.Burst(_targetCard.Root, UiEffectKind.Enhance);
+        TargetCard.SetCard(after);
+        UiEffects.Pop(TargetCard.Root, 0.9f, 0.3f);
+        UiEffects.Flash(CardFlash, UiPalette.WithAlpha(Color.white, 0.8f), 0.5f);
+        UiEffects.Burst(TargetCard.Root, UiEffectKind.Enhance);
         Notify($"+{after.EnhanceLevel} 강화 완료", true);
 
         yield return new WaitForSecondsRealtime(SettleSeconds);
 
-        _playRoutine = null;
-        _inputBlocker.gameObject.SetActive(false);
         _shownGain = 0;
-        UpdatePreview(false);
-    }
-
-    private void Notify(string message, bool success)
-    {
-        _onNotify?.Invoke(message, success);
-    }
-
-    private void OnBackClicked()
-    {
-        _onBack?.Invoke();
+        RefreshWork(after, false);
     }
 }

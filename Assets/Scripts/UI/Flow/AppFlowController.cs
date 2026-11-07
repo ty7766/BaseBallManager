@@ -184,7 +184,7 @@ public class AppFlowController : MonoBehaviour
         _gachaScreen.Initialize(ShowLobby, OpenCardDetail, ShowToast);
         _lineUpScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
         _enhanceScreen.Initialize(ShowLobby, ShowToast, OpenCardDetail);
-        _trainScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
+        _trainScreen.Initialize(ShowLobby, ShowToast, OpenCardDetail);
         _combineScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
         _dismantleScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
         _goldenGloveCraftScreen.Initialize(ShowLobby, OpenCardPicker, ShowToast, OpenCardDetail);
@@ -536,8 +536,8 @@ public class AppFlowController : MonoBehaviour
         if (_inventoryScreen.gameObject.activeSelf)
             _inventoryScreen.Refresh();
 
-        if (_enhanceScreen.gameObject.activeSelf)
-            _enhanceScreen.Refresh();
+        if (_router.Current is CardWorkScreen workScreen)
+            workScreen.Refresh();
     }
 
     private void ShowToast(string message, bool success)
