@@ -36,7 +36,7 @@ public static class PlayerPhotoProvider
     }
 
     /// <summary>
-    /// 올려둔 사진을 모두 내린다 (화면을 떠날 때)
+    /// 올려둔 사진을 모두 내린다. 카드가 하나도 안 보이는 화면(로비)으로 갈 때만 부른다
     /// </summary>
     public static void UnloadAll()
     {

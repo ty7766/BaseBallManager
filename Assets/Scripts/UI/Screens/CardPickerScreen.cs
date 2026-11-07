@@ -10,11 +10,14 @@ using UnityEngine.UI;
 /// </summary>
 public class CardPickerScreen : UiScreenBehaviour
 {
+    //제목 아래 오른쪽 필터 버튼 줄
+    private const float FilterRowTop = 104f;
+
     private Action _onCancel;
 
     [SerializeField] private TextMeshProUGUI _titleText;
     [SerializeField] private TextMeshProUGUI _selectionText;
-    [SerializeField] private CardFilterBarView _filterBar;
+    [SerializeField] private CardFilterButtonView _filterButton;
     [SerializeField] private CardGridView _grid;
     [SerializeField] private Button _confirmButton;
 
@@ -48,9 +51,17 @@ public class CardPickerScreen : UiScreenBehaviour
         Refresh();
     }
 
+    /// <summary>
+    /// 필터 창이 열려 있으면 그것부터 닫는다
+    /// </summary>
+    public override bool HandleBack()
+    {
+        return _filterButton.ClosePanel();
+    }
+
     protected override void BindEvents()
     {
-        _filterBar.SetChangedHandler(Refresh);
+        _filterButton.SetChangedHandler(Refresh);
         _grid.SetClickHandler(OnCardClicked);
         Bind(_confirmButton, OnConfirmClicked);
         BindButton("CancelButton", OnCancelClicked);
@@ -68,12 +79,13 @@ public class CardPickerScreen : UiScreenBehaviour
         _selectionText = UiBuilder.CreateText(Root, "Selection", 32f, UiPalette.AccentGold, TextAlignmentOptions.Right);
         UiBuilder.PlaceRight(_selectionText.rectTransform, 32f, 40f, 320f, 44f);
 
-        _filterBar = CardFilterBarView.Bake(Root);
-        UiBuilder.Place(_filterBar.Root, 32f, 100f, 1016f, CardFilterBarView.BarHeight);
-        _filterBar.SetChangedHandler(Refresh);
+        _filterButton = CardFilterButtonView.Bake(Root);
+        UiBuilder.PlaceRight(_filterButton.Root, 32f, FilterRowTop, CardFilterButtonView.ButtonWidth,
+            CardFilterButtonView.ButtonHeight);
+        _filterButton.SetChangedHandler(Refresh);
 
         _grid = CardGridView.Bake(Root);
-        UiBuilder.Stretch(_grid.Root, 32f, 100f + CardFilterBarView.BarHeight + 16f, 32f, 200f);
+        UiBuilder.Stretch(_grid.Root, 32f, FilterRowTop + CardFilterButtonView.ButtonHeight + 20f, 32f, 200f);
         _grid.SetClickHandler(OnCardClicked);
         _grid.SetEmptyMessage("고를 수 있는 카드가 없습니다");
 
@@ -96,6 +108,13 @@ public class CardPickerScreen : UiScreenBehaviour
         cancelRect.offsetMax = new Vector2(-32f, 160f);
     }
 
+    //다음에 열 때는 필터 없이 맨 위부터
+    protected override void OnHidden()
+    {
+        _filterButton.ResetFilter();
+        _grid.ScrollToTop();
+    }
+
     //필터를 통과하고 선택 가능한 카드만 깐다
     private void Refresh()
     {
@@ -104,7 +123,7 @@ public class CardPickerScreen : UiScreenBehaviour
 
         _candidateIds.Clear();
 
-        List<CardInstance> filtered = InventoryManager.Instance.GetFiltered(_filterBar.CurrentFilter);
+        List<CardInstance> filtered = InventoryManager.Instance.GetFiltered(_filterButton.CurrentFilter);
 
         foreach (CardInstance card in filtered)
         {

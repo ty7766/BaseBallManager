@@ -156,7 +156,28 @@ public class GachaScreen : UiScreenBehaviour
     protected override void OnShown()
     {
         Refresh();
-        _reveal?.ResumeHint();
+    }
+
+    /// <summary>
+    /// 기록 창이 열려 있으면 그것부터 닫는다
+    /// </summary>
+    public override bool HandleBack()
+    {
+        if (_historyPanel == null || !_historyPanel.gameObject.activeSelf)
+            return false;
+
+        _historyPanel.Close();
+
+        return true;
+    }
+
+    //다시 들어오면 일반 뽑기 · 빈 결과 · 기록 창 닫힘 (뽑은 카드는 이미 인벤토리에 있다)
+    protected override void OnHidden()
+    {
+        _gachaType = GachaType.Normal;
+        _historyPanel?.Close();
+        _reveal?.Hide();
+        _emptyText.gameObject.SetActive(true);
     }
 
     //알약 탭 하나. 바탕(흰 알약)은 고른 탭에서만 보인다

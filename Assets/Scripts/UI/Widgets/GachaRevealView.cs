@@ -102,12 +102,17 @@ public sealed class GachaRevealView
     }
 
     /// <summary>
-    /// 화면에 다시 들어왔을 때 남은 뒷면이 있으면 안내 화살표를 다시 돌린다
+    /// 결과를 걷어 낸다 (화면을 떠날 때)
     /// </summary>
-    public void ResumeHint()
+    public void Hide()
     {
-        if (_faceDownCount > 0 && _dealTween == null && _hintTween == null && _group.gameObject.activeInHierarchy)
-            PlayHintCycle();
+        UiAnimator.Cancel(_dealTween);
+        _dealTween = null;
+        _faceDownCount = 0;
+        SetHintVisible(false);
+        _shownCards.Clear();
+        _group.gameObject.SetActive(false);
+        _skipButton.gameObject.SetActive(false);
     }
 
     //1장은 가운데 크게. 아래에서 떠오르며 놓인다

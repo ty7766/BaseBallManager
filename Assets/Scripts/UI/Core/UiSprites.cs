@@ -43,6 +43,7 @@ public static class UiSprites
     public const string CardStarFill = "Card/card_star_fill";
     public const string CardSlotEmpty = "Card/card_slot_empty";
     public const string Spinner = "Common/spinner_00";
+    public const string ScrollHandle = "Common/scroll_handle";
 
     private const string ResourceRoot = "UI/";
 
