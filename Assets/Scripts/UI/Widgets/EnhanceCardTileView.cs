@@ -11,13 +11,11 @@ public class EnhanceCardTileView
 {
     private const float IconSize = 250f;
     private const float IconTop = 30f;
-    private const float CheckSize = 150f;
-    private const float CheckTop = 80f;
-    private const float SelectedDimAlpha = 0.6f;
+    //넣은 묶음 수 글자는 가운데 체크 아래
+    private const float SelectedTextTop = 330f;
     private const float MinusSize = 92f;
     private const float MinusMargin = 14f;
     private const float MinusIconSize = 52f;
-    private const string CheckSprite = "Common/check_circle";
     private const string MinusSprite = "Common/icon_minus";
     private const string DiscSprite = "Common/press_disc";
     private static readonly Color PlateColor = new Color(0.11f, 0.12f, 0.13f, 1f);
@@ -73,17 +71,10 @@ public class EnhanceCardTileView
         _ownedText = CreateCenteredText(plate.transform, "Owned", 28f, UiPalette.Text2, 336f, 40f);
         _ruleText = CreateCenteredText(plate.transform, "Rule", 24f, UiPalette.Text3, 384f, 36f);
 
-        Image dim = UiBuilder.CreateImage(_root, "Selected", UiPalette.WithAlpha(Color.black, SelectedDimAlpha));
-        UiBuilder.Stretch(dim.rectTransform, 0f, 0f, 0f, 0f);
-        dim.raycastTarget = false;
+        Image dim = CardCellView.CreateCheckOverlay(_root, out _checkMark);
         _selectedLayer = dim.gameObject;
 
-        _checkMark = UiBuilder.CreateImage(dim.transform, "Check", Color.white, CheckSprite);
-        UiBuilder.CenterPivot(UiBuilder.Place(_checkMark.rectTransform, (CardCellView.CellWidth - CheckSize) * 0.5f, CheckTop,
-            CheckSize, CheckSize));
-        _checkMark.raycastTarget = false;
-
-        _selectedText = CreateCenteredText(dim.transform, "Count", 38f, UiPalette.Text1, 300f, 56f);
+        _selectedText = CreateCenteredText(dim.transform, "Count", 38f, UiPalette.Text1, SelectedTextTop, 56f);
 
         _minusButton = CreateMinusButton();
         _selectedLayer.SetActive(false);

@@ -13,7 +13,7 @@
     Assets/Resources/UI/Common/checkbox_off.png     빈 체크박스 (흰 테 — Image 색으로 틴트) 48 → 2배
     Assets/Resources/UI/Common/checkbox_on.png      체크된 체크박스 (흰 채움 + 남색 체크) 48 → 2배
     Assets/Resources/UI/Common/scroll_handle.png    스크롤바 손잡이 · 홈 (둥근 막대, 9-슬라이스 10px) 12×24 → 2배
-    Assets/Resources/UI/Common/check_circle.png     선택 표시 — 흰 원 + 남색 체크 (강화 재료) 96 → 2배
+    Assets/Resources/UI/Common/check_circle.png     선택 표시 — 채움 없이 굵은 흰 선 원 + 체크 (강화 재료) 96 → 2배
     Assets/Resources/UI/Common/icon_minus.png       빼기 막대 (Image 색으로 틴트) 48 → 2배
 """
 import subprocess
@@ -80,10 +80,9 @@ def scroll_handle():
 
 
 def check_circle():
-    """어둡게 덮인 카드 위에서 읽히도록 흰 원판 + 굵은 남색 체크, 바깥에 옅은 테"""
-    return ('<circle cx="48" cy="48" r="46" fill="#FFFFFF" fill-opacity="0.22"/>'
-            '<circle cx="48" cy="48" r="40" fill="#F3F6FA"/>'
-            '<path d="M28,49 L42,63 L68,34" fill="none" stroke="#0A111D" stroke-width="9" '
+    """어둡게 덮인 카드 위 선택 표시 — 채움 없이 굵은 흰 선 원 + 체크"""
+    return ('<circle cx="48" cy="48" r="41" fill="none" stroke="#FFFFFF" stroke-width="8"/>'
+            '<path d="M28,49 L42,63 L68,34" fill="none" stroke="#FFFFFF" stroke-width="10" '
             'stroke-linecap="round" stroke-linejoin="round"/>')
 
 

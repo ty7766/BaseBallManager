@@ -16,8 +16,8 @@ public class CardCellView
 
     private const float BorderThickness = 5f;
     private const float BlockedDimAlpha = 0.68f;
-    //체크 방식 선택 표시 — 카드를 어둡게 덮고 가운데 동그라미 체크
-    private const float CheckDimAlpha = 0.55f;
+    //체크 방식 선택 표시 — 카드를 어둡게 덮고 가운데 흰 선 동그라미 체크
+    private const float CheckDimAlpha = 0.75f;
     private const float CheckSize = 150f;
     private const string CheckSprite = "Common/check_circle";
 
@@ -192,14 +192,25 @@ public class CardCellView
         if (_checkDim != null)
             return;
 
-        _checkDim = UiBuilder.CreateImage(_root, "CheckDim", UiPalette.WithAlpha(Color.black, CheckDimAlpha));
-        UiBuilder.Stretch(_checkDim.rectTransform, 0f, 0f, 0f, 0f);
-        _checkDim.raycastTarget = false;
+        _checkDim = CreateCheckOverlay(_root, out _checkMark);
+    }
 
-        _checkMark = UiBuilder.CreateImage(_checkDim.transform, "Check", Color.white, CheckSprite);
-        UiBuilder.CenterPivot(UiBuilder.Place(_checkMark.rectTransform, (CellWidth - CheckSize) * 0.5f,
+    /// <summary>
+    /// 타일(CellWidth 규격) 위에 선택 표시를 만든다 — 어둡게 덮고 가운데 흰 선 체크.
+    /// 카드 칸과 강화 전용 카드 칸이 같은 위치 · 같은 모양을 쓰도록 여기서만 만든다
+    /// </summary>
+    public static Image CreateCheckOverlay(RectTransform tile, out Image checkMark)
+    {
+        Image dim = UiBuilder.CreateImage(tile, "CheckDim", UiPalette.WithAlpha(Color.black, CheckDimAlpha));
+        UiBuilder.Stretch(dim.rectTransform, 0f, 0f, 0f, 0f);
+        dim.raycastTarget = false;
+
+        checkMark = UiBuilder.CreateImage(dim.transform, "Check", Color.white, CheckSprite);
+        UiBuilder.CenterPivot(UiBuilder.Place(checkMark.rectTransform, (CellWidth - CheckSize) * 0.5f,
             (CellHeight - CheckSize) * 0.5f, CheckSize, CheckSize));
-        _checkMark.raycastTarget = false;
+        checkMark.raycastTarget = false;
+
+        return dim;
     }
 
     public void SetVisible(bool visible)

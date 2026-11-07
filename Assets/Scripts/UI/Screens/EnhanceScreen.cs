@@ -185,7 +185,7 @@ public class EnhanceScreen : UiScreenBehaviour
         _backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
         PlaceBottomButton(_backButton, 0f, 1f);
 
-        _changeButton = UiBuilder.CreateButton(Root, "ChangeButton", "다른 카드", 34f, false, ReturnToPick);
+        _changeButton = UiBuilder.CreateButton(Root, "ChangeButton", "뒤로", 34f, false, ReturnToPick);
         PlaceBottomButton(_changeButton, 0f, 0.5f);
 
         _enhanceButton = UiBuilder.CreateButton(Root, "EnhanceButton", "강화", 36f, true, OnEnhanceClicked,
