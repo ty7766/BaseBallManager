@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 카드 분해. 위 칸은 담은 카드 줄 + 반환 재화 미리보기, 아래는 보유 카드. 목록에서 누른 카드가 줄에 담긴다(최대 30장).
-/// 분해하면 담은 카드가 한꺼번에 터지며 사라지고 받은 재화가 올라간다
+/// 분해하면 담은 카드가 한꺼번에 터지며 사라지고, 뒤를 흐리게 깐 흰 창에 받은 재화가 뜬다
 /// </summary>
 public class DismantleScreen : CardWorkScreen
 {
@@ -67,6 +67,22 @@ public class DismantleScreen : CardWorkScreen
     private readonly List<int> _pickedIds = new List<int>(MaxBatchCount);
     private readonly List<CardView> _trayCards = new List<CardView>(MaxBatchCount);
 
+    private RewardPopupView _rewardPopup;
+
+    /// <summary>
+    /// 받은 재화 창이 열려 있으면 그것부터 닫는다
+    /// </summary>
+    public override bool HandleBack()
+    {
+        if (_rewardPopup != null && _rewardPopup.IsOpen)
+        {
+            _rewardPopup.Close();
+            return true;
+        }
+
+        return base.HandleBack();
+    }
+
     //담은 카드 줄(빈 칸 모양 + 가로 스크롤) · 반환 재화 칩 · 담은 수 · 안내
     protected override void BuildWork()
     {
@@ -126,6 +142,13 @@ public class DismantleScreen : CardWorkScreen
     protected override void ClearWork()
     {
         _pickedIds.Clear();
+    }
+
+    //떠나면 받은 재화 창도 닫는다
+    protected override void OnHidden()
+    {
+        _rewardPopup?.CloseImmediately();
+        base.OnHidden();
     }
 
     //잠그거나 라인업에 넣어 분해할 수 없게 된 카드는 뺀다
@@ -291,7 +314,7 @@ public class DismantleScreen : CardWorkScreen
             ShowCardDetail(_pickedIds[slot]);
     }
 
-    //담은 카드가 한꺼번에 터지며 작아지고, 받은 재화가 0 에서 올라간다
+    //담은 카드가 한꺼번에 터지며 작아지고, 받은 재화 창이 뜬다
     private IEnumerator PlayDismantle(int shownCards, int done, int[] received)
     {
         SetAction(false, ActionLabel);
@@ -305,18 +328,29 @@ public class DismantleScreen : CardWorkScreen
         yield return new WaitForSecondsRealtime(ConsumeSeconds + 0.1f);
 
         for (int i = 0; i < RewardCount; i++)
-        {
-            UiEffects.CountUp(_rewardAmounts[i], 0, received[i], "{0:N0}", 0.5f);
-            UiEffects.Pop(_rewardAmounts[i].transform, 0.7f, 0.3f);
-        }
+            _rewardAmounts[i].text = received[i].ToString("N0");
 
-        Notify($"{done}장 분해 — 포인트 {received[0]:N0} · 훈련 카드 {received[1]} · 골글 포인트 {received[2]:N0}", true);
+        ShowRewardPopup(done, received);
 
-        yield return new WaitForSecondsRealtime(0.8f);
+        yield return new WaitForSecondsRealtime(0.3f);
 
         RefreshChrome();
         RefreshList();
         RefreshWork(false);
+    }
+
+    //받은 것만 줄로 — 아이콘 + x 수량
+    private void ShowRewardPopup(int done, int[] received)
+    {
+        if (_rewardPopup == null)
+            _rewardPopup = RewardPopupView.Create(Root);
+
+        RewardLine[] lines = new RewardLine[RewardCount];
+
+        for (int i = 0; i < RewardCount; i++)
+            lines[i] = new RewardLine(RewardIconPaths[i], received[i]);
+
+        _rewardPopup.Show($"{done}장 분해 완료", lines);
     }
 
     private static void ShrinkAway(RectTransform card)
