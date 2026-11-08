@@ -74,7 +74,7 @@ public class PitcherState
             fatigue = Mathf.Lerp(1.0f, MaxFatiguePenalty, t);
         }
 
-        return new PitcherSnapshot(Snapshot.InstanceId, Snapshot.Name,
+        return new PitcherSnapshot(Snapshot.InstanceId, Snapshot.Name, Snapshot.Year, Snapshot.Position,
             (int)(Snapshot.Velo * fatigue),
             (int)(Snapshot.Stuff * fatigue),
             (int)(Snapshot.Control * fatigue),

@@ -13,7 +13,13 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
 
     [Header("게임 시작 지급")]
     [SerializeField, Tooltip("튜토리얼 완료 보상 일반 뽑기권")]
-    private int _tutorialTicketReward = 150;
+    private int _tutorialTicketReward = 500;
+
+    [SerializeField, Tooltip("튜토리얼 완료 시 주는 시그니쳐 뽑기권 (테스트용)")]
+    private int _tutorialSignatureTicketReward = 200;
+
+    [SerializeField, Tooltip("뽑기권을 뺀 나머지 재화를 테스트용으로 일괄 지급한다. 0이면 안 준다")]
+    private int _testCurrencyAmount = 999999;
 
     [SerializeField, Tooltip("팀별 시작 지급 시그니쳐 카드 표. 비워두면 시작 카드를 지급하지 않는다")]
     private StartingSignatureTable _startingSignatureTable;
@@ -81,7 +87,7 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
     }
 
     /// <summary>
-    /// 튜토리얼 완료 보상 - 일반 뽑기권 지급
+    /// 튜토리얼 완료 보상 - 일반 · 시그니쳐 뽑기권 지급
     /// </summary>
     public bool CompleteTutorial()
     {
@@ -98,7 +104,29 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
         }
 
         CurrencyManager.Instance.Add(CurrencyType.NormalTicket, _tutorialTicketReward);
+        CurrencyManager.Instance.Add(CurrencyType.SignatureTicket, _tutorialSignatureTicketReward);
+        GrantTestCurrencies();
+
         return true;
+    }
+
+    //테스트용 일괄 지급. 수치 균형을 잡을 때 0 으로 내리면 된다
+    private void GrantTestCurrencies()
+    {
+        if (_testCurrencyAmount <= 0)
+            return;
+
+        foreach (CurrencyType type in System.Enum.GetValues(typeof(CurrencyType)))
+        {
+            if (type == CurrencyType.None
+                || type == CurrencyType.NormalTicket
+                || type == CurrencyType.SignatureTicket)
+            {
+                continue;
+            }
+
+            CurrencyManager.Instance.Add(type, _testCurrencyAmount);
+        }
     }
 
     /// <summary>

@@ -90,7 +90,7 @@ public static class SimulationContextBuilder
             return default;
         }
 
-        return new HitterSnapshot(instanceId, cardData.Name,
+        return new HitterSnapshot(instanceId, cardData.Name, cardData.Year, cardData.Position,
             CardStatsCalculator.CalculateFinalStat(hitterData.Power, card.EnhanceLevel, card.TrainDelta[0]),
             CardStatsCalculator.CalculateFinalStat(hitterData.Contact, card.EnhanceLevel, card.TrainDelta[1]),
             CardStatsCalculator.CalculateFinalStat(hitterData.Run, card.EnhanceLevel, card.TrainDelta[2]),
@@ -118,7 +118,7 @@ public static class SimulationContextBuilder
             return default;
         }
 
-        return new PitcherSnapshot(instanceId, cardData.Name,
+        return new PitcherSnapshot(instanceId, cardData.Name, cardData.Year, cardData.Position,
             CardStatsCalculator.CalculateFinalStat(pitcherData.Velocity, card.EnhanceLevel, card.TrainDelta[0]),
             CardStatsCalculator.CalculateFinalStat(pitcherData.Stuff, card.EnhanceLevel, card.TrainDelta[1]),
             CardStatsCalculator.CalculateFinalStat(pitcherData.Control, card.EnhanceLevel, card.TrainDelta[2]),

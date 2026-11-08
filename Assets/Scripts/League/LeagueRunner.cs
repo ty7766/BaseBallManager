@@ -53,6 +53,81 @@ public class LeagueRunner
                 playerGameResult = result;
         }
 
+        return ApplyDayScores(scores, playerGameResult);
+    }
+
+    /// <summary>
+    /// 관전용 경기 1건의 시뮬 입력. 시즌이 끝났으면 null
+    /// </summary>
+    public SimulationContext BuildNextPlayerGameContext()
+    {
+        if (Season.IsFinished)
+        {
+            Debug.LogWarning($"[LeagueRunner]: {Season.Tier} 시즌이 이미 끝났습니다 ({Season.TotalDayCount}경기)");
+            return null;
+        }
+
+        return BuildContext(Season.CurrentDay.PlayerGame);
+    }
+
+    /// <summary>
+    /// 관전용 경기 1건을 열어 타석 단위로 전진시킬 세션을 돌려준다. 실패하면 null
+    /// </summary>
+    public GameSession BeginPlayerGame()
+    {
+        SimulationContext context = BuildNextPlayerGameContext();
+
+        if (context == null)
+            return null;
+
+        return new GameSession(context, _simulator);
+    }
+
+    /// <summary>
+    /// 관전이 끝난 내 경기 결과를 확정한다. 같은 날 AI 경기까지 시뮬해 순위표에 반영한다
+    /// </summary>
+    public LeagueDayResult CommitPlayerGame(GameResult playerGameResult)
+    {
+        if (playerGameResult == null)
+        {
+            Debug.LogError("[LeagueRunner]: 확정할 내 경기 결과가 없습니다");
+            return null;
+        }
+
+        if (Season.IsFinished)
+        {
+            Debug.LogWarning($"[LeagueRunner]: {Season.Tier} 시즌이 이미 끝났습니다 ({Season.TotalDayCount}경기)");
+            return null;
+        }
+
+        LeagueGameDay day = Season.CurrentDay;
+        LeagueGameScore[] scores = new LeagueGameScore[day.Games.Count];
+
+        for (int i = 0; i < day.Games.Count; i++)
+        {
+            LeagueGame game = day.Games[i];
+
+            if (i == LeagueGameDay.PlayerGameIndex)
+            {
+                scores[i] = new LeagueGameScore(game, playerGameResult.HomeScore, playerGameResult.AwayScore);
+                continue;
+            }
+
+            SimulationContext context = BuildContext(game);
+
+            if (context == null)
+                return null;
+
+            GameResult result = _simulator.SimulateGame(context);
+            scores[i] = new LeagueGameScore(game, result.HomeScore, result.AwayScore);
+        }
+
+        return ApplyDayScores(scores, playerGameResult);
+    }
+
+    //하루치 점수를 순위표에 반영하고 결과를 확정한다
+    private LeagueDayResult ApplyDayScores(LeagueGameScore[] scores, GameResult playerGameResult)
+    {
         foreach (LeagueGameScore score in scores)
         {
             if (!Season.Standings.ApplyGameResult(score.Game, score.HomeScore, score.AwayScore))

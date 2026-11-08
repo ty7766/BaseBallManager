@@ -21,6 +21,17 @@ public class CardInstanceSaveData
 }
 
 /// <summary>
+/// 뽑기 기록 1줄의 저장 형태
+/// </summary>
+[Serializable]
+public class GachaHistorySaveData
+{
+    public int CardId;
+    public int GachaType;                //(int)GachaType
+    public long RolledAtUtcTicks;
+}
+
+/// <summary>
 /// 라인업 편성의 저장 형태
 /// </summary>
 [Serializable]
@@ -50,6 +61,11 @@ public class PlayerSaveData
     public bool TutorialCompleted;
 
     /// <summary>
+    /// 경기 중 교체 방식 (SubstitutionMode)
+    /// </summary>
+    public int SubstitutionMode;
+
+    /// <summary>
     /// 아래 2개 배열은 같은 길이이며 인덱스가 서로 대응한다 (Dictionary 직렬화 불가 회피)
     /// </summary>
     public int[] CurrencyTypes;          //(int)CurrencyType
@@ -64,6 +80,11 @@ public class PlayerSaveData
     /// </summary>
     public int NormalPityCount;
     public int SignaturePityCount;
+
+    /// <summary>
+    /// 뽑기 기록 (오래된 순). 기록이 생기기 전 세이브는 null 이다
+    /// </summary>
+    public GachaHistorySaveData[] GachaHistory;
 
     public LineUpSaveData LineUp;
 }

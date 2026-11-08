@@ -10,6 +10,11 @@ public class GameSession
 {
     public bool IsGameOver => _state.IsGameOver;
     public GameState State => _state;
+
+    /// <summary>
+    /// 이 경기의 시뮬 입력. UI가 라인업·벤치·투수진을 그릴 때 쓴다
+    /// </summary>
+    public SimulationContext Context => _context;
     public IReadOnlyList<SimulationBatterLog> BatterLogs => _batterLogs;
     public IReadOnlyList<SimulationStealLog> StealLogs => _stealLogs;
 

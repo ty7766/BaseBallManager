@@ -1,0 +1,1451 @@
+[
+ {
+  "file": "Assets/Resources/UI/Card/icon_star.png",
+  "size": [
+   176,
+   176
+  ],
+  "designSize": [
+   176,
+   176
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "카드 종류색 (#93C1F5 · #FF6FA0 · #F2C14E)",
+  "usage": "등급 수만큼 배치. 카드 88px · 목록 행 23px"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/card_slot_empty.png",
+  "size": [
+   699,
+   979
+  ],
+  "designSize": [
+   699,
+   979
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "빈 카드 슬롯 (라인업 · 조합 재료 칸). 카드 절반 크기"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/card_mask_photo.png",
+  "size": [
+   1398,
+   1700
+  ],
+  "designSize": [
+   1398,
+   1700
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "사진 알파 마스크. 카드 (0,0)에 배치. 기본 Mask는 경계가 딱딱하므로 소프트 마스크 필요"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/card_team_aura.png",
+  "size": [
+   1120,
+   1120
+  ],
+  "designSize": [
+   1120,
+   1120
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "팀색, 알파 0.28(노말) · 0.18(시그) · 골글 없음",
+  "usage": "중심을 카드 (699, 587)에. 사진 뒤"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/card_name_shadow.png",
+  "size": [
+   1398,
+   417
+  ],
+  "designSize": [
+   1398,
+   417
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "노말 #040C1C 알파 0.66 · 시그 #4A0826 알파 0.56 · 골글 #281803 알파 0.6",
+  "usage": "카드 (0, 1540)에 배치. 이름 뒤"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/card_fx_shine_5.png",
+  "size": [
+   1398,
+   1957
+  ],
+  "designSize": [
+   1398,
+   1957
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색, 알파 0.14",
+  "usage": "노말 5성만. 카드 전체 덮개 (움직이면 광택 연출)"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/card_fx_glow_signature.png",
+  "size": [
+   800,
+   800
+  ],
+  "designSize": [
+   800,
+   800
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   200,
+   200,
+   200,
+   200
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "카드보다 사방 180 크게(1758×2317) 늘려서 카드 뒤에 배치"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/card_fx_glow_goldenglove.png",
+  "size": [
+   800,
+   800
+  ],
+  "designSize": [
+   800,
+   800
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   200,
+   200,
+   200,
+   200
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "카드보다 사방 180 크게(1758×2317) 늘려서 카드 뒤에 배치"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/badge_enhance_fill.png",
+  "size": [
+   264,
+   229
+  ],
+  "designSize": [
+   264,
+   229
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "+1 #5F6A7A · +2 #3C8B6E · +3 #3D6FB0 · +4 #6B55B0 · +5 #9A4A8E · +6 #B0703A · +7 #B04A42 · +8 #8E2B3A · +9 #4A1E2C",
+  "usage": "강화 육각형 바탕. 카드 우상단 (1078, 56)"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/badge_enhance_rim.png",
+  "size": [
+   264,
+   229
+  ],
+  "designSize": [
+   264,
+   229
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "+1~3 흰색 알파 0.45 · +4~6 #C9D2DD · +7~9 #D9B45A · +10 흰색 알파 0.85",
+  "usage": "강화 테두리. 바탕 위에 겹침"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/badge_enhance_line.png",
+  "size": [
+   264,
+   229
+  ],
+  "designSize": [
+   264,
+   229
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색 알파 0.2 (+10은 0.4)",
+  "usage": "강화 안쪽 선. 테두리 위에 겹침"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/badge_enhance_holo.png",
+  "size": [
+   264,
+   229
+  ],
+  "designSize": [
+   264,
+   229
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "+10 전용 바탕 (틴트 안 함). 테두리 · 안쪽 선은 공용 애셋"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/icon_breakthrough.png",
+  "size": [
+   128,
+   128
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "#7EE3D8",
+  "usage": "카드 뒷면 '돌파 완료'"
+ },
+ {
+  "file": "Assets/Resources/UI/Card/icon_lock.png",
+  "size": [
+   128,
+   128
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 100,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색",
+  "usage": "인벤토리 목록에서 잠금 카드 위 오버레이"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/out_dot_filled.png",
+  "size": [
+   48,
+   48
+  ],
+  "designSize": [
+   24,
+   24
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "아웃 점"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/out_dot_empty.png",
+  "size": [
+   48,
+   48
+  ],
+  "designSize": [
+   24,
+   24
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "아웃 점 (빈)"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/base_diamond_occupied.png",
+  "size": [
+   80,
+   80
+  ],
+  "designSize": [
+   40,
+   40
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "주자 있는 베이스"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/base_diamond_empty.png",
+  "size": [
+   80,
+   80
+  ],
+  "designSize": [
+   40,
+   40
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "빈 베이스"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/base_home.png",
+  "size": [
+   40,
+   40
+  ],
+  "designSize": [
+   20,
+   20
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "홈 (항상 비활성)"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/icon_inning.png",
+  "size": [
+   72,
+   60
+  ],
+  "designSize": [
+   36,
+   30
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색 · 구분선 #C9D2DF",
+  "usage": "▲ 초. ▼ 말은 Z축 180° 회전"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/stamina_bar_frame.png",
+  "size": [
+   48,
+   32
+  ],
+  "designSize": [
+   24,
+   16
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   6,
+   6,
+   6,
+   6
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "투수 체력 바 틀"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/stamina_bar_fill.png",
+  "size": [
+   32,
+   32
+  ],
+  "designSize": [
+   16,
+   16
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Filled",
+  "tint": "#4FD1A5 >50% · #FFB23F ≤50% · #FF4D5A ≤20%",
+  "usage": "Image Type Filled · Horizontal"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/stamina_bar_tick.png",
+  "size": [
+   6,
+   32
+  ],
+  "designSize": [
+   3,
+   16
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "50% 눈금"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/log_row_offense.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   16,
+   16,
+   16,
+   16
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "중계 행 · 공격 (평범·수비는 배경 없음)"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/log_row_score.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   16,
+   16,
+   16,
+   16
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "중계 행 · 득점 동반"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/log_row_homerun.png",
+  "size": [
+   256,
+   80
+  ],
+  "designSize": [
+   128,
+   40
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   16,
+   16,
+   16,
+   16
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "중계 행 · 홈런"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/log_inning_chip.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   8,
+   8,
+   8,
+   8
+  ],
+  "imageType": "Sliced",
+  "tint": "공격 팀 강조색",
+  "usage": "중계 행 앞 이닝 칩"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/log_inning_header.png",
+  "size": [
+   32,
+   4
+  ],
+  "designSize": [
+   16,
+   2
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "이닝 구분선 (가로로 늘림)"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/badge_score.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   6,
+   6,
+   6,
+   6
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "+N점 배지"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/panel_large.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   8,
+   8,
+   8,
+   8
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "화면 단위 패널 · 스코어보드"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/panel_small.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   8,
+   8,
+   8,
+   8
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "칩 · 목록 섹션 · 모달 요약"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/button_primary.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   4,
+   4,
+   4,
+   4
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "주 버튼 (글자 #0A111D)"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/button_normal.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   10,
+   10,
+   10,
+   10
+  ],
+  "imageType": "Sliced",
+  "tint": "보조 #2A3953 · 일시정지 #F3F6FA · 예약됨 #8EC5FF (+바탕 하늘 10%)",
+  "usage": "테두리 버튼"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/button_disabled.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   8,
+   8,
+   8,
+   8
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "비활성 버튼 (글자 #465267)"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/tab_on.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   4,
+   12,
+   4,
+   4
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "켜진 탭 (꺼진 탭은 이미지 없음)"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/row_normal.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   8,
+   8,
+   8,
+   8
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "목록 행"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/row_selected.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   10,
+   10,
+   10,
+   10
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "선택된 행"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/row_used.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   8,
+   8,
+   8,
+   8
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "사용됨·강판 (CanvasGroup 알파 0.5)"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/row_pitching.png",
+  "size": [
+   64,
+   64
+  ],
+  "designSize": [
+   32,
+   32
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   8,
+   8,
+   8,
+   8
+  ],
+  "imageType": "Sliced",
+  "tint": null,
+  "usage": "등판 중"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/row_empty.png",
+  "size": [
+   112,
+   112
+  ],
+  "designSize": [
+   56,
+   56
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   20,
+   20,
+   20,
+   20
+  ],
+  "imageType": "Tiled",
+  "tint": null,
+  "usage": "빈 슬롯 점선 (Image Type Tiled)"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/tag_outline.png",
+  "size": [
+   32,
+   32
+  ],
+  "designSize": [
+   16,
+   16
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   6,
+   6,
+   6,
+   6
+  ],
+  "imageType": "Sliced",
+  "tint": "AWAY·HOME·포지션 #2A3953 · MY TEAM #F2C14E · 공격 #FFA24C",
+  "usage": "테두리 태그"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/scrollbar_track.png",
+  "size": [
+   32,
+   12
+  ],
+  "designSize": [
+   16,
+   6
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "가로 스크롤바 트랙"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/scrollbar_handle.png",
+  "size": [
+   32,
+   12
+  ],
+  "designSize": [
+   16,
+   6
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "가로 스크롤바 손잡이"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/icon_pause.png",
+  "size": [
+   96,
+   96
+  ],
+  "designSize": [
+   48,
+   48
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색 (상황별 색)",
+  "usage": "아이콘"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/icon_resume.png",
+  "size": [
+   96,
+   96
+  ],
+  "designSize": [
+   48,
+   48
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색 (상황별 색)",
+  "usage": "아이콘"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/icon_back.png",
+  "size": [
+   96,
+   96
+  ],
+  "designSize": [
+   48,
+   48
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색 (상황별 색)",
+  "usage": "아이콘"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/icon_swap.png",
+  "size": [
+   96,
+   96
+  ],
+  "designSize": [
+   48,
+   48
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색 (상황별 색)",
+  "usage": "아이콘"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/icon_steal.png",
+  "size": [
+   96,
+   96
+  ],
+  "designSize": [
+   48,
+   48
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색 (상황별 색)",
+  "usage": "아이콘"
+ },
+ {
+  "file": "Assets/Resources/UI/Match/icon_ball.png",
+  "size": [
+   96,
+   96
+  ],
+  "designSize": [
+   48,
+   48
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색 (상황별 색)",
+  "usage": "아이콘"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_gold.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "골드"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_point.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "포인트"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_goldenglove_point.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "골든글러브 포인트"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_normal_ticket.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "일반 뽑기권"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_signature_ticket.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "시그니쳐 뽑기권"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_train_card.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "훈련 카드"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_breakthrough_card.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "훈련돌파 카드"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_enhance_card_star3.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "강화 전용 카드 (3성 노말)"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_enhance_card_star4.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "강화 전용 카드 (4성 노말)"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_enhance_card_star5.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "강화 전용 카드 (5성 노말)"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_enhance_card_signature.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "강화 전용 카드 (시그니쳐)"
+ },
+ {
+  "file": "Assets/Resources/UI/Currency/currency_enhance_card_goldenglove.png",
+  "size": [
+   256,
+   256
+  ],
+  "designSize": [
+   128,
+   128
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": null,
+  "usage": "강화 전용 카드 (골든글러브)"
+ },
+ {
+  "file": "Assets/Resources/UI/Common/spinner_00.png",
+  "size": [
+   192,
+   192
+  ],
+  "designSize": [
+   96,
+   96
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색",
+  "usage": "로딩 스피너 8프레임 (0.08초 간격)"
+ },
+ {
+  "file": "Assets/Resources/UI/Common/spinner_01.png",
+  "size": [
+   192,
+   192
+  ],
+  "designSize": [
+   96,
+   96
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색",
+  "usage": "로딩 스피너 8프레임 (0.08초 간격)"
+ },
+ {
+  "file": "Assets/Resources/UI/Common/spinner_02.png",
+  "size": [
+   192,
+   192
+  ],
+  "designSize": [
+   96,
+   96
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색",
+  "usage": "로딩 스피너 8프레임 (0.08초 간격)"
+ },
+ {
+  "file": "Assets/Resources/UI/Common/spinner_03.png",
+  "size": [
+   192,
+   192
+  ],
+  "designSize": [
+   96,
+   96
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색",
+  "usage": "로딩 스피너 8프레임 (0.08초 간격)"
+ },
+ {
+  "file": "Assets/Resources/UI/Common/spinner_04.png",
+  "size": [
+   192,
+   192
+  ],
+  "designSize": [
+   96,
+   96
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색",
+  "usage": "로딩 스피너 8프레임 (0.08초 간격)"
+ },
+ {
+  "file": "Assets/Resources/UI/Common/spinner_05.png",
+  "size": [
+   192,
+   192
+  ],
+  "designSize": [
+   96,
+   96
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색",
+  "usage": "로딩 스피너 8프레임 (0.08초 간격)"
+ },
+ {
+  "file": "Assets/Resources/UI/Common/spinner_06.png",
+  "size": [
+   192,
+   192
+  ],
+  "designSize": [
+   96,
+   96
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색",
+  "usage": "로딩 스피너 8프레임 (0.08초 간격)"
+ },
+ {
+  "file": "Assets/Resources/UI/Common/spinner_07.png",
+  "size": [
+   192,
+   192
+  ],
+  "designSize": [
+   96,
+   96
+  ],
+  "pixelsPerUnit": 200,
+  "border_LBRT": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "imageType": "Simple",
+  "tint": "흰색",
+  "usage": "로딩 스피너 8프레임 (0.08초 간격)"
+ }
+]

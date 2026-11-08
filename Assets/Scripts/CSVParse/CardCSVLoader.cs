@@ -11,6 +11,9 @@ public class CardCSVLoader
     private const string HitterResourcePath = "Data/HitterCards";
     private const string PitcherResourcePath = "Data/PitcherCards";
 
+    //선수 사진 파일 이름. 아직 시트에 없을 수 있어 없으면 빈 값으로 둔다
+    private const string PhotoColumn = "photo";
+
     /// <summary>
     /// 타자 카드 전체. 파일을 못 읽으면 빈 목록
     /// </summary>
@@ -47,6 +50,8 @@ public class CardCSVLoader
 
         Dictionary<string, int> headers = ParseHeaders(headerLine);
 
+        int reservedCount = 0;
+
         for (int i = 1; i < lines.Length; i++)
         {
             string line = lines[i].Trim();
@@ -54,10 +59,31 @@ public class CardCSVLoader
             if (string.IsNullOrEmpty(line))
                 continue;
 
-            result.Add(parseRow(new CsvRow(line.Split(','), headers, resourcePath, i + 1)));
+            string[] columns = line.Split(',');
+
+            if (IsUnfilledRow(columns, headers))
+            {
+                reservedCount++;
+                continue;
+            }
+
+            result.Add(parseRow(new CsvRow(columns, headers, resourcePath, i + 1)));
         }
 
+        if (reservedCount > 0)
+            Debug.Log($"[CardCSVLoader]: {resourcePath}에서 아직 채우지 않은 {reservedCount}행을 건너뛰었습니다 (선수 이름 없음)");
+
         return result;
+    }
+
+    //cardId만 미리 끊어 두고 아직 선수를 넣지 않은 행. 이름이 비면 만들 카드가 없다.
+    //이름이 있는데 다른 칸이 비었으면 실수이므로 그대로 파서에 넘겨 예외로 드러낸다
+    private static bool IsUnfilledRow(string[] columns, Dictionary<string, int> headers)
+    {
+        if (!headers.TryGetValue("name", out int nameIndex))
+            return false;
+
+        return nameIndex >= columns.Length || string.IsNullOrWhiteSpace(columns[nameIndex]);
     }
 
     //CSV 파일 읽기. 경로가 틀리면 null
@@ -94,7 +120,7 @@ public class CardCSVLoader
             ParseCardType(row.GetString("cardType"), row), ParseCardGrade(row.GetString("grade"), row),
             row.GetString("position"),
             row.GetInt("power"), row.GetInt("contact"), row.GetInt("run"), row.GetInt("defense"),
-            row.GetInt("OVR"));
+            row.GetInt("OVR"), row.GetOptionalString(PhotoColumn));
     }
 
     //투수 1행 파싱
@@ -105,7 +131,7 @@ public class CardCSVLoader
             ParseCardType(row.GetString("cardType"), row), ParseCardGrade(row.GetString("grade"), row),
             row.GetString("position"),
             row.GetInt("velo"), row.GetInt("stuff"), row.GetInt("control"), row.GetInt("stamina"),
-            row.GetInt("OVR"));
+            row.GetInt("OVR"), row.GetOptionalString(PhotoColumn));
     }
 
     //카드 종류 분류
@@ -113,7 +139,7 @@ public class CardCSVLoader
     {
         "N" => CardType.Normal,
         "S" => CardType.Signature,
-        "G" => CardType.GoldenGlove,
+        "G" or "GG" => CardType.GoldenGlove,
         _ => throw new ArgumentException(row.Describe($"알 수 없는 cardType: '{value}'"))
     };
 
@@ -154,6 +180,17 @@ public class CardCSVLoader
 
             if (index >= _columns.Length)
                 throw new ArgumentException(Describe($"'{column}' 열이 비어 있습니다 (칸 {_columns.Length}개)"));
+
+            return _columns[index].Trim();
+        }
+
+        /// <summary>
+        /// 열이 없거나 비어 있어도 예외를 내지 않는다. 나중에 추가되는 선택 열에 쓴다
+        /// </summary>
+        public string GetOptionalString(string column)
+        {
+            if (!_headers.TryGetValue(column, out int index) || index >= _columns.Length)
+                return string.Empty;
 
             return _columns[index].Trim();
         }

@@ -7,6 +7,16 @@ using UnityEngine;
 public class LeagueManager : SingletonBehaviour<LeagueManager>
 {
     public LeagueSeason CurrentSeason => _runner == null ? null : _runner.Season;
+
+    /// <summary>
+    /// 현재 진행 중인 리그의 티어. 시작된 리그가 없으면 Basic1
+    /// </summary>
+    public LeagueTier CurrentTier => _currentTier;
+
+    /// <summary>
+    /// 다음에 치를 플레이어 경기. 시작된 리그가 없거나 시즌이 끝났으면 null
+    /// </summary>
+    public LeagueGame? NextPlayerGame => _runner?.Season.CurrentDay?.PlayerGame;
     public bool IsSeasonRunning => _runner != null && !_runner.Season.IsFinished;
     public PostSeasonRunner PostSeason { get; private set; }
 
@@ -256,6 +266,53 @@ public class LeagueManager : SingletonBehaviour<LeagueManager>
         }
 
         LeagueDayResult result = _runner.SimulateNextGame();
+
+        if (result != null)
+            _rewardService.GrantPerGameRewards(_currentTier);
+
+        return result;
+    }
+
+    /// <summary>
+    /// 다음 내 경기의 시뮬 입력만 미리 받는다 (경기 전 화면이 라인업을 그릴 때 쓴다)
+    /// </summary>
+    public SimulationContext PeekNextPlayerGameContext()
+    {
+        if (_runner == null)
+        {
+            Debug.LogError("[LeagueManager]: 시작된 리그가 없습니다");
+            return null;
+        }
+
+        return _runner.BuildNextPlayerGameContext();
+    }
+
+    /// <summary>
+    /// 내 경기를 관전 모드로 연다. 끝난 뒤 CommitPlayerGame으로 확정해야 하루가 넘어간다
+    /// </summary>
+    public GameSession BeginPlayerGame()
+    {
+        if (_runner == null)
+        {
+            Debug.LogError("[LeagueManager]: 시작된 리그가 없습니다");
+            return null;
+        }
+
+        return _runner.BeginPlayerGame();
+    }
+
+    /// <summary>
+    /// 관전한 내 경기 결과를 확정한다. 같은 날 AI 경기와 경기당 보상까지 함께 처리된다
+    /// </summary>
+    public LeagueDayResult CommitPlayerGame(GameResult playerGameResult)
+    {
+        if (_runner == null)
+        {
+            Debug.LogError("[LeagueManager]: 시작된 리그가 없습니다");
+            return null;
+        }
+
+        LeagueDayResult result = _runner.CommitPlayerGame(playerGameResult);
 
         if (result != null)
             _rewardService.GrantPerGameRewards(_currentTier);

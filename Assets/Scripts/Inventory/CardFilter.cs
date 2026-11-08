@@ -1,53 +1,78 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
-/// 인벤토리 필터 조건을 담는 데이터 클래스
+/// 인벤토리 필터 조건. 한 항목 안에서 여러 개를 고르면 하나라도 맞으면 통과(합집합)하고, 항목끼리는 모두 맞아야 통과(교집합)한다.
+/// 예) 3성 + KT · 삼성 + 시그 → 3성이면서 KT 나 삼성이면서 시그인 카드. 아무것도 고르지 않은 항목은 검사하지 않는다
 /// </summary>
 public class CardFilter
 {
-    public PlayerTypeFilter PlayerType  { get; set; }
-    public CardGrade        Grade       { get; set; }
-    public CardType         Type        { get; set; }
-    public string           TeamName    { get; set; }
+    /// <summary>
+    /// 고른 선수 타입 (HitterOnly · PitcherOnly)
+    /// </summary>
+    public HashSet<PlayerTypeFilter> PlayerTypes { get; } = new HashSet<PlayerTypeFilter>();
+    public HashSet<CardGrade> Grades { get; } = new HashSet<CardGrade>();
+    public HashSet<CardType> Types { get; } = new HashSet<CardType>();
+    public HashSet<string> TeamNames { get; } = new HashSet<string>();
 
     /// <summary>
-    /// 이 카드가 모든 조건을 통과하는지 판정. 비어 있는 조건(None / null)은 검사하지 않는다
+    /// 고른 조건 수 (필터 버튼 배지)
+    /// </summary>
+    public int SelectedCount => PlayerTypes.Count + Grades.Count + Types.Count + TeamNames.Count;
+
+    /// <summary>
+    /// 이 카드가 모든 항목을 통과하는지 판정
     /// </summary>
     public bool Matches(CardMasterData cardMasterData)
     {
-        if (!MatchesPlayerType(cardMasterData))
+        if (PlayerTypes.Count > 0 && !PlayerTypes.Contains(GetPlayerType(cardMasterData)))
             return false;
 
-        if (Grade != CardGrade.None && cardMasterData.CardGrade != Grade)
+        if (Grades.Count > 0 && !Grades.Contains(cardMasterData.CardGrade))
             return false;
 
-        if (Type != CardType.None && cardMasterData.CardType != Type)
+        if (Types.Count > 0 && !Types.Contains(cardMasterData.CardType))
             return false;
 
-        if (!string.IsNullOrEmpty(TeamName) && cardMasterData.TeamName != TeamName)
+        if (TeamNames.Count > 0 && !TeamNames.Contains(cardMasterData.TeamName))
             return false;
 
         return true;
     }
 
-    //타자·투수는 마스터 데이터의 실제 타입으로 판정한다
-    private bool MatchesPlayerType(CardMasterData cardMasterData)
+    /// <summary>
+    /// 모든 조건을 비운다
+    /// </summary>
+    public void Clear()
     {
-        return PlayerType switch
-        {
-            PlayerTypeFilter.All => true,
-            PlayerTypeFilter.HitterOnly => cardMasterData is HitterMasterData,
-            PlayerTypeFilter.PitcherOnly => cardMasterData is PitcherMasterData,
-            _ => UnknownPlayerType()
-        };
+        PlayerTypes.Clear();
+        Grades.Clear();
+        Types.Clear();
+        TeamNames.Clear();
     }
 
-    //필터 값이 enum 범위를 벗어났다. 필터링 도중 예외를 던지는 대신 걸러낸다
-    private bool UnknownPlayerType()
+    /// <summary>
+    /// 다른 필터의 조건을 그대로 옮겨 담는다 (필터 창의 고르는 중 사본 ↔ 적용된 필터)
+    /// </summary>
+    public void CopyFrom(CardFilter other)
     {
-        Debug.LogError($"[CardFilter] : 알 수 없는 선수 타입 필터입니다 ({PlayerType})");
+        if (other == null)
+        {
+            Debug.LogWarning("[CardFilter] : 복사할 필터가 null 입니다");
+            return;
+        }
 
-        return false;
+        Clear();
+        PlayerTypes.UnionWith(other.PlayerTypes);
+        Grades.UnionWith(other.Grades);
+        Types.UnionWith(other.Types);
+        TeamNames.UnionWith(other.TeamNames);
+    }
+
+    //타자 · 투수는 마스터 데이터의 실제 타입으로 판정한다
+    private static PlayerTypeFilter GetPlayerType(CardMasterData cardMasterData)
+    {
+        return cardMasterData is PitcherMasterData ? PlayerTypeFilter.PitcherOnly : PlayerTypeFilter.HitterOnly;
     }
 }
 

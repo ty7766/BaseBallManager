@@ -72,11 +72,7 @@ public class LineUpManager : SingletonBehaviour<LineUpManager>
             return false;
         }
 
-        if (IsBattingOrderTaken(battingOrder, slot))
-        {
-            Debug.LogWarning($"[LineUpManager]: {battingOrder}번 타순은 이미 다른 선수가 사용 중입니다");
-            return false;
-        }
+        //타순 중복은 배치 단계에서 막지 않는다 (HasDuplicateBattingOrder 로 경기 직전에 검사)
 
         if (IsCardAssigned(instanceId))
         {
@@ -254,19 +250,64 @@ public class LineUpManager : SingletonBehaviour<LineUpManager>
             return false;
         }
 
-        if (IsBattingOrderTaken(order, slot))
-        {
-            Debug.LogWarning($"[LineUpManager]: {order}번 타순은 이미 다른 선수가 사용 중입니다");
-            return false;
-        }
-
+        //중복을 막지 않는다. 바꾸는 도중에는 겹칠 수밖에 없고,
+        //최종 검사는 HasDuplicateBattingOrder 로 경기 입장 직전에 한다
         _hitterSlots[slot] = (_hitterSlots[slot].instanceId, order);
 
         return true;
     }
 
     /// <summary>
-    /// 야수 9칸과 투수 11칸이 모두 찼는지 검사한다 (벤치는 선택이라 보지 않는다)
+    /// 타순이 겹치는 야수가 있는지. 겹치면 경기를 시작할 수 없다
+    /// </summary>
+    public bool HasDuplicateBattingOrder()
+    {
+        int seen = 0;
+
+        foreach ((int instanceId, int battingOrder) hitter in _hitterSlots.Values)
+        {
+            if (hitter.instanceId == EmptySlot)
+                continue;
+
+            int bit = 1 << hitter.battingOrder;
+
+            if ((seen & bit) != 0)
+                return true;
+
+            seen |= bit;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 겹친 타순 번호를 모아 돌려준다 (안내 문구용). 없으면 빈 목록
+    /// </summary>
+    public List<int> GetDuplicatedBattingOrders()
+    {
+        List<int> duplicated = new List<int>(HitterSlotCount);
+        int[] counts = new int[HitterSlotCount + 1];
+
+        foreach ((int instanceId, int battingOrder) hitter in _hitterSlots.Values)
+        {
+            if (hitter.instanceId == EmptySlot)
+                continue;
+
+            if (hitter.battingOrder >= 1 && hitter.battingOrder <= HitterSlotCount)
+                counts[hitter.battingOrder]++;
+        }
+
+        for (int order = 1; order <= HitterSlotCount; order++)
+        {
+            if (counts[order] > 1)
+                duplicated.Add(order);
+        }
+
+        return duplicated;
+    }
+
+    /// <summary>
+    /// 야수 9칸과 투수 11칸이 모두 찼고 타순이 겹치지 않는지 검사한다 (벤치는 선택이라 보지 않는다)
     /// </summary>
     public bool IsLineupComplete()
     {
@@ -285,7 +326,7 @@ public class LineUpManager : SingletonBehaviour<LineUpManager>
             }
         }
 
-        return true;
+        return !HasDuplicateBattingOrder();
     }
 
     /// <summary>
@@ -440,21 +481,4 @@ public class LineUpManager : SingletonBehaviour<LineUpManager>
         return true;
     }
 
-    //해당 타순을 다른 슬롯이 쓰고 있는지 확인
-    private bool IsBattingOrderTaken(int order, HitterPosition excludeSlot)
-    {
-        foreach (KeyValuePair<HitterPosition, (int instanceId, int battingOrder)> pair in _hitterSlots)
-        {
-            if (pair.Key == excludeSlot)
-                continue;
-
-            if (pair.Value.instanceId == EmptySlot)
-                continue;
-
-            if (pair.Value.battingOrder == order)
-                return true;
-        }
-
-        return false;
-    }
 }

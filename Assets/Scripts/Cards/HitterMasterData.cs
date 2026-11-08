@@ -10,8 +10,8 @@ public class HitterMasterData : CardMasterData
 
     public HitterMasterData(int cardId, string name, string teamName, int year,
         CardType cardType, CardGrade cardGrade, string position,
-        int power, int contact, int run, int defense, int ovr)
-        : base(cardId, name, teamName, year, cardType, cardGrade, position, ovr)
+        int power, int contact, int run, int defense, int ovr, string photoKey)
+        : base(cardId, name, teamName, year, cardType, cardGrade, position, ovr, photoKey)
     {
         Power = power;
         Contact = contact;

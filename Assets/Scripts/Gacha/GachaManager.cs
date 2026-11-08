@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// 뽑기 시스템 전반 로직
-/// 일반 뽑기, 시그니쳐 뽑기 카운터 관리, 천장 시스템 관리
+/// 일반 뽑기, 시그니쳐 뽑기 카운터 관리, 천장 시스템 관리, 뽑기 기록
 /// 뽑기 1회마다 GachaResult 하나가 나온다
 /// </summary>
 public class GachaManager : SingletonBehaviour<GachaManager>
@@ -18,6 +18,16 @@ public class GachaManager : SingletonBehaviour<GachaManager>
     /// </summary>
     public int NormalPityCount => _normalPityCount;
     public int SignaturePityCount => _signaturePityCount;
+
+    /// <summary>
+    /// 천장이 발동하는 뽑기 횟수 (화면 표기용)
+    /// </summary>
+    public int PityLimit => _pityLimit;
+
+    /// <summary>
+    /// 뽑기 기록 (오래된 순). 기록 보기 화면 · 세이브용
+    /// </summary>
+    public IReadOnlyList<GachaHistoryEntry> History => _history.Entries;
 
     [Header("일반 뽑기 확률 구간 설정")]
     [SerializeField, Tooltip("3성 확률")]
@@ -39,8 +49,14 @@ public class GachaManager : SingletonBehaviour<GachaManager>
     [SerializeField, Tooltip("천장이 발동하는 뽑기 횟수")]
     private int _pityLimit = 50;
 
+    [Header("기록")]
+    [SerializeField, Tooltip("뽑기 기록 보관 개수 (기록 보기 10쪽 × 10줄). 넘으면 오래된 기록부터 지워 남기지 않는다")]
+    private int _historyLimit = 100;
+
     private int _normalPityCount;
     private int _signaturePityCount;
+
+    private readonly GachaHistory _history = new GachaHistory();
 
     private readonly Dictionary<(CardGrade, CardType), List<int>> _cardPools
         = new Dictionary<(CardGrade, CardType), List<int>>();
@@ -68,9 +84,12 @@ public class GachaManager : SingletonBehaviour<GachaManager>
             return null;
 
         CurrencyManager.Instance.Spend(ticketType, 1);
-        InventoryManager.Instance.AddCard(gachaResult.CardId);
 
-        return gachaResult;
+        int instanceId = InventoryManager.Instance.AddCard(gachaResult.CardId);
+
+        RecordHistory(gachaResult.CardId, gachaType);
+
+        return new GachaResult(gachaResult.CardId, gachaResult.CardGrade, gachaResult.CardType, instanceId);
     }
 
     /// <summary>
@@ -98,9 +117,13 @@ public class GachaManager : SingletonBehaviour<GachaManager>
 
         CurrencyManager.Instance.Spend(ticketType, gachaResults.Count);
 
-        foreach (GachaResult result in gachaResults)
+        for (int i = 0; i < gachaResults.Count; i++)
         {
-            InventoryManager.Instance.AddCard(result.CardId);
+            GachaResult result = gachaResults[i];
+            int instanceId = InventoryManager.Instance.AddCard(result.CardId);
+
+            RecordHistory(result.CardId, gachaType);
+            gachaResults[i] = new GachaResult(result.CardId, result.CardGrade, result.CardType, instanceId);
         }
 
         return gachaResults;
@@ -119,6 +142,14 @@ public class GachaManager : SingletonBehaviour<GachaManager>
 
         _normalPityCount = normalPityCount;
         _signaturePityCount = signaturePityCount;
+    }
+
+    /// <summary>
+    /// 세이브 복원용 뽑기 기록 주입 (오래된 순)
+    /// </summary>
+    public void RestoreHistory(IReadOnlyList<GachaHistoryEntry> entries)
+    {
+        _history.Restore(entries, _historyLimit);
     }
 
     //뽑기 종류 -> 소모 뽑기권
@@ -238,6 +269,12 @@ public class GachaManager : SingletonBehaviour<GachaManager>
         }
 
         return new GachaResult(cardId, grade, masterData.CardType);
+    }
+
+    //뽑은 카드를 기록에 남긴다. 시각은 UTC 로 두고 보여줄 때 현지 시간으로 바꾼다
+    private void RecordHistory(int cardId, GachaType gachaType)
+    {
+        _history.Add(new GachaHistoryEntry(cardId, gachaType, System.DateTime.UtcNow.Ticks), _historyLimit);
     }
 
     //뽑기 종류에 맞는 천장 카운터를 참조로 반환
