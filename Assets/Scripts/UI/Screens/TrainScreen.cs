@@ -28,7 +28,7 @@ public class TrainScreen : CardWorkScreen
     private const float BarTop = LevelTop + LevelHeight + 10f;
     private const int StatColumns = 2;
     private const float StatTop = BarTop + BarHeight + 24f;
-    private const float StatRowHeight = 52f;
+    private const float StatRowHeight = 60f;
     private const float StatCellWidth = PreviewWidth / StatColumns;
     private const float CostTop = StatTop + StatRowHeight * (StatCount / StatColumns) + 20f;
     private const float CostChipWidth = 290f;
@@ -167,7 +167,7 @@ public class TrainScreen : CardWorkScreen
         return text;
     }
 
-    //한 칸 = 스탯 이름 · 최종 값 · 훈련 누적(+5). 이번에 오른 만큼(+1)은 누적 위에 잠깐 떴다 사라진다
+    //한 칸 = 스탯 이름 · 최종 값 · 오른쪽 아래 훈련 누적(+5). 이번에 오른 만큼(+1)은 누적 바로 위에 잠깐 떴다 사라진다
     private void BuildStatCell(int index, float left, float top)
     {
         _statLabels[index] = CreateStatText("StatLabel", 30f, UiPalette.Text2, TextAlignmentOptions.MidlineLeft,
@@ -176,9 +176,9 @@ public class TrainScreen : CardWorkScreen
             left + 140f, top, 90f, StatRowHeight);
         UiBuilder.CenterPivot(_statValues[index].rectTransform);
         _statDeltas[index] = CreateStatText("StatDelta", 24f, UiPalette.Text3, TextAlignmentOptions.MidlineLeft,
-            left + 240f, top, 70f, StatRowHeight);
+            left + 240f, top + 28f, 70f, 28f);
         _statGains[index] = CreateStatText("StatGain", 26f, UiPalette.AccentGold, TextAlignmentOptions.MidlineLeft,
-            left + 240f, top - 16f, 70f, 30f);
+            left + 240f, top, 70f, 28f);
         UiBuilder.CenterPivot(_statGains[index].rectTransform);
     }
 
