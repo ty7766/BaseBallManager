@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// 훈련과 훈련돌파. 카드를 고르면 위 칸에 훈련 단계 · 4개 스탯 · 비용이 나오고, 훈련을 누를 때마다 1단계씩 오른다.
 /// 상한에 닿으면 같은 버튼이 돌파로 바뀌어 상한을 연다. 아래 목록은 보유 카드 그대로라 다른 카드를 누르면 바로 바뀐다
 /// </summary>
-public class TrainScreen : CardWorkScreen
+public class TrainScreen : TargetWorkScreen
 {
     //지금 카드로 할 수 있는 것
     private enum TrainStep
@@ -71,7 +71,7 @@ public class TrainScreen : CardWorkScreen
     private UiTween _flashTween;
 
     //이름 · 단계 · 막대 · 스탯 2×2(이름 · 값 · 훈련 누적 · 이번 상승) · 비용 칩 2개 · 안내
-    protected override void BuildWork()
+    protected override void BuildTargetWork()
     {
         _targetName = CreatePreviewText("TargetName", 40f, UiPalette.Text1, NameTop, 52f);
         _levelText = CreatePreviewText("Level", 38f, UiPalette.Text1, LevelTop, LevelHeight);
@@ -110,7 +110,7 @@ public class TrainScreen : CardWorkScreen
     }
 
     //단계 · 스탯은 늘 보이고, 비용 칩과 버튼은 훈련 / 돌파 / 끝 에 따라 바뀐다
-    protected override void RefreshWork(CardDisplayInfo target, bool animate)
+    protected override void RefreshTargetWork(CardDisplayInfo target, bool animate)
     {
         int maxLevel = target.GetMaxTrainLevel();
         string[] labels = target.StatLabels;
