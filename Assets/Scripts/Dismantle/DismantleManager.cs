@@ -5,6 +5,12 @@
 /// </summary>
 public class DismantleManager : SingletonBehaviour<DismantleManager>
 {
+    /// <summary>
+    /// 카드 1장 분해 때 훈련 카드가 나올 확률과 나오는 장수 (미리보기 안내용)
+    /// </summary>
+    public float TrainCardDropChance => _trainCardDropChance;
+    public int TrainCardDropAmount => _trainCardDropAmount;
+
     [Header("기본 포인트 보상 (카드 등급별)")]
     [SerializeField]
     private int _basePointStar3 = 100;
