@@ -24,10 +24,14 @@ public class CombineScreen : CardWorkScreen
     private const float MaterialSpacing = 300f;
     private const float SlotPlusSize = 52f;
     private const float UnknownFontSize = 110f;
-    private const float LineThickness = 5f;
-    private const float GlowSize = 26f;
-    //전기가 흐르는 듯한 광이 선을 타고 지나가는 주기(초)
-    private const float FlowCycleSeconds = 1.6f;
+    //배선 = 관(어두운 선) + 그 안을 흐르는 빛 물줄기(가산 합성 띠를 이어 붙여 밀어 올린다)
+    private const float PipeThickness = 8f;
+    private const float StreamThickness = 26f;
+    private const float StreamTileLength = 180f;
+    private const float StreamSpeed = 200f;
+    private const float SurgeSpeedScale = 4f;
+    private const string StreamSprite = "Fx/flow_stream";
+    private const string AdditiveMaterialPath = "UI/Materials/AdditiveLight";
     //양옆 안내 칸 — 왼쪽 고른 수, 오른쪽 결과 확률 · 안내
     private const float SidePanelTop = WorkTop + 20f;
     private const float SidePanelHeight = ResultHeight - 20f;
@@ -38,14 +42,16 @@ public class CombineScreen : CardWorkScreen
     private const float OddsRowHeight = 46f;
     private const float OddsBarWidth = 170f;
     private const float OddsBarHeight = 12f;
-    private const float ConsumeSeconds = 0.3f;
-    private const float ConsumeStagger = 0.08f;
+    private const float ConsumeSeconds = 0.36f;
     private const string PlusSprite = "Common/icon_plus";
     private const string LockedReason = "잠금";
     private const string LineUpReason = "라인업";
     private const string OtherTypeReason = "다른 종류";
 
     private static readonly CardGrade[] OddsGrades = { CardGrade.Star3, CardGrade.Star4, CardGrade.Star5 };
+    private static readonly Color PipeEmptyColor = UiPalette.LineBorder;
+    private static readonly Color PipeFilledColor = new Color(0.2f, 0.3f, 0.42f, 1f);
+    private static readonly Color StreamColor = new Color(0.56f, 0.8f, 1f, 1f);
 
     /// <summary>
     /// 화면 제목 · 실행 버튼
@@ -67,43 +73,34 @@ public class CombineScreen : CardWorkScreen
     [SerializeField] private TextMeshProUGUI _unknownMark;
     [SerializeField] private CardView[] _materialCards = new CardView[MaterialSlotCount];
     [SerializeField] private RectTransform[] _flowRoots = new RectTransform[MaterialSlotCount];
-    [SerializeField] private RectTransform[] _flowGlows = new RectTransform[MaterialSlotCount];
+    [SerializeField] private RectTransform[] _streamRoots = new RectTransform[MaterialSlotCount];
     [SerializeField] private TextMeshProUGUI _countText;
-    [SerializeField] private TextMeshProUGUI _guideText;
     [SerializeField] private TextMeshProUGUI _infoText;
     [SerializeField] private RectTransform _oddsGroup;
     [SerializeField] private Image[] _oddsFills = new Image[OddsGradeCount];
     [SerializeField] private TextMeshProUGUI[] _oddsTexts = new TextMeshProUGUI[OddsGradeCount];
 
     private readonly List<int> _materialIds = new List<int>(MaterialSlotCount);
-    private readonly Vector2[][] _flowPaths = new Vector2[MaterialSlotCount][];
-    private readonly float[] _flowLengths = new float[MaterialSlotCount];
+    private readonly RawImage[][] _streams = new RawImage[MaterialSlotCount][];
+    private readonly float[][] _streamStarts = new float[MaterialSlotCount][];
+    private readonly float[][] _streamLengths = new float[MaterialSlotCount][];
 
     private CombineResult _lastResult;
-    private float _flowPhase;
+    private float _flowDistance;
+    private float _flowSpeedScale = 1f;
+    private bool _surging;
 
     private int RequiredCount => CombineManager.Instance != null ? CombineManager.Instance.GetMaterialCount() : MaterialSlotCount;
 
-    //광이 재료에서 결과 쪽으로 흐른다. 화면이 켜져 있을 때만 돈다
+    //빛 물줄기가 재료에서 결과 쪽으로 끝없이 흐른다. 화면이 켜져 있을 때만 돈다
     private void Update()
     {
-        _flowPhase += Time.unscaledDeltaTime / FlowCycleSeconds;
-
-        if (_flowPhase >= 1f)
-            _flowPhase -= 1f;
+        _flowDistance = Mathf.Repeat(_flowDistance + Time.unscaledDeltaTime * StreamSpeed * _flowSpeedScale, StreamTileLength);
 
         for (int i = 0; i < MaterialSlotCount; i++)
         {
-            bool filled = i < _materialIds.Count;
-
-            _flowGlows[i].gameObject.SetActive(filled);
-
-            if (!filled)
-                continue;
-
-            Vector2 point = GetPointOnPath(i, _flowPhase);
-
-            _flowGlows[i].anchoredPosition = new Vector2(point.x, -point.y);
+            if (_streamRoots[i].gameObject.activeSelf)
+                ScrollStream(i);
         }
     }
 
@@ -261,20 +258,11 @@ public class CombineScreen : CardWorkScreen
         return LineUpManager.Instance != null && LineUpManager.Instance.IsCardAssigned(info.InstanceId) ? LineUpReason : null;
     }
 
-    //왼쪽: 재료 · 고른 수 · 규칙, 오른쪽: 결과 확률 막대 3줄 또는 안내 글
+    //왼쪽: 고른 수, 오른쪽: 결과 확률 막대 3줄 또는 안내 글
     private void BuildSidePanels()
     {
-        TextMeshProUGUI materialLabel = UiBuilder.CreateText(WorkArea, "MaterialLabel", 26f, UiPalette.Text3,
-            TextAlignmentOptions.Center);
-        UiBuilder.Place(materialLabel.rectTransform, SideMargin, SidePanelTop, LeftPanelWidth, 40f);
-        materialLabel.text = "재료";
-
-        _countText = UiBuilder.CreateText(WorkArea, "Count", 64f, UiPalette.Text1, TextAlignmentOptions.Center);
-        UiBuilder.CenterPivot(UiBuilder.Place(_countText.rectTransform, SideMargin, SidePanelTop + 44f, LeftPanelWidth, 80f));
-
-        _guideText = UiBuilder.CreateText(WorkArea, "Guide", 24f, UiPalette.Text3, TextAlignmentOptions.Center);
-        UiBuilder.Place(_guideText.rectTransform, SideMargin, SidePanelTop + 132f, LeftPanelWidth, 70f);
-        _guideText.text = "같은 종류끼리\n등급은 섞어도 됩니다";
+        _countText = UiBuilder.CreateText(WorkArea, "Count", 72f, UiPalette.Text1, TextAlignmentOptions.Center);
+        UiBuilder.CenterPivot(UiBuilder.Place(_countText.rectTransform, SideMargin, SidePanelTop, LeftPanelWidth, SidePanelHeight));
 
         _infoText = UiBuilder.CreateText(WorkArea, "Info", 32f, UiPalette.Text2, TextAlignmentOptions.Center);
         UiBuilder.Place(_infoText.rectTransform, RightPanelLeft, SidePanelTop, RightPanelWidth, SidePanelHeight);
@@ -310,7 +298,7 @@ public class CombineScreen : CardWorkScreen
         UiBuilder.Place(_oddsTexts[index].rectTransform, 66f + OddsBarWidth, top, RightPanelWidth - 66f - OddsBarWidth, OddsRowHeight);
     }
 
-    //재료 칸 위 가운데에서 위로 → 가로 → 결과 칸 아래 가운데로 오르는 직각 경로
+    //재료 칸 위 가운데에서 위로 → 가로 → 결과 칸 아래 가운데로 오르는 직각 경로. 관 위에 물줄기 띠를 같은 순서로 깐다
     private RectTransform BuildFlowLine(int index)
     {
         RectTransform root = UiBuilder.CreateRect(WorkArea, "FlowLine");
@@ -319,30 +307,52 @@ public class CombineScreen : CardWorkScreen
         UiBuilder.Place(root, 0f, 0f, 0f, 0f);
 
         for (int i = 0; i < path.Length - 1; i++)
-            AddSegment(root, path[i], path[i + 1]);
+            AddPipe(root, path[i], path[i + 1]);
 
-        Image glow = UiBuilder.CreateImage(root, "Glow", Color.white, UiSprites.IconStar);
-        RectTransform glowRect = glow.rectTransform;
+        RectTransform streams = UiBuilder.CreateRect(root, "Streams");
+        Texture streamTexture = UiSprites.Get(StreamSprite)?.texture;
+        Material additive = Resources.Load<Material>(AdditiveMaterialPath);
 
-        glowRect.anchorMin = new Vector2(0f, 1f);
-        glowRect.anchorMax = new Vector2(0f, 1f);
-        glowRect.pivot = new Vector2(0.5f, 0.5f);
-        glowRect.sizeDelta = new Vector2(GlowSize, GlowSize);
-        glow.gameObject.SetActive(false);
-        _flowGlows[index] = glowRect;
+        UiBuilder.Place(streams, 0f, 0f, 0f, 0f);
+
+        for (int i = 0; i < path.Length - 1; i++)
+            AddStream(streams, path[i], path[i + 1], streamTexture, additive);
+
+        streams.gameObject.SetActive(false);
+        _streamRoots[index] = streams;
 
         return root;
     }
 
-    //가로 또는 세로 한 조각
-    private static void AddSegment(RectTransform parent, Vector2 from, Vector2 to)
+    //가로 또는 세로 관 한 조각
+    private static void AddPipe(RectTransform parent, Vector2 from, Vector2 to)
     {
-        Image line = UiBuilder.CreateImage(parent, "Segment", UiPalette.LineBorder);
-        float left = Mathf.Min(from.x, to.x) - LineThickness * 0.5f;
-        float top = Mathf.Min(from.y, to.y) - LineThickness * 0.5f;
+        Image line = UiBuilder.CreateImage(parent, "Pipe", PipeEmptyColor);
+        float left = Mathf.Min(from.x, to.x) - PipeThickness * 0.5f;
+        float top = Mathf.Min(from.y, to.y) - PipeThickness * 0.5f;
 
-        UiBuilder.Place(line.rectTransform, left, top, Mathf.Abs(to.x - from.x) + LineThickness,
-            Mathf.Abs(to.y - from.y) + LineThickness);
+        UiBuilder.Place(line.rectTransform, left, top, Mathf.Abs(to.x - from.x) + PipeThickness,
+            Mathf.Abs(to.y - from.y) + PipeThickness);
+    }
+
+    //from 에서 to 쪽으로 눕힌 띠. 텍스처 가로가 흐르는 방향이 되게 돌려 놓는다
+    private static void AddStream(RectTransform parent, Vector2 from, Vector2 to, Texture texture, Material material)
+    {
+        RectTransform rect = UiBuilder.CreateRect(parent, "Stream");
+        RawImage stream = rect.gameObject.AddComponent<RawImage>();
+        Vector2 delta = to - from;
+
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(0f, 1f);
+        rect.pivot = new Vector2(0f, 0.5f);
+        rect.anchoredPosition = new Vector2(from.x, -from.y);
+        rect.sizeDelta = new Vector2(delta.magnitude + PipeThickness * 0.5f, StreamThickness);
+        rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(-delta.y, delta.x) * Mathf.Rad2Deg);
+
+        stream.texture = texture;
+        stream.material = material;
+        stream.color = StreamColor;
+        stream.raycastTarget = false;
     }
 
     //배치 상수에서 나오는 값이라 베이크 때와 실행 때가 같다
@@ -369,48 +379,55 @@ public class CombineScreen : CardWorkScreen
         return ScreenCenterX + (index - (MaterialSlotCount - 1) * 0.5f) * MaterialSpacing;
     }
 
-    //경로 위 비율 t 에 해당하는 점. 경로는 처음 쓸 때 상수로 다시 만든다
-    private Vector2 GetPointOnPath(int index, float t)
+    //띠마다 경로 위 시작 거리만큼 무늬를 밀어 두어야 꺾인 곳에서도 물줄기가 이어진다. 경로는 처음 쓸 때 상수로 다시 만든다
+    private void ScrollStream(int index)
     {
-        if (_flowPaths[index] == null)
+        if (_streams[index] == null)
+            CacheStreams(index);
+
+        RawImage[] streams = _streams[index];
+
+        for (int i = 0; i < streams.Length; i++)
         {
-            _flowPaths[index] = GetFlowPath(index);
-
-            for (int i = 0; i < _flowPaths[index].Length - 1; i++)
-                _flowLengths[index] += (_flowPaths[index][i + 1] - _flowPaths[index][i]).magnitude;
+            streams[i].uvRect = new Rect((_streamStarts[index][i] - _flowDistance) / StreamTileLength, 0f,
+                _streamLengths[index][i] / StreamTileLength, 1f);
         }
-
-        Vector2[] path = _flowPaths[index];
-        float remaining = _flowLengths[index] * t;
-
-        for (int i = 0; i < path.Length - 1; i++)
-        {
-            float length = (path[i + 1] - path[i]).magnitude;
-
-            if (remaining <= length || i == path.Length - 2)
-                return Vector2.Lerp(path[i], path[i + 1], length <= 0f ? 0f : remaining / length);
-
-            remaining -= length;
-        }
-
-        return path[path.Length - 1];
     }
 
-    //재료가 들어간 줄은 밝게
+    private void CacheStreams(int index)
+    {
+        Vector2[] path = GetFlowPath(index);
+        RawImage[] streams = _streamRoots[index].GetComponentsInChildren<RawImage>(true);
+        float[] starts = new float[streams.Length];
+        float[] lengths = new float[streams.Length];
+        float travelled = 0f;
+
+        for (int i = 0; i < streams.Length && i < path.Length - 1; i++)
+        {
+            starts[i] = travelled;
+            lengths[i] = streams[i].rectTransform.sizeDelta.x;
+            travelled += (path[i + 1] - path[i]).magnitude;
+        }
+
+        _streams[index] = streams;
+        _streamStarts[index] = starts;
+        _streamLengths[index] = lengths;
+    }
+
+    //재료가 들어간 줄은 관이 밝아지고 물줄기가 흐른다
     private void TintFlowLine(int index, bool filled)
     {
-        Color color = filled ? UiPalette.Text2 : UiPalette.LineBorder;
+        Color color = filled ? PipeFilledColor : PipeEmptyColor;
 
         foreach (Transform child in _flowRoots[index])
         {
-            if (child == _flowGlows[index])
-                continue;
+            Image pipe = child.GetComponent<Image>();
 
-            Image segment = child.GetComponent<Image>();
-
-            if (segment != null)
-                segment.color = color;
+            if (pipe != null)
+                pipe.color = color;
         }
+
+        _streamRoots[index].gameObject.SetActive(filled || _surging);
     }
 
     //재료가 없으면 처음 안내 또는 방금 받은 결과, 노말 재료면 확률 막대, 시그 · 골글이면 같은 종류 1장
@@ -488,15 +505,24 @@ public class CombineScreen : CardWorkScreen
             ShowCardDetail(_materialIds[slot]);
     }
 
-    //재료가 하나씩 작아지며 사라지고, 결과 칸의 ? 가 뒤집히듯 새 카드로 바뀐다. 승급이면 크게 터진다
+    //재료 3장이 한꺼번에 터지며 작아지고, 물줄기가 빨라져 결과 칸으로 몰린 뒤 새 카드가 튀어나온다. 승급이면 크게 터진다
     private IEnumerator PlayCombine(CombineResult result)
     {
         SetAction(false, ActionLabel);
+        _surging = true;
+        _flowSpeedScale = SurgeSpeedScale;
 
         for (int i = 0; i < MaterialSlotCount; i++)
-            ShrinkAway(_materialCards[i].Root, i * ConsumeStagger);
+        {
+            _streamRoots[i].gameObject.SetActive(true);
+            UiEffects.Burst(_materialCards[i].Root, UiEffectKind.Enhance);
+            ShrinkAway(_materialCards[i].Root);
+        }
 
-        yield return new WaitForSecondsRealtime(ConsumeSeconds + ConsumeStagger * MaterialSlotCount);
+        yield return new WaitForSecondsRealtime(ConsumeSeconds + 0.1f);
+
+        _flowSpeedScale = 1f;
+        _surging = false;
 
         _lastResult = result;
 
@@ -519,14 +545,14 @@ public class CombineScreen : CardWorkScreen
         RefreshWork(false);
     }
 
-    private static void ShrinkAway(RectTransform card, float delay)
+    private static void ShrinkAway(RectTransform card)
     {
         UiAnimator.Play(ConsumeSeconds, t =>
         {
             float scale = 1f - t;
 
             card.localScale = new Vector3(scale, scale, 1f);
-        }, () => card.gameObject.SetActive(false), UiEase.OutCubic, delay);
+        }, () => card.gameObject.SetActive(false), UiEase.InCubic);
     }
 
     private static string GetGradeLabel(CardGrade grade)
