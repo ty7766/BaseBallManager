@@ -41,6 +41,9 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private const string EnhancePlusTag = "<size=60%><voffset=0.12em>+</voffset></size>";
     //OVR 칸 (카드 좌표). 세 자리는 두 자리가 차지하는 가장 넓은 폭에 맞춰 가로로만 누른다
     private const float OvrLeft = 46f;
+    //OVR · 포지션은 위 테두리에서 조금 띄운다
+    private const float OvrTop = 70f;
+    private const float PositionTop = 322f;
     private const float OvrWidth = 320f;
     //조합 결과 자리에 띄우는 물음표 크기 (카드 좌표계)
     private const float UnknownMarkSize = 520f;
@@ -177,9 +180,9 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _photo = CreateHiddenLayer(_front, "Photo", 0f, PhotoTop, BaseWidth, PhotoHeight);
         _foreground = CreateHiddenLayer(_front, "Foreground", 0f, 0f, BaseWidth, BaseHeight);
 
-        _ovrText = CreateCardText(_front, "Ovr", 230f, OvrLeft, 34f, OvrWidth, 230f, TextAlignmentOptions.Center);
+        _ovrText = CreateCardText(_front, "Ovr", 230f, OvrLeft, OvrTop, OvrWidth, 230f, TextAlignmentOptions.Center);
         CenterPivotX(_ovrText.rectTransform);
-        _positionText = CreateCardText(_front, "Position", 104f, OvrLeft, 286f, OvrWidth, 104f, TextAlignmentOptions.Center);
+        _positionText = CreateCardText(_front, "Position", 104f, OvrLeft, PositionTop, OvrWidth, 104f, TextAlignmentOptions.Center);
         _teamLogo = CreateLayer(_front, "TeamLogo", null, 1046f, 60f, 300f, 300f);
         _teamLogo.preserveAspect = true;
 

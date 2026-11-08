@@ -18,18 +18,19 @@ public class TrainScreen : CardWorkScreen
 
     private const int StatCount = CardInstance.TrainStatCount;
     private const int CostChipCount = 2;
-    //이름 · 단계 글자 · 단계 막대 · 스탯 4줄 · 비용 칩 · 안내 순으로 위에서 아래
-    private const float LevelTop = PreviewTop + 62f;
+    //이름 · 단계 글자 · 단계 막대 · 스탯 2×2 · 비용 칩 · 안내 순으로 위에서 아래. 카드 높이 안에서 가운데쯤
+    private const float NameTop = TargetTop + 56f;
+    private const float LevelTop = NameTop + 62f;
     private const float LevelHeight = 48f;
-    private const float BarWidth = 520f;
-    private const float BarHeight = 14f;
+    private const float BarWidth = 600f;
+    private const float BarHeight = 16f;
     private const float BarLeft = PreviewLeft + (PreviewWidth - BarWidth) * 0.5f;
-    private const float BarTop = LevelTop + LevelHeight + 8f;
-    private const float StatTop = BarTop + BarHeight + 22f;
-    private const float StatRowHeight = 40f;
-    private const float StatBlockWidth = 460f;
-    private const float StatBlockLeft = PreviewLeft + (PreviewWidth - StatBlockWidth) * 0.5f;
-    private const float CostTop = StatTop + StatRowHeight * StatCount + 14f;
+    private const float BarTop = LevelTop + LevelHeight + 10f;
+    private const int StatColumns = 2;
+    private const float StatTop = BarTop + BarHeight + 24f;
+    private const float StatRowHeight = 52f;
+    private const float StatCellWidth = PreviewWidth / StatColumns;
+    private const float CostTop = StatTop + StatRowHeight * (StatCount / StatColumns) + 20f;
     private const float CostChipWidth = 290f;
     private const float CostChipHeight = 64f;
     private const float CostChipGap = 24f;
@@ -69,10 +70,10 @@ public class TrainScreen : CardWorkScreen
     private UiTween _barTween;
     private UiTween _flashTween;
 
-    //이름 · 단계 · 막대 · 스탯 4줄(이름 · 값 · 훈련 누적 · 이번 상승) · 비용 칩 2개 · 안내
+    //이름 · 단계 · 막대 · 스탯 2×2(이름 · 값 · 훈련 누적 · 이번 상승) · 비용 칩 2개 · 안내
     protected override void BuildWork()
     {
-        _targetName = CreatePreviewText("TargetName", 40f, UiPalette.Text1, PreviewTop, 52f);
+        _targetName = CreatePreviewText("TargetName", 40f, UiPalette.Text1, NameTop, 52f);
         _levelText = CreatePreviewText("Level", 38f, UiPalette.Text1, LevelTop, LevelHeight);
         UiBuilder.CenterPivot(_levelText.rectTransform);
 
@@ -85,12 +86,12 @@ public class TrainScreen : CardWorkScreen
         UiBuilder.Place(_levelBarFill.rectTransform, 0f, 0f, 0f, BarHeight);
 
         for (int i = 0; i < StatCount; i++)
-            BuildStatRow(i, StatTop + i * StatRowHeight);
+            BuildStatCell(i, PreviewLeft + i % StatColumns * StatCellWidth, StatTop + i / StatColumns * StatRowHeight);
 
         for (int i = 0; i < CostChipCount; i++)
             BuildCostChip(i);
 
-        _noteText = CreatePreviewText("Note", 24f, UiPalette.Text3, CostTop + CostChipHeight + 6f, 34f);
+        _noteText = CreatePreviewText("Note", 24f, UiPalette.Text3, CostTop + CostChipHeight + 8f, 34f);
     }
 
     protected override void OnTargetChanged()
@@ -116,6 +117,7 @@ public class TrainScreen : CardWorkScreen
 
         _targetName.text = PlayerLabelFormat.NameWithYear(target.Name, target.Year);
         _levelText.text = $"훈련 Lv.{target.TrainLevel}  {MaxLevelColorTag}/ {maxLevel}</color>";
+        _levelBarFill.color = target.TrainLevel >= maxLevel ? UiPalette.AccentGold : UiPalette.WithAlpha(UiPalette.Text1, 0.95f);
         SetBar(maxLevel > 0 ? (float)target.TrainLevel / maxLevel : 0f, animate);
 
         for (int i = 0; i < StatCount; i++)
@@ -165,27 +167,27 @@ public class TrainScreen : CardWorkScreen
         return text;
     }
 
-    //스탯 이름 · 최종 값 · 훈련 누적(+5) · 이번에 오른 만큼(+1, 잠깐 떴다 사라짐)
-    private void BuildStatRow(int index, float top)
+    //한 칸 = 스탯 이름 · 최종 값 · 훈련 누적(+5). 이번에 오른 만큼(+1)은 누적 위에 잠깐 떴다 사라진다
+    private void BuildStatCell(int index, float left, float top)
     {
         _statLabels[index] = CreateStatText("StatLabel", 30f, UiPalette.Text2, TextAlignmentOptions.MidlineLeft,
-            StatBlockLeft, top, 150f);
-        _statValues[index] = CreateStatText("StatValue", 34f, UiPalette.Text1, TextAlignmentOptions.MidlineRight,
-            StatBlockLeft + 150f, top, 110f);
+            left + 20f, top, 120f, StatRowHeight);
+        _statValues[index] = CreateStatText("StatValue", 38f, UiPalette.Text1, TextAlignmentOptions.MidlineRight,
+            left + 140f, top, 90f, StatRowHeight);
         UiBuilder.CenterPivot(_statValues[index].rectTransform);
-        _statDeltas[index] = CreateStatText("StatDelta", 26f, UiPalette.Text3, TextAlignmentOptions.MidlineLeft,
-            StatBlockLeft + 278f, top, 90f);
-        _statGains[index] = CreateStatText("StatGain", 30f, UiPalette.AccentGold, TextAlignmentOptions.MidlineLeft,
-            StatBlockLeft + 370f, top, 90f);
+        _statDeltas[index] = CreateStatText("StatDelta", 24f, UiPalette.Text3, TextAlignmentOptions.MidlineLeft,
+            left + 240f, top, 70f, StatRowHeight);
+        _statGains[index] = CreateStatText("StatGain", 26f, UiPalette.AccentGold, TextAlignmentOptions.MidlineLeft,
+            left + 240f, top - 16f, 70f, 30f);
         UiBuilder.CenterPivot(_statGains[index].rectTransform);
     }
 
     private TextMeshProUGUI CreateStatText(string name, float fontSize, Color color, TextAlignmentOptions alignment,
-        float left, float top, float width)
+        float left, float top, float width, float height)
     {
         TextMeshProUGUI text = UiBuilder.CreateText(WorkPanel, name, fontSize, color, alignment);
 
-        UiBuilder.Place(text.rectTransform, left, top, width, StatRowHeight);
+        UiBuilder.Place(text.rectTransform, left, top, width, height);
 
         return text;
     }
@@ -228,7 +230,7 @@ public class TrainScreen : CardWorkScreen
         bool pointEnough = SetCostChip(0, PointIcon, pointCost, CurrencyType.Point);
         bool cardEnough = SetCostChip(1, TrainCardIcon, trainCardCost, CurrencyType.TrainCard);
 
-        _noteText.text = "훈련 1번 = 스탯 총합 +2 (무작위로 나뉨)";
+        _noteText.text = string.Empty;
         SetAction(pointEnough && cardEnough, ActionLabel);
     }
 
@@ -242,7 +244,7 @@ public class TrainScreen : CardWorkScreen
         bool enough = SetCostChip(0, BreakthroughIcon, cost, CurrencyType.BreakthroughCard) && cost > 0;
 
         _noteText.text = $"돌파하면 훈련 상한 {target.TrainLevel} → {openedLevel}";
-        SetAction(enough, "돌파");
+        SetAction(enough, "돌파", true);
     }
 
     private bool SetCostChip(int index, string iconPath, int cost, CurrencyType type)

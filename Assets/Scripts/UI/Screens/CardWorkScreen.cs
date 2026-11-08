@@ -26,7 +26,11 @@ public abstract class CardWorkScreen : UiScreenBehaviour
     private const float ListRowTop = TargetTop + TargetHeight + 24f;
     private const float GridTop = ListRowTop + CardFilterButtonView.ButtonHeight + 36f;
     private const float GridBottom = 224f;
-    private const string EmptySlotSprite = "Card/card_slot_empty";
+    //빈 자리 — 버튼과 같은 모서리(왼쪽 위 · 오른쪽 아래 직각)의 실선 칸 + 가운데 +
+    private const float EmptySlotCornerScale = 0.6f;
+    private const float EmptySlotLineAlpha = 0.4f;
+    private const float EmptySlotPlusSize = 84f;
+    private const string EmptySlotPlusSprite = "Common/icon_plus";
     private const string CardMaskSprite = "Fx/card_mask";
     private const string OwnedListLabel = "보유 카드";
 
@@ -155,8 +159,7 @@ public abstract class CardWorkScreen : UiScreenBehaviour
         UiBuilder.Place(title.rectTransform, SideMargin, 32f, 500f, 60f);
         title.text = Title;
 
-        _emptySlot = UiBuilder.CreateImage(Root, "EmptySlot", Color.white, EmptySlotSprite);
-        UiBuilder.Place(_emptySlot.rectTransform, SideMargin, TargetTop, TargetWidth, TargetHeight);
+        BuildEmptySlot();
 
         _emptyText = UiBuilder.CreateText(Root, "EmptyText", 36f, UiPalette.Text2, TextAlignmentOptions.Center);
         UiBuilder.Place(_emptyText.rectTransform, PreviewLeft, TargetTop, PreviewWidth, TargetHeight);
@@ -280,13 +283,14 @@ public abstract class CardWorkScreen : UiScreenBehaviour
     }
 
     /// <summary>
-    /// 실행 버튼 상태와 글자
+    /// 실행 버튼 상태와 글자. highlight 면 금색 버튼 (돌파처럼 한 단계 넘어서는 실행)
     /// </summary>
-    protected void SetAction(bool enabled, string label)
+    protected void SetAction(bool enabled, string label, bool highlight = false)
     {
         _actionButton.interactable = enabled;
         _actionGroup.alpha = enabled ? 1f : 0.4f;
         _actionLabel.text = label;
+        _actionButton.targetGraphic.color = highlight ? UiPalette.AccentGold : UiPalette.ButtonPrimary;
     }
 
     /// <summary>
@@ -351,6 +355,24 @@ public abstract class CardWorkScreen : UiScreenBehaviour
     protected void Notify(string message, bool success)
     {
         _onNotify?.Invoke(message, success);
+    }
+
+    //채운 바탕 + 실선 테두리 + 가운데 +. 큰 칸이라 모서리를 버튼보다 크게 잡는다
+    private void BuildEmptySlot()
+    {
+        Color lineColor = UiPalette.WithAlpha(UiPalette.Text1, EmptySlotLineAlpha);
+
+        _emptySlot = UiBuilder.CreateImage(Root, "EmptySlot", UiPalette.BgPanel, UiSprites.ButtonPrimary, Image.Type.Sliced);
+        UiBuilder.Place(_emptySlot.rectTransform, SideMargin, TargetTop, TargetWidth, TargetHeight);
+        _emptySlot.pixelsPerUnitMultiplier = EmptySlotCornerScale;
+
+        Image frame = UiBuilder.CreateImage(_emptySlot.transform, "Frame", lineColor, UiSprites.ButtonNormal, Image.Type.Sliced);
+        UiBuilder.Stretch(frame.rectTransform, 0f, 0f, 0f, 0f);
+        frame.pixelsPerUnitMultiplier = EmptySlotCornerScale;
+
+        Image plus = UiBuilder.CreateImage(_emptySlot.transform, "Plus", lineColor, EmptySlotPlusSprite);
+        UiBuilder.Place(plus.rectTransform, (TargetWidth - EmptySlotPlusSize) * 0.5f, (TargetHeight - EmptySlotPlusSize) * 0.5f,
+            EmptySlotPlusSize, EmptySlotPlusSize);
     }
 
     private IEnumerator RunSequence(IEnumerator sequence)
