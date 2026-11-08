@@ -15,6 +15,7 @@
     Assets/Resources/UI/Common/scroll_handle.png    스크롤바 손잡이 · 홈 (둥근 막대, 9-슬라이스 10px) 12×24 → 2배
     Assets/Resources/UI/Common/check_circle.png     선택 표시 — 채움 없이 굵은 흰 선 원 + 체크 (강화 재료) 96 → 2배
     Assets/Resources/UI/Common/icon_minus.png       빼기 막대 (Image 색으로 틴트) 48 → 2배
+    Assets/Resources/UI/Common/icon_plus.png        더하기 (빈 카드 자리 가운데, Image 색으로 틴트) 48 → 2배
 """
 import subprocess
 import tempfile
@@ -90,6 +91,11 @@ def icon_minus():
     return '<rect x="8" y="20" width="32" height="8" rx="4" fill="#FFFFFF"/>'
 
 
+def icon_plus():
+    return ('<rect x="8" y="21" width="32" height="6" rx="3" fill="#FFFFFF"/>'
+            '<rect x="21" y="8" width="6" height="32" rx="3" fill="#FFFFFF"/>')
+
+
 ICONS = {
     "icon_filter": (icon_filter(), 48, 48),
     "checkbox_off": (checkbox(False), 48, 48),
@@ -97,6 +103,7 @@ ICONS = {
     "scroll_handle": (scroll_handle(), 12, 24),
     "check_circle": (check_circle(), 96, 96),
     "icon_minus": (icon_minus(), 48, 48),
+    "icon_plus": (icon_plus(), 48, 48),
 }
 
 SPRITES = {

@@ -248,6 +248,25 @@ public class CardGridView : UiWidgetBehaviour
     }
 
     /// <summary>
+    /// 카드 1장만 다시 그린다 (목록은 그대로고 한 장의 단계 · OVR 만 바뀌었을 때)
+    /// </summary>
+    public void RefreshCard(int instanceId)
+    {
+        for (int i = 0; i < Count; i++)
+        {
+            CardCellView cell = _cells[i];
+
+            if (cell.InstanceId != instanceId || !CardDisplayInfo.TryCreate(instanceId, out CardDisplayInfo info))
+                continue;
+
+            cell.SetCard(info);
+            cell.SetSelected(_selected.Contains(instanceId));
+            cell.SetBlocked(_blockedReason == null ? null : _blockedReason(info));
+            return;
+        }
+    }
+
+    /// <summary>
     /// 맨 위로 되돌린다 (화면을 떠날 때)
     /// </summary>
     public void ScrollToTop()
