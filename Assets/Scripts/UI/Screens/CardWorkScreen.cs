@@ -6,80 +6,65 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 카드 1장을 골라 조작하는 화면의 공통 틀 (강화 · 훈련 …). 위 절반은 작업 칸, 아래 절반은 카드 목록.
-/// 처음엔 위 칸이 비어 있고, 목록에서 카드를 고르면 위 왼쪽에 놓인다. 뒤로가기는 대상 해제 → 로비
+/// 카드를 골라 조작하는 화면의 공통 틀 (강화 · 훈련 · 조합 …). 위 절반은 작업 칸(화면마다 다름), 아래 절반은 카드 목록.
+/// 아래 버튼 · 뒤로가기(필터 창 → 고른 것 비우기 → 로비) · 떠나면 초기화 · 연출 중 입력 막기를 함께 쓴다
 /// </summary>
 public abstract class CardWorkScreen : UiScreenBehaviour
 {
     /// <summary>
-    /// 위 작업 칸 규격 — 왼쪽 대상 카드, 오른쪽 작업 내용(PreviewLeft ~ PreviewWidth)
+    /// 위 작업 칸 규격 (화면 왼쪽 위 기준). 높이는 대상 카드(폭 340) 한 장 높이
     /// </summary>
     protected const float SideMargin = 32f;
-    protected const float TargetTop = 120f;
-    protected const float TargetWidth = 340f;
-    protected const float TargetHeight = TargetWidth * CardView.BaseHeight / CardView.BaseWidth;
-    protected const float PreviewLeft = SideMargin + TargetWidth + 32f;
-    protected const float PreviewWidth = 1080f - SideMargin - PreviewLeft;
-    protected const float PreviewTop = TargetTop + 30f;
+    protected const float WorkTop = 120f;
+    protected const float WorkHeight = 340f * CardView.BaseHeight / CardView.BaseWidth;
 
     //아래 카드 목록 — 머리 줄(왼쪽 이름 · 오른쪽 필터) 아래로
-    private const float ListRowTop = TargetTop + TargetHeight + 24f;
+    private const float ListRowTop = WorkTop + WorkHeight + 24f;
     private const float GridTop = ListRowTop + CardFilterButtonView.ButtonHeight + 36f;
     private const float GridBottom = 224f;
-    //빈 자리 — 버튼과 같은 모서리(왼쪽 위 · 오른쪽 아래 직각)의 실선 칸 + 가운데 +
+    private const string OwnedListLabel = "보유 카드";
+    //빈 칸 — 버튼과 같은 모서리(왼쪽 위 · 오른쪽 아래 직각)의 실선 칸 + 가운데 표시
     private const float EmptySlotCornerScale = 0.6f;
     private const float EmptySlotLineAlpha = 0.4f;
-    private const float EmptySlotPlusSize = 84f;
-    private const string EmptySlotPlusSprite = "Common/icon_plus";
-    private const string CardMaskSprite = "Fx/card_mask";
-    private const string OwnedListLabel = "보유 카드";
 
     /// <summary>
-    /// 화면 제목 · 빈 칸 안내 · 실행 버튼 글자. 베이크 시점에 쓰이므로 상수 문자열로 둔다
+    /// 화면 제목 · 실행 버튼 글자. 베이크 시점에 쓰이므로 상수 문자열로 둔다
     /// </summary>
     protected abstract string Title { get; }
-    protected abstract string EmptyMessage { get; }
     protected abstract string ActionLabel { get; }
 
     /// <summary>
-    /// 대상을 고른 뒤 목록을 재료로 바꿀 때의 목록 이름. null 이면 목록은 보유 카드 그대로다
+    /// 고른 것이 있는가. 아래 버튼(로비로 / 뒤로 + 실행)과 뒤로가기가 이것을 본다
     /// </summary>
-    protected virtual string MaterialListLabel => null;
+    protected abstract bool HasWork { get; }
 
     /// <summary>
-    /// 재료 목록이 비었을 때 문구
+    /// 목록 머리 줄 이름 · 필터를 보일지 · 빈 목록 문구(null 이면 기본)
     /// </summary>
-    protected virtual string MaterialEmptyMessage => "카드가 없습니다";
+    protected virtual string ListLabel => OwnedListLabel;
+    protected virtual bool ShowsFilter => true;
+    protected virtual string ListEmptyMessage => null;
 
     /// <summary>
-    /// 재료 목록에서 고른 카드 (체크 표시)
+    /// 목록에서 체크로 보일 카드
     /// </summary>
-    protected virtual IReadOnlyCollection<int> MaterialSelection => null;
+    protected abstract IReadOnlyCollection<int> ListSelection { get; }
 
     /// <summary>
-    /// 위 칸에 놓인 카드. 없으면 InvalidInstanceId
+    /// 연출이 도는 중 (입력이 막혀 있다)
     /// </summary>
-    protected int TargetInstanceId => _targetInstanceId;
-    protected bool HasTarget => _targetInstanceId != InventoryManager.InvalidInstanceId;
     protected bool IsPlaying => _playRoutine != null;
 
     /// <summary>
-    /// 위 작업 칸 루트 · 대상 카드 · 카드 위 번쩍임 · 카드 목록
+    /// 위 작업 칸 루트 (화면 폭 · 목록 머리 줄 위까지) · 아래 카드 목록
     /// </summary>
-    protected RectTransform WorkPanel => _workPanel;
-    protected CardView TargetCard => _targetCard;
-    protected Image CardFlash => _cardFlash;
+    protected RectTransform WorkArea => _workArea;
     protected CardGridView Grid => _grid;
 
-    [SerializeField] private Image _emptySlot;
-    [SerializeField] private TextMeshProUGUI _emptyText;
+    [SerializeField] private RectTransform _workArea;
     [SerializeField] private TextMeshProUGUI _listLabel;
     [SerializeField] private CardFilterButtonView _filterButton;
     [SerializeField] private CardGridView _grid;
-    [SerializeField] private RectTransform _workPanel;
-    [SerializeField] private CanvasGroup _workGroup;
-    [SerializeField] private CardView _targetCard;
-    [SerializeField] private Image _cardFlash;
     [SerializeField] private Button _lobbyButton;
     [SerializeField] private Button _stepBackButton;
     [SerializeField] private Button _actionButton;
@@ -89,13 +74,11 @@ public abstract class CardWorkScreen : UiScreenBehaviour
 
     private readonly List<int> _listIds = new List<int>(64);
     private readonly List<RectTransform> _leadingTiles = new List<RectTransform>(1);
-    private readonly List<int> _targetSelection = new List<int>(1);
 
     private Action _onBack;
     private Action<string, bool> _onNotify;
     private Action<int> _onShowCardDetail;
     private Coroutine _playRoutine;
-    private int _targetInstanceId = InventoryManager.InvalidInstanceId;
 
     /// <summary>
     /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
@@ -115,18 +98,14 @@ public abstract class CardWorkScreen : UiScreenBehaviour
         if (InventoryManager.Instance == null)
             return;
 
-        if (HasTarget && !CardDisplayInfo.TryCreate(_targetInstanceId, out CardDisplayInfo _))
-            ClearTarget();
-
-        SetStep(HasTarget);
+        ValidateWork();
+        RefreshChrome();
         RefreshList();
-
-        if (HasTarget)
-            RefreshTarget(false);
+        RefreshWork(false);
     }
 
     /// <summary>
-    /// 필터 창 → 고른 카드 순으로 한 단계씩 물러난다. 연출 중에는 막는다
+    /// 필터 창 → 고른 것 순으로 한 단계씩 물러난다. 연출 중에는 막는다
     /// </summary>
     public override bool HandleBack()
     {
@@ -136,10 +115,10 @@ public abstract class CardWorkScreen : UiScreenBehaviour
         if (_filterButton.ClosePanel())
             return true;
 
-        if (!HasTarget)
+        if (!HasWork)
             return false;
 
-        ReturnToEmpty();
+        ReturnToStart();
 
         return true;
     }
@@ -148,22 +127,16 @@ public abstract class CardWorkScreen : UiScreenBehaviour
     {
         WireWidgets();
         Bind(_lobbyButton, OnLobbyClicked);
-        Bind(_stepBackButton, ReturnToEmpty);
+        Bind(_stepBackButton, ReturnToStart);
         Bind(_actionButton, OnActionButtonClicked);
     }
 
-    //제목 · 빈 자리 안내 · 목록 머리 줄 · 목록 · 작업 칸(숨김) · 아래 버튼 · 연출 중 입력 막이
+    //제목 · 목록 머리 줄 · 목록 · 작업 칸 · 아래 버튼 · 연출 중 입력 막이
     protected sealed override void Build()
     {
         TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
         UiBuilder.Place(title.rectTransform, SideMargin, 32f, 500f, 60f);
         title.text = Title;
-
-        BuildEmptySlot();
-
-        _emptyText = UiBuilder.CreateText(Root, "EmptyText", 36f, UiPalette.Text2, TextAlignmentOptions.Center);
-        UiBuilder.Place(_emptyText.rectTransform, PreviewLeft, TargetTop, PreviewWidth, TargetHeight);
-        _emptyText.text = EmptyMessage;
 
         _listLabel = UiBuilder.CreateText(Root, "ListLabel", 32f, UiPalette.Text2);
         UiBuilder.Place(_listLabel.rectTransform, SideMargin, ListRowTop, 600f, CardFilterButtonView.ButtonHeight);
@@ -175,22 +148,14 @@ public abstract class CardWorkScreen : UiScreenBehaviour
         _grid = CardGridView.Bake(Root);
         UiBuilder.Stretch(_grid.Root, SideMargin, GridTop, SideMargin, GridBottom);
 
-        _workPanel = UiBuilder.CreateRect(Root, "WorkPanel");
-        UiBuilder.PlaceRow(_workPanel, 0f, ListRowTop);
-        _workGroup = _workPanel.gameObject.AddComponent<CanvasGroup>();
-
-        _targetCard = CardView.Bake(_workPanel, TargetWidth, false);
-        UiBuilder.CenterPivot(UiBuilder.Place(_targetCard.Root, SideMargin, TargetTop, TargetWidth, TargetHeight));
-
-        _cardFlash = UiBuilder.CreateImage(_workPanel, "CardFlash", UiPalette.WithAlpha(Color.white, 0f), CardMaskSprite);
-        UiBuilder.Place(_cardFlash.rectTransform, SideMargin, TargetTop, TargetWidth, TargetHeight);
-
+        _workArea = UiBuilder.CreateRect(Root, "WorkArea");
+        UiBuilder.PlaceRow(_workArea, 0f, ListRowTop);
         BuildWork();
 
         _lobbyButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnLobbyClicked);
         PlaceBottomButton(_lobbyButton, 0f, 1f);
 
-        _stepBackButton = UiBuilder.CreateButton(Root, "StepBackButton", "뒤로", 34f, false, ReturnToEmpty);
+        _stepBackButton = UiBuilder.CreateButton(Root, "StepBackButton", "뒤로", 34f, false, ReturnToStart);
         PlaceBottomButton(_stepBackButton, 0f, 0.5f);
 
         _actionButton = UiBuilder.CreateButton(Root, "ActionButton", ActionLabel, 36f, true, OnActionButtonClicked,
@@ -204,7 +169,7 @@ public abstract class CardWorkScreen : UiScreenBehaviour
         _inputBlocker.gameObject.SetActive(false);
 
         WireWidgets();
-        SetStep(false);
+        SetBottomButtons(false);
     }
 
     protected override void OnShown()
@@ -213,35 +178,45 @@ public abstract class CardWorkScreen : UiScreenBehaviour
         Refresh();
     }
 
-    //다시 들어오면 빈 칸부터, 필터 없이 맨 위에서
+    //다시 들어오면 고른 것 없이, 필터 없이 맨 위에서
     protected override void OnHidden()
     {
         _playRoutine = null;
         _inputBlocker.gameObject.SetActive(false);
-        ClearTarget();
+        ClearWork();
         _filterButton.ResetFilter();
         _grid.ScrollToTop();
     }
 
     /// <summary>
-    /// 위 칸 오른쪽(WorkPanel 안, PreviewLeft · PreviewTop 기준) 작업 내용을 조립한다. 베이크 시점에 한 번
+    /// 위 작업 칸(WorkArea 안, 화면 왼쪽 위 기준 좌표)을 조립한다. 베이크 시점에 한 번
     /// </summary>
     protected abstract void BuildWork();
 
     /// <summary>
-    /// 작업 내용을 대상 카드에 맞춰 갱신한다. 실행 버튼 상태도 여기서 SetAction 으로 정한다
+    /// 위 작업 칸을 지금 고른 것에 맞춰 갱신한다. 실행 버튼 상태도 여기서 SetAction 으로 정한다
     /// </summary>
-    protected abstract void RefreshWork(CardDisplayInfo target, bool animate);
+    protected abstract void RefreshWork(bool animate);
 
     /// <summary>
-    /// 실행 버튼(강화 · 훈련 …)을 눌렀다
+    /// 목록의 카드를 눌렀다
+    /// </summary>
+    protected abstract void OnListCardClicked(int instanceId);
+
+    /// <summary>
+    /// 고른 것을 모두 비운다 (뒤로 · 화면을 떠날 때)
+    /// </summary>
+    protected abstract void ClearWork();
+
+    /// <summary>
+    /// 실행 버튼(강화 · 훈련 · 조합 …)을 눌렀다
     /// </summary>
     protected abstract void OnActionClicked();
 
     /// <summary>
-    /// 대상이 바뀌거나 비워졌다. 화면이 들고 있던 재료 선택 등을 비운다
+    /// 다시 그리기 전에 고른 것 중 사라진 카드 등을 정리한다
     /// </summary>
-    protected virtual void OnTargetChanged()
+    protected virtual void ValidateWork()
     {
     }
 
@@ -253,33 +228,35 @@ public abstract class CardWorkScreen : UiScreenBehaviour
     }
 
     /// <summary>
-    /// 재료 목록을 채운다 (MaterialListLabel 이 있을 때). 카드가 아닌 칸은 leadingTiles 로 앞에 끼운다
+    /// 목록을 채운다. 기본은 필터를 거친 보유 카드. 카드가 아닌 칸은 leadingTiles 로 앞에 끼운다
     /// </summary>
-    protected virtual void CollectMaterials(List<int> instanceIds, List<RectTransform> leadingTiles)
+    protected virtual void CollectListCards(List<int> instanceIds, List<RectTransform> leadingTiles)
     {
+        CollectOwnedCards(instanceIds);
     }
 
     /// <summary>
-    /// 재료 목록의 카드를 눌렀다
+    /// 목록에서 고를 수 없는 사유 (흐리게 덮고 글자로 보인다)
     /// </summary>
-    protected virtual void OnMaterialClicked(int instanceId)
-    {
-    }
-
-    /// <summary>
-    /// 보유 카드 목록에서 고를 수 없는 사유 (이미 최대 등)
-    /// </summary>
-    protected virtual string GetTargetBlockedReason(CardDisplayInfo info)
+    protected virtual string GetBlockedReason(CardDisplayInfo info)
     {
         return null;
     }
 
     /// <summary>
-    /// 재료 목록에서 고를 수 없는 사유
+    /// 위 칸 위젯의 콜백 (프리팹에 저장되지 않는 것). 베이크 경로와 코드 조립 경로가 함께 부른다
     /// </summary>
-    protected virtual string GetMaterialBlockedReason(CardDisplayInfo info)
+    protected virtual void WireWork()
     {
-        return null;
+    }
+
+    /// <summary>
+    /// 필터를 거친 보유 카드
+    /// </summary>
+    protected void CollectOwnedCards(List<int> instanceIds)
+    {
+        foreach (CardInstance card in InventoryManager.Instance.GetFiltered(_filterButton.CurrentFilter))
+            instanceIds.Add(card.InstanceId);
     }
 
     /// <summary>
@@ -294,51 +271,55 @@ public abstract class CardWorkScreen : UiScreenBehaviour
     }
 
     /// <summary>
-    /// 대상 카드 그림과 작업 내용을 다시 그린다
+    /// 아래 버튼 · 목록 머리 줄을 고른 것에 맞춘다
     /// </summary>
-    protected void RefreshTarget(bool animate)
+    protected void RefreshChrome()
     {
-        if (!CardDisplayInfo.TryCreate(_targetInstanceId, out CardDisplayInfo info))
-            return;
-
-        _targetCard.SetCard(info);
-        RefreshWork(info, animate);
+        SetBottomButtons(HasWork);
+        _listLabel.text = ListLabel;
+        _filterButton.gameObject.SetActive(ShowsFilter);
     }
 
     /// <summary>
-    /// 목록을 다시 깐다 (재료가 소모됐을 때)
+    /// 목록을 다시 깐다 (내용이 바뀌거나 재료가 소모됐을 때)
     /// </summary>
     protected void RefreshList()
     {
-        bool materials = ShowsMaterials();
-
         _listIds.Clear();
         _leadingTiles.Clear();
-
-        if (materials)
-        {
-            CollectMaterials(_listIds, _leadingTiles);
-        }
-        else
-        {
-            foreach (CardInstance card in InventoryManager.Instance.GetFiltered(_filterButton.CurrentFilter))
-                _listIds.Add(card.InstanceId);
-        }
+        CollectListCards(_listIds, _leadingTiles);
 
         _grid.SetLeadingTiles(_leadingTiles);
-        _grid.SetEmptyMessage(materials ? MaterialEmptyMessage
-            : _filterButton.CurrentFilter.SelectedCount > 0 ? "조건에 맞는 카드가 없습니다" : "카드가 없습니다");
-        _grid.SetSelection(GetListSelection());
+        _grid.SetEmptyMessage(ListEmptyMessage
+            ?? (_filterButton.CurrentFilter.SelectedCount > 0 ? "조건에 맞는 카드가 없습니다" : "카드가 없습니다"));
+        _grid.SetSelection(ListSelection);
         _grid.SetCards(_listIds);
     }
 
     /// <summary>
-    /// 재료 선택이 바뀌었다 — 체크 표시와 막힌 칸만 다시 칠한다
+    /// 고른 것이 바뀌었다 — 체크 표시와 막힌 칸만 다시 칠한다
     /// </summary>
-    protected void RefreshMaterialSelection()
+    protected void RefreshListSelection()
     {
-        _grid.SetSelection(GetListSelection());
+        _grid.SetSelection(ListSelection);
         _grid.RefreshBlocked();
+    }
+
+    /// <summary>
+    /// 고른 것을 비우고 처음 상태로 (아래 "뒤로" 버튼 · 뒤로가기)
+    /// </summary>
+    protected void ReturnToStart()
+    {
+        if (IsPlaying)
+            return;
+
+        string listLabel = ListLabel;
+
+        ClearWork();
+        Refresh();
+
+        if (listLabel != ListLabel)
+            _grid.ScrollToTop();
     }
 
     /// <summary>
@@ -357,22 +338,38 @@ public abstract class CardWorkScreen : UiScreenBehaviour
         _onNotify?.Invoke(message, success);
     }
 
-    //채운 바탕 + 실선 테두리 + 가운데 +. 큰 칸이라 모서리를 버튼보다 크게 잡는다
-    private void BuildEmptySlot()
+    /// <summary>
+    /// 카드 상세를 덮어 띄운다 (길게 누르기)
+    /// </summary>
+    protected void ShowCardDetail(int instanceId)
     {
-        Color lineColor = UiPalette.WithAlpha(UiPalette.Text1, EmptySlotLineAlpha);
+        _onShowCardDetail?.Invoke(instanceId);
+    }
 
-        _emptySlot = UiBuilder.CreateImage(Root, "EmptySlot", UiPalette.BgPanel, UiSprites.ButtonPrimary, Image.Type.Sliced);
-        UiBuilder.Place(_emptySlot.rectTransform, SideMargin, TargetTop, TargetWidth, TargetHeight);
-        _emptySlot.pixelsPerUnitMultiplier = EmptySlotCornerScale;
+    /// <summary>
+    /// 빈 칸 하나 — 채운 바탕 + 버튼 모서리 실선 테두리 + 가운데 표시(+ 아이콘 또는 글자). 큰 칸이라 모서리를 버튼보다 크게 잡는다
+    /// </summary>
+    protected static Image CreateEmptySlot(Transform parent, string name, float left, float top, float width, float height)
+    {
+        Color lineColor = GetEmptySlotLineColor();
+        Image slot = UiBuilder.CreateImage(parent, name, UiPalette.BgPanel, UiSprites.ButtonPrimary, Image.Type.Sliced);
 
-        Image frame = UiBuilder.CreateImage(_emptySlot.transform, "Frame", lineColor, UiSprites.ButtonNormal, Image.Type.Sliced);
+        UiBuilder.Place(slot.rectTransform, left, top, width, height);
+        slot.pixelsPerUnitMultiplier = EmptySlotCornerScale;
+
+        Image frame = UiBuilder.CreateImage(slot.transform, "Frame", lineColor, UiSprites.ButtonNormal, Image.Type.Sliced);
         UiBuilder.Stretch(frame.rectTransform, 0f, 0f, 0f, 0f);
         frame.pixelsPerUnitMultiplier = EmptySlotCornerScale;
 
-        Image plus = UiBuilder.CreateImage(_emptySlot.transform, "Plus", lineColor, EmptySlotPlusSprite);
-        UiBuilder.Place(plus.rectTransform, (TargetWidth - EmptySlotPlusSize) * 0.5f, (TargetHeight - EmptySlotPlusSize) * 0.5f,
-            EmptySlotPlusSize, EmptySlotPlusSize);
+        return slot;
+    }
+
+    /// <summary>
+    /// 빈 칸 테두리 · 가운데 표시 색
+    /// </summary>
+    protected static Color GetEmptySlotLineColor()
+    {
+        return UiPalette.WithAlpha(UiPalette.Text1, EmptySlotLineAlpha);
     }
 
     private IEnumerator RunSequence(IEnumerator sequence)
@@ -398,130 +395,41 @@ public abstract class CardWorkScreen : UiScreenBehaviour
         rect.offsetMax = new Vector2(-rightInset, 160f);
     }
 
+    //고른 것이 없으면 로비로 하나, 있으면 뒤로 + 실행
+    private void SetBottomButtons(bool hasWork)
+    {
+        _lobbyButton.gameObject.SetActive(!hasWork);
+        _stepBackButton.gameObject.SetActive(hasWork);
+        _actionButton.gameObject.SetActive(hasWork);
+    }
+
     //프리팹에 저장되지 않는 위젯 콜백. 베이크 경로와 코드 조립 경로가 함께 쓴다
     private void WireWidgets()
     {
         _filterButton.SetChangedHandler(OnFilterChanged);
         _grid.SetClickHandler(OnGridClicked);
-        _grid.SetLongPressHandler(OnGridLongPressed);
+        _grid.SetLongPressHandler(ShowCardDetail);
         _grid.SetBlockedReason(GetBlockedReason);
         _grid.SetCheckSelection(true);
-        _targetCard.SetLongPressHandler(OnTargetLongPressed);
-    }
-
-    //처음엔 위 칸이 비어 있고 아래는 보유 카드, 고르면 위 칸이 채워진다
-    private void SetStep(bool hasTarget)
-    {
-        bool materials = hasTarget && MaterialListLabel != null;
-
-        _emptySlot.gameObject.SetActive(!hasTarget);
-        _emptyText.gameObject.SetActive(!hasTarget);
-        _workPanel.gameObject.SetActive(hasTarget);
-        _lobbyButton.gameObject.SetActive(!hasTarget);
-        _stepBackButton.gameObject.SetActive(hasTarget);
-        _actionButton.gameObject.SetActive(hasTarget);
-        _filterButton.gameObject.SetActive(!materials);
-        _listLabel.text = materials ? MaterialListLabel : OwnedListLabel;
-    }
-
-    private bool ShowsMaterials()
-    {
-        return HasTarget && MaterialListLabel != null;
-    }
-
-    private IReadOnlyCollection<int> GetListSelection()
-    {
-        if (ShowsMaterials())
-            return MaterialSelection;
-
-        _targetSelection.Clear();
-
-        if (HasTarget)
-            _targetSelection.Add(_targetInstanceId);
-
-        return _targetSelection;
-    }
-
-    private string GetBlockedReason(CardDisplayInfo info)
-    {
-        return ShowsMaterials() ? GetMaterialBlockedReason(info) : GetTargetBlockedReason(info);
+        WireWork();
     }
 
     private void OnFilterChanged()
     {
-        if (!ShowsMaterials())
+        if (ShowsFilter)
             RefreshList();
     }
 
     private void OnGridClicked(int instanceId)
     {
-        if (IsPlaying)
-            return;
-
-        if (ShowsMaterials())
-            OnMaterialClicked(instanceId);
-        else
-            SelectTarget(instanceId);
-    }
-
-    private void OnGridLongPressed(int instanceId)
-    {
-        _onShowCardDetail?.Invoke(instanceId);
-    }
-
-    private void OnTargetLongPressed()
-    {
-        if (HasTarget)
-            _onShowCardDetail?.Invoke(_targetInstanceId);
-    }
-
-    //고른 카드가 위 왼쪽에 튀어나온다. 재료를 쓰는 화면은 목록이 재료로 바뀐다
-    private void SelectTarget(int instanceId)
-    {
-        if (instanceId == _targetInstanceId)
-            return;
-
-        bool wasEmpty = !HasTarget;
-
-        _targetInstanceId = instanceId;
-        OnTargetChanged();
-        Refresh();
-
-        if (ShowsMaterials())
-            _grid.ScrollToTop();
-
-        if (wasEmpty)
-            UiEffects.FadeIn(_workGroup, 0.2f);
-
-        UiEffects.Pop(_targetCard.Root, 0.86f, 0.28f);
-    }
-
-    private void ReturnToEmpty()
-    {
-        if (IsPlaying)
-            return;
-
-        bool materials = ShowsMaterials();
-
-        ClearTarget();
-        Refresh();
-
-        if (materials)
-            _grid.ScrollToTop();
-    }
-
-    private void ClearTarget()
-    {
-        _targetInstanceId = InventoryManager.InvalidInstanceId;
-        OnTargetChanged();
+        if (!IsPlaying)
+            OnListCardClicked(instanceId);
     }
 
     private void OnActionButtonClicked()
     {
-        if (IsPlaying || !HasTarget)
-            return;
-
-        OnActionClicked();
+        if (!IsPlaying && HasWork)
+            OnActionClicked();
     }
 
     private void OnLobbyClicked()

@@ -27,6 +27,48 @@ public class CombineManager : SingletonBehaviour<CombineManager>
     }
 
     /// <summary>
+    /// 고른 노말 재료로 나올 결과 등급 확률 (3 · 4 · 5성, 합 1). 재료 1장씩 기준 등급이 될 확률이 같다.
+    /// 재료가 없거나 노말이 아닌 재료가 섞이면 모두 0
+    /// </summary>
+    public (float star3, float star4, float star5) GetNormalGradeOdds(IReadOnlyList<int> materialInstanceIds)
+    {
+        if (materialInstanceIds == null || materialInstanceIds.Count == 0)
+            return (0f, 0f, 0f);
+
+        float share = 1f / materialInstanceIds.Count;
+        float star3 = 0f;
+        float star4 = 0f;
+        float star5 = 0f;
+
+        foreach (int instanceId in materialInstanceIds)
+        {
+            CardInstance card = InventoryManager.Instance.GetCard(instanceId);
+            CardMasterData masterData = card == null ? null : CardDataManager.Instance.GetCardMasterData(card.CardId);
+
+            if (masterData == null || masterData.CardType != CardType.Normal)
+                return (0f, 0f, 0f);
+
+            switch (masterData.CardGrade)
+            {
+                case CardGrade.Star3:
+                    star3 += share * (1f - _upgradeChanceStar3);
+                    star4 += share * _upgradeChanceStar3 * (1f - _upgradeChanceStar4);
+                    star5 += share * _upgradeChanceStar3 * _upgradeChanceStar4;
+                    break;
+                case CardGrade.Star4:
+                    star4 += share * (1f - _upgradeChanceStar4);
+                    star5 += share * _upgradeChanceStar4;
+                    break;
+                default:
+                    star5 += share;
+                    break;
+            }
+        }
+
+        return (star3, star4, star5);
+    }
+
+    /// <summary>
     /// 재료로 조합할 수 있는지 검사한다 (개수 · 중복 · 존재 · 잠금 · 라인업 · 종류 일치)
     /// </summary>
     public bool CanCombine(IReadOnlyList<int> materialInstanceIds)

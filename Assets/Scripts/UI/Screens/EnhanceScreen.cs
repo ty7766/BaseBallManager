@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// 카드 강화. 카드를 고르면 아래 목록이 재료(같은 카드 + 강화 전용 카드)로 바뀐다.
 /// 재료를 고를수록 오른쪽에 +3 → +5 처럼 오를 단계를 미리 보여 주고, 강화를 누르면 한 번에 올린다
 /// </summary>
-public class EnhanceScreen : CardWorkScreen
+public class EnhanceScreen : TargetWorkScreen
 {
     private const float MedalWidth = 168f;
     private const float MedalHeight = MedalWidth * 208f / 240f;
@@ -88,7 +88,7 @@ public class EnhanceScreen : CardWorkScreen
     private int MaxLevel => EnhanceManager.Instance != null ? EnhanceManager.Instance.MaxEnhanceLevel : 0;
 
     //이름 · 지금 메달 → 오를 메달 · 단계 칸 · OVR · 세부 스탯 · 재료 요약
-    protected override void BuildWork()
+    protected override void BuildTargetWork()
     {
         _targetName = CreatePreviewText("TargetName", 40f, UiPalette.Text1, PreviewTop, 52f);
 
@@ -214,7 +214,7 @@ public class EnhanceScreen : CardWorkScreen
     }
 
     //지금 단계 → 오를 단계 메달, 단계 칸(채움 · 이번에 오를 칸 · 빈 칸), OVR 변화
-    protected override void RefreshWork(CardDisplayInfo target, bool animate)
+    protected override void RefreshTargetWork(CardDisplayInfo target, bool animate)
     {
         int maxLevel = MaxLevel;
         int current = target.EnhanceLevel;
@@ -376,11 +376,11 @@ public class EnhanceScreen : CardWorkScreen
 
     private void OnMaterialsChanged()
     {
-        RefreshMaterialSelection();
+        RefreshListSelection();
         _enhanceCardTile?.SetSelectedSets(_selectedSets, _cardsPerLevel);
 
         if (CardDisplayInfo.TryCreate(TargetInstanceId, out CardDisplayInfo target))
-            RefreshWork(target, true);
+            RefreshTargetWork(target, true);
     }
 
     //+0 은 메달이 없으므로 회색 빈 메달
@@ -532,6 +532,6 @@ public class EnhanceScreen : CardWorkScreen
         yield return new WaitForSecondsRealtime(SettleSeconds);
 
         _shownGain = 0;
-        RefreshWork(after, false);
+        RefreshTargetWork(after, false);
     }
 }
