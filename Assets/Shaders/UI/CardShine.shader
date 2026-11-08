@@ -103,7 +103,7 @@ Shader "BaseBallManager/UI/CardShine"
 
                 // 가는 심 + 넓고 옅은 어깨 (시안의 0.42 · 0.08 띠)
                 half band = exp(-gap * gap) * 0.84 + exp(-gap * gap / 9.0) * 0.16;
-                half strength = band * i.color.a * CardClip(i.mask);
+                half strength = band * i.color.a * CardClip(i.mask) * CardShapeAlpha(i.texcoord);
 
                 return fixed4(i.color.rgb * strength, 0);
             }

@@ -45,7 +45,7 @@ public class EnhanceCardTileView
         _root = UiBuilder.CreateRect(parent, "EnhanceCardTile");
         UiBuilder.Place(_root, 0f, 0f, CardCellView.CellWidth, CardCellView.CellHeight);
 
-        Image plate = UiBuilder.CreateImage(_root, "Plate", PlateColor, UiSprites.ButtonPrimary, Image.Type.Sliced);
+        Image plate = UiBuilder.CreateImage(_root, "Plate", PlateColor, UiSprites.CardFill, Image.Type.Sliced);
         UiBuilder.Stretch(plate.rectTransform, 0f, 0f, 0f, 0f);
         plate.raycastTarget = true;
 
@@ -54,7 +54,7 @@ public class EnhanceCardTileView
         addButton.onClick.AddListener(OnAddClicked);
         plate.gameObject.AddComponent<UiPressFeedback>();
 
-        _frame = UiBuilder.CreateImage(plate.transform, "Frame", Color.white, UiSprites.ButtonNormal, Image.Type.Sliced);
+        _frame = UiBuilder.CreateImage(plate.transform, "Frame", Color.white, UiSprites.CardFrame, Image.Type.Sliced);
         UiBuilder.Stretch(_frame.rectTransform, 0f, 0f, 0f, 0f);
         _frame.raycastTarget = false;
 

@@ -49,14 +49,14 @@ public class CardCellView
         UiBuilder.Stretch(_card.Root, 0f, 0f, 0f, 0f);
 
         _border = UiBuilder.CreateImage(_root, "Border", UiPalette.ButtonPrimary,
-            UiSprites.ButtonNormal, Image.Type.Sliced);
+            UiSprites.CardFrame, Image.Type.Sliced);
         UiBuilder.Stretch(_border.rectTransform,
             -BorderThickness, -BorderThickness, -BorderThickness, -BorderThickness);
         _border.raycastTarget = false;
         _border.gameObject.SetActive(false);
 
         _blockedDim = UiBuilder.CreateImage(_root, "BlockedDim",
-            UiPalette.WithAlpha(Color.black, BlockedDimAlpha));
+            UiPalette.WithAlpha(Color.black, BlockedDimAlpha), UiSprites.CardFill, Image.Type.Sliced);
         UiBuilder.Stretch(_blockedDim.rectTransform, 0f, 0f, 0f, 0f);
         _blockedDim.raycastTarget = false;
 
@@ -201,7 +201,8 @@ public class CardCellView
     /// </summary>
     public static Image CreateCheckOverlay(RectTransform tile, out Image checkMark)
     {
-        Image dim = UiBuilder.CreateImage(tile, "CheckDim", UiPalette.WithAlpha(Color.black, CheckDimAlpha));
+        Image dim = UiBuilder.CreateImage(tile, "CheckDim", UiPalette.WithAlpha(Color.black, CheckDimAlpha),
+            UiSprites.CardFill, Image.Type.Sliced);
         UiBuilder.Stretch(dim.rectTransform, 0f, 0f, 0f, 0f);
         dim.raycastTarget = false;
 

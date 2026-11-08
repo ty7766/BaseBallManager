@@ -42,6 +42,8 @@ public static class UiSprites
     public const string CardStarBack = "Card/card_star_back";
     public const string CardStarFill = "Card/card_star_fill";
     public const string CardSlotEmpty = "Card/card_slot_empty";
+    public const string CardFill = "Card/card_fill";
+    public const string CardFrame = "Card/card_frame";
     public const string Spinner = "Common/spinner_00";
     public const string ScrollHandle = "Common/scroll_handle";
 

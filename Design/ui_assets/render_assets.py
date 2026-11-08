@@ -79,14 +79,7 @@ def card_assets():
           f'<path d="M{cx} {cy - 60}V{cy + 60}M{cx - 60} {cy}H{cx + 60}" stroke="rgba(255,255,255,0.35)" stroke-width="12"/>',
           scale=1, usage="빈 카드 슬롯 (라인업 · 조합 재료 칸). 카드 절반 크기")
 
-    for key, glow, ring in (("signature", "#FF5C93", "#FF6FA0"), ("goldenglove", "#F2C14E", "#F7D57A")):
-        asset("Card", f"card_fx_glow_{key}", 800, 800,
-              '<defs><filter id="b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="45"/></filter>'
-              '<mask id="m"><rect width="800" height="800" fill="#fff"/><rect x="180" y="180" width="440" height="440" fill="#000"/></mask></defs>'
-              f'<g mask="url(#m)"><rect x="180" y="180" width="440" height="440" fill="{glow}" fill-opacity="0.5" filter="url(#b)"/>'
-              f'<rect x="176" y="176" width="448" height="448" fill="{ring}" fill-opacity="0.58"/></g>',
-              scale=1, border=[200, 200, 200, 200], mode="Sliced",
-              usage="카드보다 사방 180 크게(1758×2317) 늘려서 카드 뒤에 배치")
+    # card_fx_glow_{signature,goldenglove} 는 카드 모양(사선 모서리)을 따라야 해서 card_shape.py 가 만든다
 
     asset("Card", "icon_breakthrough", 128, 128, f'<path d="{BURST}" fill="{WHITE}"/>',
           scale=1, vb="0 0 24 24", tint="#7EE3D8", usage="카드 뒷면 '돌파 완료'")

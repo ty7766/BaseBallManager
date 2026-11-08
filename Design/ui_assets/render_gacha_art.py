@@ -30,6 +30,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from card_shape import CHAMFER_RATIO, chamfer_alpha, chamfer_path
+
 ROOT = Path(__file__).resolve().parents[2]
 UI = ROOT / "Assets" / "Resources" / "UI"
 WORK = Path(tempfile.gettempdir()) / "bbm_gacha_art"
@@ -42,7 +44,7 @@ BASE_SIZE = 62
 BG_W, BG_H = 1080, 2340
 STAGE_Y = 1330           # 빛줄기가 엇갈리는 높이 = 결과 카드 가운데 (1080×2278 기준)
 LAMP_Y = 145             # 조명 높이. 제목(32~92)을 피해 재화 줄(100~190) 뒤에 숨긴다
-CARD_CORNER = 46 / CW     # 카드 모서리 반지름 (카드 폭 비율)
+CARD_CHAMFER = CW * CHAMFER_RATIO   # 카드 모서리 사선 (card_shape.py 와 같다)
 SPILL_W, SPILL_H = 256, 512
 SPILL_HEIGHT_RATIO = 1.3 # 새는 빛 그림 높이 ÷ 카드 높이. Unity 의 SpillHeightRatio 와 같다
 BLOOM_CARD_W = 180       # 번짐 그림에서 카드 폭(픽셀)
@@ -74,12 +76,14 @@ def card_back():
 <pattern id="lat" width="120" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="120" height="120" fill="none" stroke="#fff" stroke-width="3"/></pattern>
 <radialGradient id="fade" cx="0.5" cy="0.5" r="0.62"><stop offset="0" stop-color="#fff" stop-opacity="0.16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
 <mask id="m"><rect width="{CW}" height="{CH}" fill="url(#fade)"/></mask>
+<clipPath id="card"><path d="{chamfer_path(0, 0, CW, CH, CARD_CHAMFER)}"/></clipPath>
 </defs>
-<rect width="{CW}" height="{CH}" rx="46" fill="url(#bg)"/>
-<rect width="{CW}" height="{CH}" rx="46" fill="url(#hl)"/>
+<g clip-path="url(#card)">
+<rect width="{CW}" height="{CH}" fill="url(#bg)"/>
+<rect width="{CW}" height="{CH}" fill="url(#hl)"/>
 <rect width="{CW}" height="{CH}" fill="url(#lat)" mask="url(#m)"/>''']
-    out.append(f'<rect x="14" y="14" width="{CW - 28}" height="{CH - 28}" rx="38" fill="none" stroke="url(#rim)" stroke-width="10"/>'
-               f'<rect x="56" y="56" width="{CW - 112}" height="{CH - 112}" rx="20" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="4"/>')
+    out.append(f'<path d="{inset_card_path(14)}" fill="none" stroke="url(#rim)" stroke-width="10"/>'
+               f'<path d="{inset_card_path(56)}" fill="none" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="4"/>')
     for half, opacity in ((k, 0.9), (k + 34, 0.35)):
         out.append(f'<polygon points="{f(cx)},{f(cy - half)} {f(cx + half)},{f(cy)} {f(cx)},{f(cy + half)} {f(cx - half)},{f(cy)}" '
                    f'fill="none" stroke="url(#rim)" stroke-opacity="{opacity}" stroke-width="9"/>')
@@ -90,7 +94,14 @@ def card_back():
     for bx, by in ((cx + k, cy), (cx, cy - k), (cx - k, cy)):
         out.append(f'<rect x="{f(bx - half_base)}" y="{f(by - half_base)}" width="{BASE_SIZE}" height="{BASE_SIZE}" '
                    f'transform="rotate(45 {f(bx)} {f(by)})" fill="url(#rim)"/>')
+    out.append("</g>")
     return "".join(out)
+
+
+def inset_card_path(inset):
+    """카드 모양을 안쪽으로 inset 만큼 들인 선. 45° 사선은 안으로 들이면 다리가 inset × (2 - √2) 만큼 짧아진다"""
+    chamfer = max(0.0, CARD_CHAMFER - inset * (2 - math.sqrt(2)))
+    return chamfer_path(inset, inset, CW - inset * 2, CH - inset * 2, chamfer)
 
 
 def swipe_arrow():
@@ -155,7 +166,7 @@ def card_bloom():
     card_h = round(card_w * CH / CW)
     margin = round(card_w * BLOOM_MARGIN)
     width, height = card_w + margin * 2, card_h + margin * 2
-    silhouette = rounded_rect_mask(width, height, card_w, card_h, card_w * CARD_CORNER)
+    silhouette = chamfer_alpha(width, height, card_w, card_h)
     near = gaussian_blur(silhouette, card_w * 0.06)
     far = gaussian_blur(silhouette, card_w * 0.15)
     bloom = 0.6 * near + 0.4 * far
@@ -171,7 +182,7 @@ def card_rimlight():
     card_h = round(card_w * CH / CW)
     margin = round(card_w * RIM_MARGIN)
     width, height = card_w + margin * 2, card_h + margin * 2
-    silhouette = rounded_rect_mask(width, height, card_w, card_h, card_w * CARD_CORNER)
+    silhouette = chamfer_alpha(width, height, card_w, card_h)
     glow = 0.65 * gaussian_blur(silhouette, card_w * 0.03) + 0.35 * gaussian_blur(silhouette, card_w * 0.09)
     glow /= glow[height // 2, width // 2]
     across = (np.arange(width, dtype=np.float32) - margin) / card_w
@@ -193,16 +204,16 @@ def light_mote():
 def card_sheen():
     """카드가 기울 때 표면에 비치는 반사광. 카드 모양 안에서 들린 쪽(왼쪽)이 밝고 반대쪽으로 옅어진다"""
     height = round(MASK_W * CH / CW)
-    shape = rounded_rect_mask(MASK_W, height, MASK_W, height, MASK_W * CARD_CORNER)
+    shape = chamfer_alpha(MASK_W, height)
     across = np.arange(MASK_W, dtype=np.float32) / MASK_W
     ramp = 0.06 + 0.94 * np.exp(-across / 0.28)
     return shape * ramp[None, :] ** LINEAR_ALPHA_GAMMA
 
 
 def card_mask():
-    """카드 모양 흰 판. 모서리는 카드 그림과 같은 반지름"""
+    """카드 모양 흰 판. 모서리는 카드 그림과 같은 사선"""
     height = round(MASK_W * CH / CW)
-    return rounded_rect_mask(MASK_W, height, MASK_W, height, MASK_W * CARD_CORNER)
+    return chamfer_alpha(MASK_W, height)
 
 
 def button_corner_path(size, inset, radius):
