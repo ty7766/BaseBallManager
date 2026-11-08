@@ -6,7 +6,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
-/// 골든글러브 제작. 위는 만들어질 카드 자리(금색 칸 · ?), 아래는 제작 방식(전체 랜덤 / 팀 지정) · 팀 · 비용.
+/// 골든글러브 제작. 위는 만들어질 카드 자리(금색 칸 · ?), 아래는 제작 방식(랜덤 / 팀 지정) · 팀 · 비용.
 /// 카드를 재료로 쓰지 않으므로 카드 목록은 없다. 제작하면 빛이 차오른 뒤 칸에 새 카드가 나타난다
 /// </summary>
 public class GoldenGloveCraftScreen : UiScreenBehaviour
@@ -174,7 +174,7 @@ public class GoldenGloveCraftScreen : UiScreenBehaviour
         Refresh();
     }
 
-    //다시 들어오면 전체 랜덤 · 팀 없음 · 빈 칸
+    //다시 들어오면 랜덤 · 팀 없음 · 빈 칸
     protected override void OnHidden()
     {
         _craftRoutine = null;
@@ -229,7 +229,7 @@ public class GoldenGloveCraftScreen : UiScreenBehaviour
 
         float half = RowWidth * 0.5f;
 
-        _randomTab = CreateTab(row, "RandomTab", "전체 랜덤", 0f, half, SelectRandom, out _randomTabLabel);
+        _randomTab = CreateTab(row, "RandomTab", "랜덤", 0f, half, SelectRandom, out _randomTabLabel);
         _teamTab = CreateTab(row, "TeamTab", "팀 지정", half, half, SelectTeamMode, out _teamTabLabel);
     }
 
