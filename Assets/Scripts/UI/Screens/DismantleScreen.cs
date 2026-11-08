@@ -1,17 +1,36 @@
+﻿using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 카드 분해. 여러 장을 담아 한 번에 분해하고 포인트·훈련 카드·골글 포인트로 돌려받는다
+/// 카드 분해. 위 칸은 담은 카드 줄 + 반환 재화 미리보기, 아래는 보유 카드. 목록에서 누른 카드가 줄에 담긴다(최대 30장).
+/// 분해하면 담은 카드가 한꺼번에 터지며 사라지고 받은 재화가 올라간다
 /// </summary>
-public class DismantleScreen : CardActionScreen
+public class DismantleScreen : CardWorkScreen
 {
     private const int MaxBatchCount = 30;
-    private const float PickedCardWidth = 150f;
-    private const float PickedGap = 12f;
-    private const float RewardIconSize = 56f;
+    private const int RewardCount = 3;
+    //담은 카드 줄 — 실선 칸 안에서 가로로 스크롤
+    private const float TrayTop = WorkTop;
+    private const float TrayHeight = 236f;
+    private const float TrayWidth = 1080f - SideMargin * 2f;
+    private const float TrayCardWidth = 136f;
+    private const float TrayCardHeight = TrayCardWidth * CardView.BaseHeight / CardView.BaseWidth;
+    private const float TrayCardGap = 12f;
+    private const float TrayPadding = (TrayHeight - TrayCardHeight) * 0.5f;
+    //반환 재화 칩 3개 · 담은 수 · 훈련 카드 확률 안내
+    private const float RewardTop = TrayTop + TrayHeight + 28f;
+    private const float RewardChipWidth = 300f;
+    private const float RewardChipHeight = 76f;
+    private const float RewardChipGap = 18f;
+    private const float RewardIconSize = 54f;
+    private const float CountTop = RewardTop + RewardChipHeight + 20f;
+    private const float NoteTop = CountTop + 56f;
+    private const float ConsumeSeconds = 0.36f;
+    private const string LockedReason = "잠금";
+    private const string LineUpReason = "라인업";
 
     private static readonly string[] RewardIconPaths =
     {
@@ -20,188 +39,119 @@ public class DismantleScreen : CardActionScreen
         "Currency/currency_goldenglove_point"
     };
 
+    private static readonly string[] RewardLabels = { "포인트", "훈련 카드", "골글 포인트" };
+
     /// <summary>
-    /// 화면 제목
+    /// 화면 제목 · 실행 버튼
     /// </summary>
     protected override string Title => "분해";
+    protected override string ActionLabel => "분해";
 
     /// <summary>
-    /// 한 번에 여러 장을 담는다
+    /// 1장이라도 담았는가
     /// </summary>
-    protected override int RequiredSelectionCount => MaxBatchCount;
+    protected override bool HasWork => _pickedIds.Count > 0;
 
-    [SerializeField] private RectTransform _pickedContent;
-    [SerializeField] private TextMeshProUGUI _pickedEmptyText;
-    [SerializeField] private TextMeshProUGUI[] _rewardTexts = new TextMeshProUGUI[3];
-    [SerializeField] private TextMeshProUGUI _noticeText;
-    [SerializeField] private Button _dismantleButton;
+    /// <summary>
+    /// 담은 카드
+    /// </summary>
+    protected override IReadOnlyCollection<int> ListSelection => _pickedIds;
+
+    [SerializeField] private ScrollRect _trayScroll;
+    [SerializeField] private RectTransform _trayContent;
+    [SerializeField] private TextMeshProUGUI _trayEmptyText;
+    [SerializeField] private TextMeshProUGUI[] _rewardAmounts = new TextMeshProUGUI[RewardCount];
+    [SerializeField] private TextMeshProUGUI _countText;
+    [SerializeField] private TextMeshProUGUI _noteText;
 
     private readonly List<int> _pickedIds = new List<int>(MaxBatchCount);
-    private readonly List<CardView> _pickedCards = new List<CardView>(MaxBatchCount);
+    private readonly List<CardView> _trayCards = new List<CardView>(MaxBatchCount);
 
-    /// <summary>
-    /// 분해할 수 없는 카드도 목록에 두되 이유를 덮어 보여준다
-    /// </summary>
+    //담은 카드 줄(빈 칸 모양 + 가로 스크롤) · 반환 재화 칩 · 담은 수 · 안내
+    protected override void BuildWork()
+    {
+        Image tray = CreateEmptySlot(WorkArea, "Tray", SideMargin, TrayTop, TrayWidth, TrayHeight);
+
+        _trayScroll = UiBuilder.CreateTableScroll(tray.transform, "TrayScroll", out _trayContent);
+        UiBuilder.Stretch(_trayScroll.GetComponent<RectTransform>(), 8f, 0f, 8f, 0f);
+        _trayScroll.vertical = false;
+
+        _trayEmptyText = UiBuilder.CreateText(tray.transform, "Empty", 36f, UiPalette.Text2, TextAlignmentOptions.Center);
+        UiBuilder.Stretch(_trayEmptyText.rectTransform, 0f, 0f, 0f, 0f);
+        _trayEmptyText.text = "분해할 카드를 선택하세요";
+
+        float rowWidth = RewardChipWidth * RewardCount + RewardChipGap * (RewardCount - 1);
+        float rowLeft = SideMargin + (TrayWidth - rowWidth) * 0.5f;
+
+        for (int i = 0; i < RewardCount; i++)
+            BuildRewardChip(i, rowLeft + i * (RewardChipWidth + RewardChipGap));
+
+        _countText = UiBuilder.CreateText(WorkArea, "Count", 40f, UiPalette.Text1, TextAlignmentOptions.Center);
+        UiBuilder.CenterPivot(UiBuilder.Place(_countText.rectTransform, SideMargin, CountTop, TrayWidth, 52f));
+
+        _noteText = UiBuilder.CreateText(WorkArea, "Note", 24f, UiPalette.Text3, TextAlignmentOptions.Center);
+        UiBuilder.Place(_noteText.rectTransform, SideMargin, NoteTop, TrayWidth, 34f);
+    }
+
+    //담은 카드 줄 · 반환 재화 미리보기 · 담은 수
+    protected override void RefreshWork(bool animate)
+    {
+        RefreshTray();
+        RefreshRewardPreview();
+
+        _countText.text = $"{_pickedIds.Count} / {MaxBatchCount}";
+
+        if (animate)
+            UiEffects.Pop(_countText.transform, 0.85f, 0.2f);
+
+        SetAction(_pickedIds.Count > 0, _pickedIds.Count > 0 ? $"분해  {_pickedIds.Count}장" : ActionLabel);
+    }
+
+    protected override void OnListCardClicked(int instanceId)
+    {
+        if (!_pickedIds.Remove(instanceId))
+        {
+            if (_pickedIds.Count >= MaxBatchCount)
+            {
+                Notify($"한 번에 {MaxBatchCount}장까지 분해할 수 있습니다", false);
+                return;
+            }
+
+            _pickedIds.Add(instanceId);
+        }
+
+        OnPickedChanged(true);
+    }
+
+    protected override void ClearWork()
+    {
+        _pickedIds.Clear();
+    }
+
+    //잠그거나 라인업에 넣어 분해할 수 없게 된 카드는 뺀다
+    protected override void ValidateWork()
+    {
+        for (int i = _pickedIds.Count - 1; i >= 0; i--)
+        {
+            if (!CardDisplayInfo.TryCreate(_pickedIds[i], out CardDisplayInfo info) || GetBlockedReason(info) != null)
+                _pickedIds.RemoveAt(i);
+        }
+    }
+
     protected override string GetBlockedReason(CardDisplayInfo info)
     {
         if (info.IsLocked)
-            return "잠금 카드";
+            return LockedReason;
 
-        if (LineUpManager.Instance != null && LineUpManager.Instance.IsCardAssigned(info.InstanceId))
-            return "라인업 카드";
-
-        return null;
+        return LineUpManager.Instance != null && LineUpManager.Instance.IsCardAssigned(info.InstanceId) ? LineUpReason : null;
     }
 
-    /// <summary>
-    /// 담은 카드가 바뀌었다
-    /// </summary>
-    protected override void OnSelectionChanged(List<int> selectedIds)
+    protected override void OnActionClicked()
     {
-        _pickedIds.Clear();
-        _pickedIds.AddRange(selectedIds);
-
-        Refresh();
-    }
-
-    public override void Refresh()
-    {
-        base.Refresh();
-
-        RefreshPickedRow();
-        RefreshRewards();
-    }
-
-    protected override void BindEvents()
-    {
-        base.BindEvents();
-
-        Bind(_dismantleButton, Dismantle);
-    }
-
-    protected override void BuildBody()
-    {
-        float pickedHeight = PickedCardWidth * CardView.BaseHeight / CardView.BaseWidth;
-
-        TextMeshProUGUI pickedTitle = UiBuilder.CreateText(Body, "PickedTitle", 32f, UiPalette.Text3);
-        UiBuilder.PlaceRow(pickedTitle.rectTransform, 0f, 44f, 8f);
-        pickedTitle.text = "분해할 카드";
-
-        ScrollRect pickedScroll = UiBuilder.CreateTableScroll(Body, "PickedScroll", out _pickedContent);
-        UiBuilder.PlaceRow(pickedScroll.GetComponent<RectTransform>(), 52f, pickedHeight + 16f);
-        pickedScroll.vertical = false;
-
-        _pickedEmptyText = UiBuilder.CreateText(Body, "PickedEmpty", 30f, UiPalette.TextOff,
-            TextAlignmentOptions.Center);
-        UiBuilder.PlaceRow(_pickedEmptyText.rectTransform, 52f + pickedHeight * 0.4f, 44f, 8f);
-        _pickedEmptyText.text = "아래에서 분해할 카드를 고르세요";
-
-        float rewardTop = 52f + pickedHeight + 60f;
-
-        TextMeshProUGUI rewardTitle = UiBuilder.CreateText(Body, "RewardTitle", 34f, UiPalette.Text3);
-        UiBuilder.PlaceRow(rewardTitle.rectTransform, rewardTop, 44f, 8f);
-        rewardTitle.text = "반환 재화";
-
-        //재화는 아이콘만 두고 글자는 수량만 적는다
-        for (int i = 0; i < RewardIconPaths.Length; i++)
-        {
-            float left = i * 300f;
-
-            Image icon = UiBuilder.CreateImage(Body, "RewardIcon" + i, Color.white, RewardIconPaths[i]);
-            UiBuilder.Place(icon.rectTransform, left, rewardTop + 52f, RewardIconSize, RewardIconSize);
-
-            _rewardTexts[i] = UiBuilder.CreateText(Body, "RewardAmount" + i, 34f, UiPalette.Text1);
-            UiBuilder.Place(_rewardTexts[i].rectTransform,
-                left + RewardIconSize + 12f, rewardTop + 56f, 200f, 48f);
-        }
-
-        _dismantleButton = UiBuilder.CreateButton(Body, "DismantleButton", "분해", 36f, true, Dismantle);
-        UiBuilder.PlaceRow(_dismantleButton.GetComponent<RectTransform>(), rewardTop + 140f, 110f);
-
-        _noticeText = UiBuilder.CreateText(Body, "Notice", 28f, UiPalette.TextOff);
-        UiBuilder.PlaceRow(_noticeText.rectTransform, rewardTop + 266f, 44f, 8f);
-        _noticeText.text = "잠긴 카드와 라인업에 들어간 카드는 분해되지 않습니다";
-    }
-
-    //담은 카드를 가로 한 줄로 깐다. 칸은 필요한 만큼만 만들고 재사용한다
-    private void RefreshPickedRow()
-    {
-        for (int i = 0; i < _pickedIds.Count; i++)
-        {
-            CardView card = EnsurePickedCard(i);
-
-            card.Root.gameObject.SetActive(true);
-
-            if (CardDisplayInfo.TryCreate(_pickedIds[i], out CardDisplayInfo info))
-                card.SetCard(info);
-        }
-
-        for (int i = _pickedIds.Count; i < _pickedCards.Count; i++)
-            _pickedCards[i].Root.gameObject.SetActive(false);
-
-        _pickedEmptyText.gameObject.SetActive(_pickedIds.Count == 0);
-        _pickedContent.sizeDelta = new Vector2(_pickedIds.Count * (PickedCardWidth + PickedGap), 0f);
-    }
-
-    private CardView EnsurePickedCard(int index)
-    {
-        while (_pickedCards.Count <= index)
-        {
-            int slot = _pickedCards.Count;
-            CardView created = CardView.Bake(_pickedContent, PickedCardWidth, false);
-
-            UiBuilder.Place(created.Root, slot * (PickedCardWidth + PickedGap), 0f,
-                PickedCardWidth, PickedCardWidth * CardView.BaseHeight / CardView.BaseWidth);
-
-            _pickedCards.Add(created);
-        }
-
-        return _pickedCards[index];
-    }
-
-    //담은 카드 전부의 보상을 더해 아이콘 옆 수량만 바꾼다
-    private void RefreshRewards()
-    {
-        int point = 0;
-        int trainCard = 0;
-        int goldenGlovePoint = 0;
-        int usable = 0;
-
-        if (DismantleManager.Instance != null)
-        {
-            foreach (int instanceId in _pickedIds)
-            {
-                if (!DismantleManager.Instance.CanDismantle(instanceId))
-                    continue;
-
-                DismantleResult preview = DismantleManager.Instance.GetPreview(instanceId);
-
-                if (preview == null)
-                    continue;
-
-                point += preview.Point;
-                trainCard += preview.TrainCard;
-                goldenGlovePoint += preview.GoldenGlovePoint;
-                usable++;
-            }
-        }
-
-        _rewardTexts[0].text = point.ToString();
-        _rewardTexts[1].text = trainCard.ToString();
-        _rewardTexts[2].text = goldenGlovePoint.ToString();
-
-        _dismantleButton.interactable = usable > 0;
-    }
-
-    //담은 카드를 한 장씩 분해하고 합계를 알린다
-    private void Dismantle()
-    {
-        if (DismantleManager.Instance == null)
+        if (DismantleManager.Instance == null || _pickedIds.Count == 0)
             return;
 
-        int point = 0;
-        int trainCard = 0;
-        int goldenGlovePoint = 0;
+        int[] received = new int[RewardCount];
         int done = 0;
 
         foreach (int instanceId in _pickedIds)
@@ -211,20 +161,171 @@ public class DismantleScreen : CardActionScreen
             if (result == null)
                 continue;
 
-            point += result.Point;
-            trainCard += result.TrainCard;
-            goldenGlovePoint += result.GoldenGlovePoint;
+            received[0] += result.Point;
+            received[1] += result.TrainCard;
+            received[2] += result.GoldenGlovePoint;
             done++;
         }
 
         if (done == 0)
         {
-            Notify("분해에 실패했습니다", false);
+            Notify("분해하지 못했습니다", false);
             Refresh();
             return;
         }
 
-        ClearSelection();
-        Notify($"{done}장 분해 — 포인트 {point} · 훈련카드 {trainCard} · 골글 {goldenGlovePoint}", true);
+        int shownCards = _pickedIds.Count;
+
+        _pickedIds.Clear();
+        PlaySequence(PlayDismantle(shownCards, done, received));
+    }
+
+    //아이콘 · 받을 양 · 재화 이름
+    private void BuildRewardChip(int index, float left)
+    {
+        Image plate = UiBuilder.CreateImage(WorkArea, "RewardChip", UiPalette.BgRow, UiSprites.ButtonPrimary, Image.Type.Sliced);
+        UiBuilder.Place(plate.rectTransform, left, RewardTop, RewardChipWidth, RewardChipHeight);
+
+        Image icon = UiBuilder.CreateImage(plate.transform, "Icon", Color.white, RewardIconPaths[index]);
+        UiBuilder.Place(icon.rectTransform, 14f, (RewardChipHeight - RewardIconSize) * 0.5f, RewardIconSize, RewardIconSize);
+        icon.preserveAspect = true;
+
+        _rewardAmounts[index] = UiBuilder.CreateText(plate.transform, "Amount", 32f, UiPalette.Text1);
+        UiBuilder.CenterPivot(UiBuilder.Place(_rewardAmounts[index].rectTransform, 80f, 6f, RewardChipWidth - 92f, 38f));
+
+        TextMeshProUGUI label = UiBuilder.CreateText(plate.transform, "Label", 22f, UiPalette.Text3);
+        UiBuilder.Place(label.rectTransform, 80f, 44f, RewardChipWidth - 92f, 26f);
+        label.text = RewardLabels[index];
+    }
+
+    //담은 카드를 가로 한 줄로 깐다. 칸은 필요한 만큼만 만들고 재사용한다
+    private void RefreshTray()
+    {
+        for (int i = 0; i < _pickedIds.Count; i++)
+        {
+            CardView card = EnsureTrayCard(i);
+
+            card.Root.localScale = Vector3.one;
+            card.Root.gameObject.SetActive(true);
+
+            if (CardDisplayInfo.TryCreate(_pickedIds[i], out CardDisplayInfo info))
+                card.SetCard(info);
+        }
+
+        for (int i = _pickedIds.Count; i < _trayCards.Count; i++)
+            _trayCards[i].Root.gameObject.SetActive(false);
+
+        _trayEmptyText.gameObject.SetActive(_pickedIds.Count == 0);
+        _trayContent.sizeDelta = new Vector2(TrayPadding * 2f + _pickedIds.Count * (TrayCardWidth + TrayCardGap) - TrayCardGap, 0f);
+    }
+
+    //줄의 카드는 런타임에 만든다. 누르면 줄에서 빠지고, 길게 누르면 상세
+    private CardView EnsureTrayCard(int index)
+    {
+        while (_trayCards.Count <= index)
+        {
+            int slot = _trayCards.Count;
+            CardView created = CardView.Bake(_trayContent, TrayCardWidth, false);
+
+            UiBuilder.CenterPivot(UiBuilder.Place(created.Root, TrayPadding + slot * (TrayCardWidth + TrayCardGap), TrayPadding,
+                TrayCardWidth, TrayCardHeight));
+            created.SetClickHandler(() => RemovePickedAt(slot));
+            created.SetLongPressHandler(() => ShowPickedDetail(slot));
+            _trayCards.Add(created);
+        }
+
+        return _trayCards[index];
+    }
+
+    //담은 카드 전부의 확정 보상을 더한다. 훈련 카드는 장마다 확률이라 0 ~ 최대로 보인다
+    private void RefreshRewardPreview()
+    {
+        int point = 0;
+        int goldenGlovePoint = 0;
+
+        if (DismantleManager.Instance != null)
+        {
+            foreach (int instanceId in _pickedIds)
+            {
+                DismantleResult preview = DismantleManager.Instance.GetPreview(instanceId);
+
+                if (preview == null)
+                    continue;
+
+                point += preview.Point;
+                goldenGlovePoint += preview.GoldenGlovePoint;
+            }
+        }
+
+        int maxTrainCard = DismantleManager.Instance == null ? 0 : _pickedIds.Count * DismantleManager.Instance.TrainCardDropAmount;
+        float dropChance = DismantleManager.Instance == null ? 0f : DismantleManager.Instance.TrainCardDropChance;
+
+        _rewardAmounts[0].text = point.ToString("N0");
+        _rewardAmounts[1].text = maxTrainCard > 0 ? $"0 ~ {maxTrainCard:N0}" : "0";
+        _rewardAmounts[2].text = goldenGlovePoint.ToString("N0");
+        _noteText.text = $"훈련 카드는 장마다 {dropChance * 100f:0}% 확률로 나옵니다";
+    }
+
+    private void OnPickedChanged(bool scrollToEnd)
+    {
+        RefreshChrome();
+        RefreshListSelection();
+        RefreshWork(true);
+
+        if (scrollToEnd)
+            _trayScroll.horizontalNormalizedPosition = 1f;
+    }
+
+    private void RemovePickedAt(int slot)
+    {
+        if (IsPlaying || slot >= _pickedIds.Count)
+            return;
+
+        _pickedIds.RemoveAt(slot);
+        OnPickedChanged(false);
+    }
+
+    private void ShowPickedDetail(int slot)
+    {
+        if (slot < _pickedIds.Count)
+            ShowCardDetail(_pickedIds[slot]);
+    }
+
+    //담은 카드가 한꺼번에 터지며 작아지고, 받은 재화가 0 에서 올라간다
+    private IEnumerator PlayDismantle(int shownCards, int done, int[] received)
+    {
+        SetAction(false, ActionLabel);
+
+        for (int i = 0; i < shownCards && i < _trayCards.Count; i++)
+        {
+            UiEffects.Burst(_trayCards[i].Root, UiEffectKind.Enhance);
+            ShrinkAway(_trayCards[i].Root);
+        }
+
+        yield return new WaitForSecondsRealtime(ConsumeSeconds + 0.1f);
+
+        for (int i = 0; i < RewardCount; i++)
+        {
+            UiEffects.CountUp(_rewardAmounts[i], 0, received[i], "{0:N0}", 0.5f);
+            UiEffects.Pop(_rewardAmounts[i].transform, 0.7f, 0.3f);
+        }
+
+        Notify($"{done}장 분해 — 포인트 {received[0]:N0} · 훈련 카드 {received[1]} · 골글 포인트 {received[2]:N0}", true);
+
+        yield return new WaitForSecondsRealtime(0.8f);
+
+        RefreshChrome();
+        RefreshList();
+        RefreshWork(false);
+    }
+
+    private static void ShrinkAway(RectTransform card)
+    {
+        UiAnimator.Play(ConsumeSeconds, t =>
+        {
+            float scale = 1f - t;
+
+            card.localScale = new Vector3(scale, scale, 1f);
+        }, () => card.gameObject.SetActive(false), UiEase.InCubic);
     }
 }
