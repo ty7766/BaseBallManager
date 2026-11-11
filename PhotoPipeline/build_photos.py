@@ -6,6 +6,7 @@
     python build_photos.py --force               전부 다시 만든다
     python build_photos.py --only 김도영_기아      지정한 키만 다시 만든다 (여러 개 가능)
     python build_photos.py --install             만든 PNG를 Unity Resources/Photos 로 복사까지 한다
+    python build_photos.py --adjusted            photo_adjust.json 에 있는 사진만 다시 만든다 (조정표를 고친 뒤)
 
 폴더
     input/          원본 사진. 파일명(확장자 제외)이 곧 사진 키다 — `이름_팀` (골든글러브는 `이름_팀_골글`)
@@ -20,6 +21,8 @@
     768 x 960 · 얼굴 박스 높이 15.5% · 눈높이 세로 21% · 아래 13%는 서서히 투명하게
     가로는 얼굴을 50%에 두되 몸통 무게중심 쪽으로 최대 18%까지 당긴다 (달리는 자세가 한쪽으로 쏠리지 않게)
     크기는 얼굴로만 정한다. 보이는 몸 길이로 맞추면 원본이 어디서 잘렸느냐에 따라 카드마다 크기가 달라진다
+    원본이 다리 쪽에서 끝나 끊긴 선이 카드 이름 띠 위로 보이면, 끊긴 선이 띠 뒤로 숨을 때까지 내리고 키운다
+    사진별 손보기(확대 · 축소 · 상하좌우)는 photo_adjust.json — 자동 정렬 뒤에 얹고, 그다음 끊긴 선 숨기기를 한다
 """
 
 import argparse
@@ -52,15 +55,19 @@ MAX_SHRINK = 0.85        # 모자·헬멧이 여백을 넘을 때 줄일 수 있
 FACE_SCORE_MARGIN = 0.08  # 주인공 후보 = 가장 확실한 얼굴과 신뢰도 차이가 이 안인 얼굴. 그중 가장 큰 것을 고른다
 BODY_PULL = 0.6          # 얼굴 대신 몸통 쪽으로 가로 중심을 당기는 비율. 달리는 자세처럼 몸이 한쪽에 쏠린 사진용
 MAX_BODY_SHIFT = 0.18    # 가로로 옮기는 한계 (출력 폭 비율). 얼굴이 32~68% 안에 머문다
-#자동 정렬 뒤 사진별로 손보는 가로 보정. 선수를 오른쪽(+)·왼쪽(-)으로 옮긴다 (출력 폭 비율)
-PHOTO_NUDGE_X = {
-    "김도영_기아": 0.04,
-}
+#원본이 다리 쪽에서 끝나면 그 끊긴 선을 이 높이 아래로 보낸다. 카드 하단 이름 띠가 사진 높이 79~85% 부터 가린다
+CUT_HIDE_LINE = 0.88
+AUTO_DOWN_MAX = 0.06     # 끊긴 선을 숨길 때 먼저 내리는 한계 (출력 높이 비율). 나머지는 확대로
+AUTO_ZOOM_MAX = 1.6      # 끊긴 선을 숨길 때 키우는 한계 (얼굴 기준 배율 대비)
+AUTO_HEAD_ROOM = 0.02    # 키우다 머리가 위로 넘치지 않게 남기는 여백
+#사진별 손보기 — {"키": {"zoom": 1.1, "down": 0.04, "right": -0.02, "face": 3, "erase": [[x0, y0, x1, y1]]}}.
+#zoom 은 배율, down · right 는 출력 높이 · 폭 비율, face 는 주인공 얼굴 검출 순번, erase 는 지울 칸(출력 비율)
+ADJUST_FILE = "photo_adjust.json"
 
 # --- 검수 경고 기준 ---
 UPSCALE_WARN = 1.3       # 원본을 이 배율 넘게 키우면 흐려지기 시작한다
 UPSCALE_BAD = 2.0
-BOTTOM_CUT_OK = 0.90     # 원본 하단 끝이 이 높이보다 아래면 카드 하단 바에 가려져 괜찮다
+BOTTOM_CUT_OK = CUT_HIDE_LINE   # 원본 하단 끝이 이 높이보다 아래면 카드 하단 바에 가려져 괜찮다
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(ROOT)
@@ -171,13 +178,16 @@ def load_rgb(path):
         return np.asarray(ImageOps.exif_transpose(img).convert("RGB"))
 
 
-def pick_face(faces, detector, rgb):
+def pick_face(faces, detector, rgb, forced=None):
     """확실한 얼굴들 중 가장 큰 것을 주인공으로 고르고, 다시 찾아 정밀한 눈·입 좌표를 얻는다.
-    크기 × 신뢰도로 고르면 뒤쪽 광고판 큰 글자(한준수 사진의 "원", 신뢰도 0.74)가 진짜 얼굴(0.92)을 이긴다"""
+    크기 × 신뢰도로 고르면 뒤쪽 광고판 큰 글자(한준수 사진의 "원", 신뢰도 0.74)가 진짜 얼굴(0.92)을 이긴다.
+    관중 · 광고판을 잡는 사진은 photo_adjust.json 의 "face"(검출 순번)로 주인공을 직접 정한다"""
     areas = faces[:, 2] * faces[:, 3]
     scores = faces[:, 14]
     sure = scores >= scores.max() - FACE_SCORE_MARGIN
     main = int(np.argmax(np.where(sure, areas, -1.0)))
+    if forced is not None and 0 <= int(forced) < len(faces):
+        main = int(forced)
     f = detector.refine(rgb, faces[main])
     return {
         "eye": (f[4:6] + f[6:8]) / 2,
@@ -193,11 +203,11 @@ def output_window(eye, scale):
     return eye[0] - w * 0.5, eye[1] - h * EYE_LINE, w, h
 
 
-def segment_region(rgb, segmenter, eye, scale):
+def segment_region(rgb, segmenter, eye, scale, zoom=1.0):
     """출력 영역 주변만 잘라 배경을 지운다. 사진 전체를 넣을 때보다 머리카락 경계가 훨씬 세밀하다"""
     img_h, img_w = rgb.shape[:2]
-    x0, y0, w, h = output_window(eye, scale * MAX_SHRINK)   # 최대로 줄였을 때의 창까지 덮는다
-    pad = 0.2   # 몸통 쪽으로 가로를 옮겨도(MAX_BODY_SHIFT) 누끼 영역 안에 들도록 넉넉히 잡는다
+    x0, y0, w, h = output_window(eye, scale * MAX_SHRINK * min(1.0, zoom))   # 최대로 줄였을 때의 창까지 덮는다
+    pad = 0.25  # 몸통 쪽 · 사진별 이동으로 창을 옮겨도 누끼 영역 안에 들도록 넉넉히 잡는다
     rx0, ry0 = max(0, int(x0 - w * pad)), max(0, int(y0 - h * pad))
     rx1 = min(img_w, int(np.ceil(x0 + w * (1 + pad))))
     ry1 = min(img_h, int(np.ceil(y0 + h * (1 + pad))))
@@ -334,7 +344,46 @@ def review_flags(key, face, scale, margin, cuts, bottom_fill):
     return flags
 
 
-def process(path, key, detector, segmenter):
+def load_adjust():
+    """photo_adjust.json → {키: {"zoom", "down", "right"}}. 밑줄로 시작하는 키는 설명이라 건너뛴다"""
+    path = os.path.join(ROOT, ADJUST_FILE)
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    return {k: v for k, v in data.items() if not k.startswith("_")}
+
+
+def bottom_cut(alpha, region_origin, image_size, eye, scale, down):
+    """원본이 끝나는 선이 출력에서 어느 높이에 오나 (0~1). 원본 아래 끝이 아니거나 선수가 걸쳐 있지 않으면 None"""
+    rx0, ry0 = region_origin
+    rh = alpha.shape[0]
+    if ry0 + rh != image_size[1]:
+        return None
+    bottom_row = alpha[rh - 1]
+    if np.count_nonzero(bottom_row > 127) <= bottom_row.size * 0.02:
+        return None
+    return (EYE_LINE + down) + (rh - eye[1]) * scale / OUT_H
+
+
+def hide_bottom_cut(cut, top, eye, scale, down):
+    """끊긴 선이 이름 띠 위로 보이면 먼저 내리고(AUTO_DOWN_MAX 까지) 그래도 모자라면 키운다. (배율, 내림)"""
+    if cut is None or cut >= CUT_HIDE_LINE:
+        return scale, down
+    eye_line = EYE_LINE + down
+    below = cut - eye_line                       # 눈에서 끊긴 선까지 (출력 높이 비율)
+    move = min(AUTO_DOWN_MAX, (CUT_HIDE_LINE - cut) * 0.5)
+    zoom = (CUT_HIDE_LINE - (eye_line + move)) / max(below, 1e-6)
+    zoom = float(np.clip(zoom, 1.0, AUTO_ZOOM_MAX))
+    head = (eye[1] - top) * scale / OUT_H       # 눈에서 머리끝까지
+    #키운 머리가 위로 넘치면 그만큼 더 내린다
+    overflow = AUTO_HEAD_ROOM - ((eye_line + move) - head * zoom)
+    if overflow > 0:
+        move += overflow
+    return scale * zoom, down + move
+
+
+def process(path, key, detector, segmenter, adjust=None):
     """사진 1장 → (768x960 RGBA 또는 None, 검수 기록)"""
     rgb = load_rgb(path)
     img_h, img_w = rgb.shape[:2]
@@ -344,11 +393,15 @@ def process(path, key, detector, segmenter):
     if faces is None:
         entry["error"] = "얼굴을 찾지 못함 (뒷모습·가려진 얼굴은 다른 사진으로 교체)"
         return None, entry
-    face = pick_face(faces, detector, rgb)
+    adjust = adjust or {}
+    face = pick_face(faces, detector, rgb, adjust.get("face"))
     scale = FACE_RATIO * OUT_H / face["size"]
     entry["face_px"] = round(face["size"], 1)
+    zoom = float(adjust.get("zoom", 1.0))
+    down = float(adjust.get("down", 0.0))
+    right = float(adjust.get("right", 0.0))
 
-    rx0, ry0, region, alpha = segment_region(rgb, segmenter, face["eye"], scale)
+    rx0, ry0, region, alpha = segment_region(rgb, segmenter, face["eye"], scale, zoom)
     eye = face["eye"] - (rx0, ry0)
     alpha = keep_subject(alpha, eye, face["width"])
 
@@ -359,12 +412,25 @@ def process(path, key, detector, segmenter):
     if head_span > room:
         scale *= max(MAX_SHRINK, room / head_span)
 
+    #사진별 손보기 → 끊긴 선 숨기기. 확대 · 축소는 눈을 축으로 한다
+    scale *= zoom
+    cut = bottom_cut(alpha, (rx0, ry0), (img_w, img_h), eye, scale, down)
+    auto_scale, auto_down = hide_bottom_cut(cut, top, eye, scale, down)
+    if (auto_scale, auto_down) != (scale, down):
+        entry["auto_cut_fix"] = {"zoom": round(auto_scale / scale, 3), "down": round(auto_down - down, 3)}
+    scale, down = auto_scale, auto_down
+    if adjust:
+        entry["adjust"] = adjust
+
     window = output_window(eye, scale)
-    shift = body_shift(alpha, eye, window) - PHOTO_NUDGE_X.get(key, 0.0)
-    window = (window[0] + shift * window[2],) + window[1:]
+    shift = body_shift(alpha, eye, window) - right
+    window = (window[0] + shift * window[2], window[1] - down * window[3], window[2], window[3])
     x0, y0 = window[0], window[1]
     rgb_out = warp(region, x0, y0, scale, cv2.BORDER_REPLICATE)
     alpha_out = warp(alpha, x0, y0, scale, cv2.BORDER_CONSTANT)
+    #선수에 붙어 남은 다른 사람 팔 · 워터마크는 "erase" 칸([x0, y0, x1, y1], 출력 비율)으로 지운다
+    for ex0, ey0, ex1, ey1 in adjust.get("erase", []):
+        alpha_out[int(ey0 * OUT_H):int(ey1 * OUT_H), int(ex0 * OUT_W):int(ex1 * OUT_W)] = 0
     rgb_out = decontaminate(rgb_out, alpha_out)
 
     margin = (top - y0) * scale / OUT_H
@@ -525,6 +591,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="선수 사진 배경 제거 + 얼굴 정렬 (768x960)")
     parser.add_argument("--force", action="store_true", help="이미 만든 사진도 다시 만든다")
     parser.add_argument("--only", nargs="+", metavar="KEY", help="지정한 photo 키만 다시 만든다")
+    parser.add_argument("--adjusted", action="store_true", help=f"{ADJUST_FILE} 에 있는 사진만 다시 만든다")
     parser.add_argument("--install", action="store_true",
                         help="끝난 뒤 Unity Assets/Resources/Photos(+Thumb)로 복사한다")
     parser.add_argument("--model", default="birefnet-portrait", help="rembg 모델 (기본 birefnet-portrait)")
@@ -554,6 +621,12 @@ def main():
         sys.exit(f"[중단] {args.input} 에 사진이 없습니다")
 
     report = {k: v for k, v in load_report(args.output).items() if k in sources}
+    adjusts = load_adjust()
+    unknown = sorted(k for k in adjusts if k not in sources)
+    if unknown:
+        print(f"[경고] {ADJUST_FILE} 에 원본이 없는 키: {', '.join(unknown)}")
+    if args.adjusted:
+        args.only = [k for k in adjusts if k in sources]
     todo = []
     for key, name in sources.items():
         src = os.path.join(args.input, name)
@@ -574,7 +647,8 @@ def main():
         for i, key in enumerate(todo, 1):
             t = time.time()
             try:
-                image, entry = process(os.path.join(args.input, sources[key]), key, detector, segmenter)
+                image, entry = process(os.path.join(args.input, sources[key]), key, detector, segmenter,
+                                       adjusts.get(key))
             except Exception as error:   # 한 장이 깨져도 나머지는 계속 돈다
                 image, entry = None, {"error": f"처리 오류: {error}"}
             if image is not None:

@@ -19,6 +19,7 @@ PROJECT = os.path.dirname(ROOT)
 CSV_FILES = [os.path.join(PROJECT, "Assets", "Resources", "Data", name) for name in ("HitterCards.csv", "PitcherCards.csv")]
 INPUT_DIR = os.path.join(ROOT, "input")
 REPORT = os.path.join(ROOT, "output", "_report.json")
+ADJUST = os.path.join(ROOT, "photo_adjust.json")
 OUT = os.path.join(ROOT, "사진_수집_목록.md")
 EXTS = (".jpg", ".jpeg", ".png", ".webp", ".bmp")
 TEAMS = ["기아", "삼성", "LG", "한화", "두산", "SSG", "KT", "NC", "키움", "롯데"]
@@ -97,6 +98,15 @@ def recollect_keys():
     return failed, severe
 
 
+def review_recollect():
+    """검수에서 다시 구하라고 한 사진 (photo_adjust.json 의 recollect)"""
+    if not os.path.exists(ADJUST):
+        return {}
+    with open(ADJUST, encoding="utf-8") as f:
+        data = json.load(f)
+    return {k: v["recollect"] for k, v in data.items() if isinstance(v, dict) and v.get("recollect")}
+
+
 def team_sections(keys_by_team, title, note):
     lines = [f"## {title}", "", note, ""]
     for team in TEAMS + sorted(set(keys_by_team) - set(TEAMS)):
@@ -130,6 +140,11 @@ def main():
     lines.append(f"| **합계** | {sum(total.values())} | {sum(total.values()) - sum(left.values())} | **{sum(left.values())}** |")
     lines += ["", "---", ""]
 
+    picked = review_recollect()
+    if picked:
+        lines += ["## 0-0. 다시 구해야 할 사진 — 검수에서 걸림", "",
+                  "작성자 검수에서 바꾸기로 한 사진. 같은 이름으로 덮어쓴 뒤 photo_adjust.json 의 recollect 를 지운다.", ""]
+        lines += [f"- {key} — {why}" for key, why in sorted(picked.items())] + [""]
     if failed:
         lines += ["## 0-1. 다시 구해야 할 사진 — 실패 (게임에 안 들어감)", "",
                   "파일은 있지만 처리에 실패했다. 다른 사진으로 같은 이름에 덮어쓴다.", ""]
