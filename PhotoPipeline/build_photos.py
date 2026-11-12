@@ -60,9 +60,12 @@ CUT_HIDE_LINE = 0.88
 AUTO_DOWN_MAX = 0.06     # 끊긴 선을 숨길 때 먼저 내리는 한계 (출력 높이 비율). 나머지는 확대로
 AUTO_ZOOM_MAX = 1.6      # 끊긴 선을 숨길 때 키우는 한계 (얼굴 기준 배율 대비)
 AUTO_HEAD_ROOM = 0.02    # 키우다 머리가 위로 넘치지 않게 남기는 여백
-#사진별 손보기 — {"키": {"zoom": 1.1, "down": 0.04, "right": -0.02, "face": 3, "erase": [[x0, y0, x1, y1]]}}.
-#zoom 은 배율, down · right 는 출력 높이 · 폭 비율, face 는 주인공 얼굴 검출 순번, erase 는 지울 칸(출력 비율)
+#사진별 손보기 — {"키": {"zoom": 1.1, "down": 0.04, "right": -0.02, "face": 3, "erase": [[x0, y0, x1, y1]], "bat": true}}.
+#zoom 은 배율, down · right 는 출력 높이 · 폭 비율, face 는 주인공 얼굴 검출 순번, erase 는 지울 칸(출력 비율),
+#bat 은 인물 모델이 지운 배트를 사물 모델 누끼로 되살린다
 ADJUST_FILE = "photo_adjust.json"
+#인물 모델(birefnet-portrait)은 손에 든 배트를 배경으로 지운다. "bat" 사진만 이 모델 누끼를 겹친다
+OBJECT_MODEL = "isnet-general-use"
 
 # --- 검수 경고 기준 ---
 UPSCALE_WARN = 1.3       # 원본을 이 배율 넘게 키우면 흐려지기 시작한다
@@ -164,11 +167,22 @@ class Segmenter:
 
     def __init__(self, model):
         from rembg import new_session, remove
+        self._new_session = new_session
         self._remove = remove
         self._session = new_session(model)
+        self._object_session = None
 
     def alpha(self, rgb):
-        mask = self._remove(Image.fromarray(rgb), session=self._session, only_mask=True)
+        return self._mask(rgb, self._session)
+
+    def object_alpha(self, rgb):
+        """사물 모델 누끼 — 배트처럼 인물 모델이 지우는 장비용. 처음 쓸 때 모델을 연다"""
+        if self._object_session is None:
+            self._object_session = self._new_session(OBJECT_MODEL)
+        return self._mask(rgb, self._object_session)
+
+    def _mask(self, rgb, session):
+        mask = self._remove(Image.fromarray(rgb), session=session, only_mask=True)
         return np.asarray(mask, dtype=np.uint8)
 
 
@@ -402,6 +416,8 @@ def process(path, key, detector, segmenter, adjust=None):
     right = float(adjust.get("right", 0.0))
 
     rx0, ry0, region, alpha = segment_region(rgb, segmenter, face["eye"], scale, zoom)
+    if adjust.get("bat"):
+        alpha = np.maximum(alpha, segmenter.object_alpha(region))
     eye = face["eye"] - (rx0, ry0)
     alpha = keep_subject(alpha, eye, face["width"])
 
