@@ -86,7 +86,7 @@ Shader "BaseBallManager/UI/CardPhotoBack"
                 half alpha = shadow + glow * (1 - shadow);
                 half3 rgb = (_ShadowColor.rgb * shadow + _GlowColor.rgb * glow * (1 - shadow)) / max(alpha, 0.0001);
 
-                half4 color = half4(rgb, alpha * i.color.a * CardClip(i.mask));
+                half4 color = half4(rgb, alpha * i.color.a * CardClip(i.mask) * CardShapeAlpha(i.texcoord));
                 color.rgb *= color.a;
                 return color;
             }

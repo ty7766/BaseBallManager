@@ -58,6 +58,20 @@ CardV2F CardVert(CardAppData v)
     return o;
 }
 
+// 카드 모양 — 오른쪽 위 · 왼쪽 아래만 사선으로 깎는다 (Design/ui_assets/card_shape.py 와 같은 비율)
+#define CARD_CHAMFER 0.0515   // 사선 다리 길이 ÷ 카드 폭 (72 / 1398)
+#define CARD_ASPECT 1.39986   // 카드 높이 ÷ 폭 (1957 / 1398)
+
+// 카드 uv((0,0) = 왼쪽 아래)가 카드 모양 안이면 1, 깎인 귀퉁이면 0. 경계는 한 픽셀 부드럽게
+half CardShapeAlpha(float2 cardUv)
+{
+    float2 p = float2(cardUv.x, cardUv.y * CARD_ASPECT);
+    float bottomLeft = p.x + p.y - CARD_CHAMFER;
+    float topRight = (1.0 - p.x) + (CARD_ASPECT - p.y) - CARD_CHAMFER;
+    float edge = min(bottomLeft, topRight);
+    return saturate(edge / max(fwidth(edge), 1e-5) + 0.5);
+}
+
 // RectMask2D 밖은 지운다 (스크롤 목록 안의 카드)
 half CardClip(float4 mask)
 {

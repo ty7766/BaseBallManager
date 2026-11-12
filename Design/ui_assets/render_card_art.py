@@ -16,6 +16,7 @@
       card_ov_goldenglove.png           골글 베이스 위 월계수 · 가장자리 그늘 (사진 뒤)
       badge_enhance_{bronze,silver,gold,holo}.png      강화 육각 메달 (숫자는 TMP)
       card_star_{back,fill}.png         카드 별. back = 흰 테두리 + 그림자, fill = 등급색 틴트
+    카드 전체를 덮는 그림은 렌더 뒤 card_shape.py 로 오른쪽 위 · 왼쪽 아래를 사선으로 깎는다
 """
 import math
 import random
@@ -26,6 +27,8 @@ import time
 from pathlib import Path
 
 from PIL import Image
+
+import card_shape
 
 W, H = 1398, 1957
 ROOT = Path(__file__).resolve().parents[2]
@@ -359,6 +362,10 @@ def main():
     print(f"카드 아트 {len(todo)}장 → {OUT}")
     for name, body, size, opaque in todo:
         render(name, body, size, opaque)
+
+        #카드 전체를 덮는 그림은 카드 모양(오른쪽 위 · 왼쪽 아래 사선)으로 깎는다
+        if name in card_shape.FULL_CARD_ART:
+            card_shape.apply(OUT / f"{name}.png")
 
 
 if __name__ == "__main__":
