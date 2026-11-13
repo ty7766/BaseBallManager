@@ -16,18 +16,14 @@ public class TeamSelectScreen : UiScreenBehaviour
     private const float ColumnGap = 40f;
     private const float RowGap = 14f;
     private const float GridTop = 200f;
-    private const float EmblemSize = 180f;
-    private const float EmblemTop = 24f;
-    private const float LabelTop = 212f;
-    private const float LabelHeight = 48f;
-
-    private Action<string> _onConfirm;
-    [SerializeField] private List<Button> _teamButtons = new List<Button>(10);
-    [SerializeField] private List<TeamEmblemView> _teamEmblems = new List<TeamEmblemView>(10);
-    private List<string> _teamNames = new List<string>(10);
+    private const float LabelFontSize = 52f;
 
     [SerializeField] private TextMeshProUGUI _selectionText;
     [SerializeField] private Button _confirmButton;
+
+    private Action<string> _onConfirm;
+    private readonly List<TeamSelectButtonView> _teamButtons = new List<TeamSelectButtonView>(10);
+    private readonly List<string> _teamNames = new List<string>(10);
     private string _selectedTeamName;
 
     /// <summary>
@@ -54,15 +50,14 @@ public class TeamSelectScreen : UiScreenBehaviour
         _selectedTeamName = null;
 
         for (int i = 0; i < _teamButtons.Count; i++)
-            _teamButtons[i].gameObject.SetActive(false);
+            _teamButtons[i].SetVisible(false);
 
         for (int i = 0; i < _teamNames.Count; i++)
         {
-            Button button = EnsureButton(i);
+            TeamSelectButtonView button = EnsureButton(i);
 
-            button.gameObject.SetActive(true);
-            button.transform.Find("TeamLabel").GetComponent<TextMeshProUGUI>().text = _teamNames[i];
-            _teamEmblems[i].SetTeam(_teamNames[i]);
+            button.SetVisible(true);
+            button.SetTeam(_teamNames[i]);
         }
 
         RefreshSelection();
@@ -104,7 +99,7 @@ public class TeamSelectScreen : UiScreenBehaviour
     }
 
     //팀 버튼은 목록 길이에 맞춰 필요한 만큼만 만든다
-    private Button EnsureButton(int index)
+    private TeamSelectButtonView EnsureButton(int index)
     {
         while (_teamButtons.Count <= index)
         {
@@ -115,26 +110,15 @@ public class TeamSelectScreen : UiScreenBehaviour
             float gridWidth = ColumnCount * ButtonWidth + (ColumnCount - 1) * ColumnGap;
             float gridLeft = (UiBuilder.DesignSize.x - gridWidth) * 0.5f;
 
-            Button button = UiBuilder.CreateButton(Root, "TeamButton", string.Empty, 42f, false,
-                () => OnTeamClicked(teamIndex), out TextMeshProUGUI label);
+            TeamSelectButtonView button = TeamSelectButtonView.Create(Root, ButtonHeight, LabelFontSize,
+                () => OnTeamClicked(teamIndex));
 
-            UiBuilder.Place(button.GetComponent<RectTransform>(),
+            UiBuilder.Place(button.Root,
                 gridLeft + column * (ButtonWidth + ColumnGap),
                 GridTop + row * (ButtonHeight + RowGap),
                 ButtonWidth, ButtonHeight);
 
-            label.name = "TeamLabel";
-
-            //로고를 칸 가운데 크게 두고 팀 이름은 바로 아래에 둔다
-            UiBuilder.Place(label.rectTransform, 0f, LabelTop, ButtonWidth, LabelHeight);
-
-            TeamEmblemView emblem = TeamEmblemView.Bake(button.transform, EmblemSize);
-
-            UiBuilder.Place(emblem.Root, (ButtonWidth - EmblemSize) * 0.5f, EmblemTop,
-                EmblemSize, EmblemSize);
-
             _teamButtons.Add(button);
-            _teamEmblems.Add(emblem);
         }
 
         return _teamButtons[index];
@@ -152,18 +136,7 @@ public class TeamSelectScreen : UiScreenBehaviour
     private void RefreshSelection()
     {
         for (int i = 0; i < _teamNames.Count && i < _teamButtons.Count; i++)
-        {
-            bool selected = _teamNames[i] == _selectedTeamName;
-            Image background = _teamButtons[i].GetComponent<Image>();
-
-            background.color = selected ? UiPalette.ButtonPrimary : UiPalette.BgRow;
-            background.sprite = UiSprites.Get(selected ? UiSprites.ButtonPrimary : UiSprites.ButtonNormal);
-
-            TextMeshProUGUI label = _teamButtons[i].transform.Find("TeamLabel")
-                .GetComponent<TextMeshProUGUI>();
-
-            label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text1;
-        }
+            _teamButtons[i].SetSelected(_teamNames[i] == _selectedTeamName);
 
         bool hasSelection = !string.IsNullOrEmpty(_selectedTeamName);
 

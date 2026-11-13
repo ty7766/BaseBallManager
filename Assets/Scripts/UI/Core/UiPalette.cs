@@ -59,6 +59,9 @@ public static class UiPalette
         Hex("#041E42")  //롯데
     };
 
+    //어두운 바탕 위 팀 색의 최소 밝기 (HSV 의 V)
+    private const float TeamColorOnDarkMinValue = 0.6f;
+
     private static readonly string[] TeamOrder =
     {
         "기아", "삼성", "LG", "한화", "두산", "SSG", "KT", "NC", "키움", "롯데"
@@ -76,6 +79,16 @@ public static class UiPalette
         }
 
         return BgPanel;
+    }
+
+    /// <summary>
+    /// 어두운 바탕에 깔 팀 색. 남색 · 검정처럼 바탕에 묻히는 색은 색상은 두고 밝기만 올린다
+    /// </summary>
+    public static Color GetTeamColorOnDark(string teamName)
+    {
+        Color.RGBToHSV(GetTeamColor(teamName), out float hue, out float saturation, out float value);
+
+        return Color.HSVToRGB(hue, saturation, Mathf.Max(value, TeamColorOnDarkMinValue));
     }
 
     /// <summary>

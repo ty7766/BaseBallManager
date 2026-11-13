@@ -553,6 +553,25 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 
 ⏭️ 다음: `feature/card-design` → `develop` PR (텍스트만 작성). 골든글러브 사진은 작성자가 모으면 같은 방식으로
 
+✅ PR #21 머지 (11-13) · 브랜치 정리
+
+### 2-0-S. 🏟️ 팀 선택 버튼 — 팀 색 그라데이션 · 엠블럼 (세션 64 · 11-13, `feature/ui-team-select`)
+
+| 부분 | 한 것 |
+|---|---|
+| 위젯 | `TeamSelectButtonView` 신규 — 버튼 모양 Mask 안에 팀 색 그라데이션(왼쪽 → 오른쪽 끝 투명) + 엠블럼(높이 94%, 너비의 56% 만 버튼 안). 팀 이름은 오른쪽 가운데. 선택 = 흰 테두리 + 엠블럼 진하게 |
+| 팀 색 | `UiPalette.GetTeamColorOnDark` — 남색 · 검정 팀 색은 색상은 두고 밝기(V)를 0.6 까지 올린다. 원래 `GetTeamColor` 는 그대로 |
+| 그라데이션 | `BaseBallManager/UI/GradientDither` — 텍스처 없이 픽셀마다 계산 + 화면 픽셀 디더링(sRGB ±0.75 단계). 다른 바탕에 쓰면 머티리얼 `_Backdrop` 을 그 바탕색으로 |
+| 엠블럼 | 작성자 원본(SVG 7 · PNG 3) → `Design/ui_assets/render_team_emblems.py` 가 Edge 로 구워 `Resources/UI/Emblems/emblem_<팀>.png`. LG 흰 바탕 · SSG 바둑판 바탕 제거. `TeamEmblemImporter` 가 Single 스프라이트로 고정. 원본 · 결과 모두 `.gitignore` |
+
+- 🔴 **Linear 색 공간이라 반투명 UI 가 감마 시안보다 훨씬 진하게 섞인다** (알파 0.22 가 0.5 처럼 보임). 반투명 수치는 시안이 아니라 Unity 렌더를 보고 맞춘다
+- 🔴 흰색 저알파로 얹은 그림은 진한 색 위에서 묻혀 아래에 깔린 것처럼 보인다 — 어둡게 누른 색 + 높은 알파로 얹으면 어디서나 위로 뜬다
+- 🔴 8비트 화면에서 넓고 어두운 그라데이션은 세로 띠가 진다 — 텍스처 대신 `GradientDither`
+- 🔴 새 PNG 를 Resources 에 넣으면 Multiple 로 들어가 떨어진 조각마다 스프라이트가 나뉜다 (LG 는 TWINS 글자만 잡혔다) — 폴더별 AssetPostprocessor 로 Single 고정
+- LG 엠블럼 속 흰 채움은 시도 후 작성자 판단으로 되돌림
+
+⏭️ 다음: `feature/ui-team-select` → `develop` PR (텍스트만 작성)
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.
