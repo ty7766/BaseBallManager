@@ -16,6 +16,7 @@
     Assets/Resources/UI/Common/check_circle.png     선택 표시 — 채움 없이 굵은 흰 선 원 + 체크 (강화 재료) 96 → 2배
     Assets/Resources/UI/Common/icon_minus.png       빼기 막대 (Image 색으로 틴트) 48 → 2배
     Assets/Resources/UI/Common/icon_plus.png        더하기 (빈 카드 자리 가운데, Image 색으로 틴트) 48 → 2배
+    Assets/Resources/UI/Common/gradient_h.png       왼쪽 불투명 → 오른쪽 투명 흰 띠 (팀 색 물들이기, Image 색으로 틴트) 128×8 → 2배
 """
 import subprocess
 import tempfile
@@ -33,6 +34,7 @@ SIZE = 48
 SCALE = 2
 RADIUS = 16              # 둥근 모서리 반지름 (화면 단위)
 BORDER_PX = 36           # 9-슬라이스 테두리 (내보낸 PNG 픽셀). 둥근 모서리를 다 담는다 = 화면 18
+LINEAR_GAMMA = 2.2       # Linear 색 공간 블렌딩 보정 (gradient_h)
 
 
 def corner_path(inset, radius):
@@ -96,6 +98,16 @@ def icon_plus():
             '<rect x="21" y="8" width="6" height="32" rx="3" fill="#FFFFFF"/>')
 
 
+def gradient_h():
+    """가로 흰 띠. 왼쪽 끝은 진하게 두고 빠르게 옅어진 뒤, 끝이 선으로 보이지 않게 길게 사라진다.
+    프로젝트가 Linear 색 공간이라 반투명이 감마 시안보다 진하게 섞인다 — 눈에 보이는 농도 ^2.2 를 알파로 굽는다"""
+    seen = [(0, 1.0), (15, 0.74), (40, 0.42), (70, 0.16), (100, 0.0)]
+    stops = [(o, round(a ** LINEAR_GAMMA, 4)) for o, a in seen]
+    stop_tags = "".join(f'<stop offset="{o}%" stop-color="#FFFFFF" stop-opacity="{a}"/>' for o, a in stops)
+    return (f'<defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="0">{stop_tags}</linearGradient></defs>'
+            '<rect width="128" height="8" fill="url(#g)"/>')
+
+
 ICONS = {
     "icon_filter": (icon_filter(), 48, 48),
     "checkbox_off": (checkbox(False), 48, 48),
@@ -104,6 +116,7 @@ ICONS = {
     "check_circle": (check_circle(), 96, 96),
     "icon_minus": (icon_minus(), 48, 48),
     "icon_plus": (icon_plus(), 48, 48),
+    "gradient_h": (gradient_h(), 128, 8),
 }
 
 SPRITES = {
