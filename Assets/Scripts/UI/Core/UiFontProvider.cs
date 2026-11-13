@@ -2,8 +2,8 @@
 using UnityEngine;
 
 /// <summary>
-/// 한글 글리프를 가진 TMP 폰트 자산을 런타임에 만들어 캐시한다.
-/// 프로젝트에 한글 폰트 자산이 없어 OS 폰트에서 동적으로 뽑는다
+/// 본문(Pretendard) · 카드(이사만루) TMP 폰트 자산을 불러 캐시한다.
+/// 본문 자산이 없을 때만 OS 폰트에서 동적으로 뽑는다
 /// </summary>
 public static class UiFontProvider
 {

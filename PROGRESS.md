@@ -570,7 +570,16 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 - 🔴 새 PNG 를 Resources 에 넣으면 Multiple 로 들어가 떨어진 조각마다 스프라이트가 나뉜다 (LG 는 TWINS 글자만 잡혔다) — 폴더별 AssetPostprocessor 로 Single 고정
 - LG 엠블럼 속 흰 채움은 시도 후 작성자 판단으로 되돌림
 
-⏭️ 다음: `feature/ui-team-select` → `develop` PR (텍스트만 작성)
+✅ PR 없이 `develop` 에 직접 머지 (11-13, `16daca9`)
+
+### 2-0-T. 🔤 본문 폰트 Pretendard (세션 64 · 11-13, `feature/ui-font-pretendard`)
+
+- 본문 폰트가 Windows 맑은 고딕을 실행 중에 읽어 오는 방식(DynamicOS)이라 모바일에서는 한글이 네모로 나올 위험이 있었다 → **Pretendard Regular(SIL OFL) 파일을 게임에 넣는다**
+- `Resources/UI/Fonts/Pretendard/` 에 `Pretendard-Regular.ttf` + `LICENSE.txt` (공식 npm 패키지 v1.3.9). OFL 은 폰트를 배포할 때 라이선스를 함께 넣으라는 조건이라 원문을 같이 빌드에 넣는다
+- `UiFontAssetBuilder.RebuildBodyFont` (메뉴 "본문 폰트 자산 다시 만들기 (Pretendard)"): 설정(샘플 48 · 여백 9 · 1024 · SDFAA · 다중 아틀라스)은 그대로, 소스만 파일로
+- 🔴 프리팹 19개 · 543곳이 `UiKoreanFont` 자산과 머티리얼을 fileID 로 직접 가리킨다 — 자산을 지우고 새로 만들면 다 끊긴다. 같은 객체에 내용만 덮어쓴다 (`ReplaceKeepingReferences`)
+- UI 특수문자(`· × — ← → ▲ ▶ ▼ ◀`)는 Pretendard 에 다 있다. `⇄`(교체 화면)만 없는데 맑은 고딕에도 없던 글자다
+- ⏭️ README 크레딧에 "Pretendard — 길형진(orioncactus), SIL OFL 1.1" 도 적는다
 
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 

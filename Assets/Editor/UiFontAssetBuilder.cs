@@ -5,13 +5,19 @@ using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
 
 /// <summary>
-/// OS 한글 폰트에서 TMP 폰트 자산을 만들어 Resources에 저장한다.
+/// 본문(Pretendard) · 카드(이사만루) 폰트 파일에서 TMP 폰트 자산을 만들어 Resources에 저장한다.
 /// 프리팹에 폰트를 직렬화하려면 메모리상의 런타임 자산이 아니라 디스크 자산이 필요하다
 /// </summary>
 public static class UiFontAssetBuilder
 {
     private const string AssetFolder = "Assets/Resources/UI/Fonts";
     private const string AssetPath = AssetFolder + "/UiKoreanFont.asset";
+
+    //본문 폰트(Pretendard · SIL OFL). 파일을 게임에 넣어 모바일에서도 같은 글꼴이 나온다. 라이선스 원문을 옆에 둔다
+    private const string BodySourcePath = AssetFolder + "/Pretendard/Pretendard-Regular.ttf";
+    private const int BodySamplingSize = 48;
+    private const int BodyAtlasPadding = 9;
+    private const int BodyAtlasSize = 1024;
 
     //카드 폰트(이사만루 · 공게임즈). 출처 표기 조건이라 README 크레딧에 남긴다
     private const string CardFolder = AssetFolder + "/Card";
@@ -22,16 +28,33 @@ public static class UiFontAssetBuilder
     private const int CardAtlasPadding = 8;
     private const int CardAtlasSize = 1024;
 
-    private static readonly string[] CandidateFamilies =
-    {
-        "Pretendard", "Malgun Gothic", "맑은 고딕", "Gulim", "Batang", "Dotum"
-    };
-
     [MenuItem("Tools/BaseBallManager/UI 폰트 자산 만들기", false, 10)]
     public static void Build()
     {
         if (Ensure() == null)
             Debug.LogError("[UiFontAssetBuilder]: 한글 폰트 자산을 만들지 못했습니다");
+    }
+
+    /// <summary>
+    /// 본문 폰트 자산을 Pretendard 파일로 다시 만든다. 이미 있으면 자산 · 머티리얼 ID 를 그대로 두고 내용만 바꿔
+    /// 프리팹 글자들이 가리키는 참조를 살린다
+    /// </summary>
+    [MenuItem("Tools/BaseBallManager/본문 폰트 자산 다시 만들기 (Pretendard)", false, 10)]
+    public static void RebuildBodyFont()
+    {
+        TMP_FontAsset fresh = CreateBodyFont();
+
+        if (fresh == null)
+            return;
+
+        TMP_FontAsset existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetPath);
+
+        if (existing == null)
+            SaveNew(fresh, AssetPath);
+        else
+            ReplaceKeepingReferences(existing, fresh);
+
+        Debug.Log($"[UiFontAssetBuilder]: '{AssetPath}' 를 Pretendard 로 만들었습니다");
     }
 
     /// <summary>
@@ -88,20 +111,80 @@ public static class UiFontAssetBuilder
         if (existing != null)
             return existing;
 
-        TMP_FontAsset created = CreateFromOsFont();
+        TMP_FontAsset created = CreateBodyFont();
 
         if (created == null)
             return null;
 
-        Directory.CreateDirectory(AssetFolder);
-
-        AssetDatabase.CreateAsset(created, AssetPath);
-        AttachSubAssets(created);
-        AssetDatabase.SaveAssets();
+        SaveNew(created, AssetPath);
 
         Debug.Log($"[UiFontAssetBuilder]: '{AssetPath}' 를 만들었습니다");
 
         return AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(AssetPath);
+    }
+
+    //Pretendard 파일에서 동적 아틀라스 자산을 만든다. 글리프는 재생 중 필요한 만큼 채워진다
+    private static TMP_FontAsset CreateBodyFont()
+    {
+        Font source = AssetDatabase.LoadAssetAtPath<Font>(BodySourcePath);
+
+        if (source == null)
+        {
+            Debug.LogWarning($"[UiFontAssetBuilder]: '{BodySourcePath}' 에 Pretendard-Regular.ttf 를 넣고 다시 실행하세요");
+            return null;
+        }
+
+        TMP_FontAsset created = TMP_FontAsset.CreateFontAsset(source, BodySamplingSize, BodyAtlasPadding,
+            GlyphRenderMode.SDFAA, BodyAtlasSize, BodyAtlasSize, AtlasPopulationMode.Dynamic, true);
+
+        created.name = "UiKoreanFont";
+
+        return created;
+    }
+
+    //새 자산을 디스크에 쓰고 아틀라스 · 머티리얼을 서브 에셋으로 붙인다
+    private static void SaveNew(TMP_FontAsset fontAsset, string assetPath)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(assetPath));
+        AssetDatabase.CreateAsset(fontAsset, assetPath);
+        AttachSubAssets(fontAsset);
+        AssetDatabase.SaveAssets();
+    }
+
+    //프리팹이 자산(11400000)과 머티리얼을 fileID 로 가리킨다. 두 객체는 남기고 내용 · 아틀라스만 새것으로 바꾼다
+    private static void ReplaceKeepingReferences(TMP_FontAsset existing, TMP_FontAsset fresh)
+    {
+        Material keptMaterial = existing.material;
+
+        foreach (Object subAsset in AssetDatabase.LoadAllAssetRepresentationsAtPath(AssetPath))
+        {
+            if (subAsset is Texture2D)
+                Object.DestroyImmediate(subAsset, true);
+        }
+
+        fresh.name = existing.name;
+        EditorUtility.CopySerialized(fresh, existing);
+
+        Texture2D[] atlases = existing.atlasTextures;
+
+        for (int i = 0; i < atlases.Length; i++)
+        {
+            atlases[i].name = $"{existing.name} Atlas {i}";
+            AssetDatabase.AddObjectToAsset(atlases[i], existing);
+        }
+
+        EditorUtility.CopySerialized(fresh.material, keptMaterial);
+        keptMaterial.name = $"{existing.name} Material";
+        keptMaterial.mainTexture = atlases[0];
+        existing.material = keptMaterial;
+
+        SerializedObject serialized = new SerializedObject(existing);
+        serialized.FindProperty("m_ClearDynamicDataOnBuild").boolValue = true;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorUtility.SetDirty(keptMaterial);
+        EditorUtility.SetDirty(existing);
+        AssetDatabase.SaveAssets();
     }
 
     //동적 아틀라스에 쌓인 글리프를 지운다. 자산이 없으면 경고만 남긴다
@@ -143,23 +226,5 @@ public static class UiFontAssetBuilder
         fontAsset.material.name = $"{fontAsset.name} Material";
 
         AssetDatabase.AddObjectToAsset(fontAsset.material, fontAsset);
-    }
-
-    //후보 패밀리를 차례로 시도한다. 동적 OS 아틀라스라 글리프는 런타임에 채워진다
-    private static TMP_FontAsset CreateFromOsFont()
-    {
-        foreach (string family in CandidateFamilies)
-        {
-            TMP_FontAsset created = TMP_FontAsset.CreateFontAsset(family, "Regular", 48);
-
-            if (created == null)
-                continue;
-
-            created.name = "UiKoreanFont";
-
-            return created;
-        }
-
-        return null;
     }
 }
