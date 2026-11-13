@@ -33,17 +33,27 @@ public class TitleKeyArtView : UiWidgetBehaviour
     private const int SteadyFramesNeeded = 3;
     private const int MaxStartWaitFrames = 30;
 
-    //뒤 둘 → 가운데 둘 → 주인공 순서로 깔고 같은 순서로 들어온다 (키 · 가운데 x · 위 y · 높이 · 밝기 · 들어오는 쪽)
+    //선수 등장: 줄마다 이 간격으로 뒤 → 가운데 → 앞 → 주인공 순서
+    private const float PlayerEntryStart = 0.75f;
+    private const float WaveInterval = 0.17f;
+    private const int HeroWave = 3;
+
+    //10구단 대표 한 명씩. 뒤 넷 → 가운데 셋 → 앞 둘 → 주인공 순서로 깔고 같은 순서로 들어온다 (키 · 가운데 x · 위 y · 높이 · 밝기 · 들어오는 쪽)
     private static readonly PlayerSlot[] Slots =
     {
-        new PlayerSlot("페라자_한화", 150f, 300f, 820f, 0.42f, -1f, 0),
-        new PlayerSlot("김현수_KT", 935f, 280f, 820f, 0.42f, 1f, 0),
-        new PlayerSlot("오스틴_LG", 260f, 450f, 980f, 0.62f, -1f, 1),
-        new PlayerSlot("송성문_키움", 830f, 420f, 980f, 0.62f, 1f, 1),
-        new PlayerSlot("최지훈_SSG", 545f, 640f, 1180f, 1.04f, 0f, 2)
+        new PlayerSlot("노시환_한화", 150f, 250f, 700f, 0.40f, -1f, 0),
+        new PlayerSlot("구자욱_삼성", 395f, 230f, 700f, 0.40f, -1f, 0),
+        new PlayerSlot("박건우_NC", 685f, 230f, 700f, 0.40f, 1f, 0),
+        new PlayerSlot("안현민_KT", 930f, 250f, 700f, 0.40f, 1f, 0),
+        new PlayerSlot("오스틴_LG", 215f, 410f, 860f, 0.60f, -1f, 1),
+        new PlayerSlot("양의지_두산", 540f, 370f, 860f, 0.60f, 0f, 1),
+        new PlayerSlot("송성문_키움", 865f, 410f, 860f, 0.60f, 1f, 1),
+        new PlayerSlot("김도영_기아", 240f, 560f, 1020f, 0.82f, -1f, 2),
+        new PlayerSlot("전준우_롯데", 840f, 560f, 1020f, 0.82f, 1f, 2),
+        new PlayerSlot("최지훈_SSG", 545f, 660f, 1180f, 1.04f, 0f, HeroWave)
     };
 
-    private readonly List<PlayerLayer> _players = new List<PlayerLayer>(5);
+    private readonly List<PlayerLayer> _players = new List<PlayerLayer>(10);
     private readonly List<Material> _ownedMaterials = new List<Material>(3);
 
     private RectTransform _art;
@@ -115,7 +125,8 @@ public class TitleKeyArtView : UiWidgetBehaviour
         _sweepLoop = null;
     }
 
-    //층 순서: 바탕 → 큰 글자 → 붉은 붓질 → 검은 붓질 → 선수(뒤 · 가운데 · 주인공) → 아래 어둠 → 로고
+    //층 순서: 바탕 → 큰 글자 → 붉은 붓질 → 검은 붓질 → 선수(뒤 · 가운데 · 앞 · 주인공) → 아래 어둠 → 로고
+    //바탕만 화면을 꽉 채우고(넘치면 잘림), 나머지 1080x1920 무대는 위에 붙여 가로가 잘리지 않게 한다
     private void BuildLayers()
     {
         Image catcher = UiBuilder.CreateImage(Root, "SkipCatcher", UiPalette.WithAlpha(Color.black, 0f));
@@ -125,17 +136,22 @@ public class TitleKeyArtView : UiWidgetBehaviour
         skip.transition = Selectable.Transition.None;
         skip.onClick.AddListener(SkipIntro);
 
-        _art = UiBuilder.CreateRect(Root, "Art");
-        _art.anchorMin = _art.anchorMax = new Vector2(0.5f, 0.5f);
-        _art.sizeDelta = new Vector2(ArtWidth, ArtHeight);
-        AspectRatioFitter fitter = _art.gameObject.AddComponent<AspectRatioFitter>();
+        RectTransform backdrop = UiBuilder.CreateRect(Root, "Backdrop");
+        backdrop.anchorMin = backdrop.anchorMax = new Vector2(0.5f, 0.5f);
+        backdrop.sizeDelta = new Vector2(ArtWidth, ArtHeight);
+        AspectRatioFitter fitter = backdrop.gameObject.AddComponent<AspectRatioFitter>();
         fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
         fitter.aspectRatio = ArtWidth / ArtHeight;
 
-        _background = CreateFullLayer("Background", "title_bg", null);
-        _bigText = CreateFullLayer("BigText", "title_bigtext", null);
-        _redBrush = CreateFullLayer("RedBrush", "title_brush_red", CreateOwnedMaterial(WipeMaterialPath));
-        _blackBrush = CreateFullLayer("BlackBrush", "title_brush_black", CreateOwnedMaterial(WipeMaterialPath));
+        _art = UiBuilder.CreateRect(Root, "Art");
+        _art.anchorMin = _art.anchorMax = new Vector2(0.5f, 1f);
+        _art.pivot = new Vector2(0.5f, 1f);
+        _art.sizeDelta = new Vector2(ArtWidth, ArtHeight);
+
+        _background = CreateFullLayer(backdrop, "Background", "title_bg", null);
+        _bigText = CreateFullLayer(_art, "BigText", "title_bigtext", null);
+        _redBrush = CreateFullLayer(_art, "RedBrush", "title_brush_red", CreateOwnedMaterial(WipeMaterialPath));
+        _blackBrush = CreateFullLayer(_art, "BlackBrush", "title_brush_black", CreateOwnedMaterial(WipeMaterialPath));
         _photoFade = CreatePhotoFadeMaterial();
 
         foreach (PlayerSlot slot in Slots)
@@ -150,9 +166,9 @@ public class TitleKeyArtView : UiWidgetBehaviour
         CreateLogo();
     }
 
-    private RawImage CreateFullLayer(string name, string textureName, Material material)
+    private static RawImage CreateFullLayer(RectTransform parent, string name, string textureName, Material material)
     {
-        RectTransform rect = UiBuilder.CreateRect(_art, name);
+        RectTransform rect = UiBuilder.CreateRect(parent, name);
         RawImage image = rect.gameObject.AddComponent<RawImage>();
 
         image.texture = Resources.Load<Texture2D>(ArtRoot + textureName);
@@ -299,12 +315,14 @@ public class TitleKeyArtView : UiWidgetBehaviour
         sequence.Insert(0.65f, WipeTween(_blackBrush, 0.4f));
 
         foreach (PlayerLayer player in _players)
-            InsertPlayerEntrance(sequence, player, 0.75f + player.Slot.Wave * 0.22f);
+            InsertPlayerEntrance(sequence, player, PlayerEntryStart + player.Slot.Wave * WaveInterval);
 
-        sequence.Insert(1.3f, _art.DOShakeAnchorPos(0.3f, 14f, 18, 90f, false, true));
-        sequence.Insert(1.55f, _logo.DOFade(1f, 0.15f));
-        sequence.Insert(1.55f, _logo.rectTransform.DOScale(1f, 0.38f).SetEase(Ease.OutBack, 2.2f));
-        sequence.Insert(1.95f, SweepTween());
+        float heroAt = PlayerEntryStart + HeroWave * WaveInterval;
+
+        sequence.Insert(heroAt + 0.11f, _art.DOShakeAnchorPos(0.3f, 14f, 18, 90f, false, true));
+        sequence.Insert(heroAt + 0.36f, _logo.DOFade(1f, 0.15f));
+        sequence.Insert(heroAt + 0.36f, _logo.rectTransform.DOScale(1f, 0.38f).SetEase(Ease.OutBack, 2.2f));
+        sequence.Insert(heroAt + 0.76f, SweepTween());
 
         return sequence;
     }
@@ -327,19 +345,19 @@ public class TitleKeyArtView : UiWidgetBehaviour
         {
             player.Group.alpha = 0f;
             player.Root.anchoredPosition = player.Home + player.EntryOffset;
-            player.Root.localScale = Vector3.one * (player.Slot.Wave == 2 ? 1.06f : 1f);
+            player.Root.localScale = Vector3.one * (player.Slot.IsHero ? 1.06f : 1f);
             SetAlpha(player.Flash, 0f);
         }
     }
 
     private void InsertPlayerEntrance(Sequence sequence, PlayerLayer player, float at)
     {
-        float duration = player.Slot.Wave == 2 ? 0.5f : 0.45f;
+        float duration = player.Slot.IsHero ? 0.5f : 0.45f;
 
         sequence.Insert(at, player.Group.DOFade(1f, duration * 0.6f));
         sequence.Insert(at, player.Root.DOAnchorPos(player.Home, duration).SetEase(Ease.OutCubic));
         sequence.Insert(at, player.Root.DOScale(1f, duration).SetEase(Ease.OutCubic));
-        sequence.Insert(at + duration * 0.3f, player.Flash.DOFade(player.Slot.Wave == 2 ? 0.45f : 0.28f, 0.05f));
+        sequence.Insert(at + duration * 0.3f, player.Flash.DOFade(player.Slot.IsHero ? 0.45f : 0.28f, 0.05f));
         sequence.Insert(at + duration * 0.3f + 0.05f, player.Flash.DOFade(0f, 0.22f));
     }
 
@@ -409,7 +427,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
             layer.material.SetFloat("_Progress", progress);
     }
 
-    //선수 한 명의 배치 정보. Wave 가 같으면 함께 들어온다 (0 뒤 · 1 가운데 · 2 주인공)
+    //선수 한 명의 배치 정보. Wave 가 같으면 함께 들어온다 (0 뒤 · 1 가운데 · 2 앞 · 3 주인공)
     private readonly struct PlayerSlot
     {
         public readonly string PhotoKey;
@@ -419,6 +437,8 @@ public class TitleKeyArtView : UiWidgetBehaviour
         public readonly float Tone;
         public readonly float EntrySide;
         public readonly int Wave;
+
+        public bool IsHero => Wave == HeroWave;
 
         public PlayerSlot(string photoKey, float centerX, float top, float height, float tone, float entrySide, int wave)
         {
@@ -449,7 +469,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
             Group = group;
             Flash = flash;
             Home = home;
-            EntryOffset = slot.Wave == 2 ? new Vector2(0f, -120f) : new Vector2(slot.EntrySide * 160f, 0f);
+            EntryOffset = slot.EntrySide == 0f ? new Vector2(0f, -120f) : new Vector2(slot.EntrySide * 160f, 0f);
         }
     }
 }
