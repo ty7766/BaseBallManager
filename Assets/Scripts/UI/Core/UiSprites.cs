@@ -46,7 +46,6 @@ public static class UiSprites
     public const string CardFrame = "Card/card_frame";
     public const string Spinner = "Common/spinner_00";
     public const string ScrollHandle = "Common/scroll_handle";
-    public const string GradientHorizontal = "Common/gradient_h";
 
     private const string ResourceRoot = "UI/";
 

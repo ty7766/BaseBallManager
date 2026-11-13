@@ -9,12 +9,13 @@ using UnityEngine.UI;
 public class TeamSelectButtonView : UiWidgetBehaviour
 {
     private const string EmblemResourcePrefix = "Emblems/emblem_";
+    //셰이더가 그라데이션을 픽셀마다 계산하고 디더링한다. 텍스처로 깔면 어두운 꼬리에 세로 띠가 진다
+    private const string GradientMaterialPath = "UI/Materials/GradientDither";
     //엠블럼 너비 중 버튼 안으로 들어오는 비율. 반보다 살짝 더 들어온다
     private const float EmblemVisibleRatio = 0.56f;
     private const float EmblemHeightRatio = 0.94f;
     //가로로 긴 엠블럼은 이 가로세로비까지만 넓히고 높이를 줄인다
     private const float EmblemMaxAspect = 1.45f;
-    private const float TintWidthRatio = 1f;
     private const float TintAlpha = 0.55f;
     private const float LabelRightPadding = 34f;
 
@@ -38,7 +39,7 @@ public class TeamSelectButtonView : UiWidgetBehaviour
         Image shape = CreateButtonShapeMask(view.Root);
 
         view._height = height;
-        view._tint = CreateLeftTint(shape.rectTransform);
+        view._tint = CreateGradientTint(shape.rectTransform);
         view._emblem = UiBuilder.CreateImage(shape.rectTransform, "TeamEmblem", EmblemTint);
 
         view._frame = UiBuilder.CreateImage(view.Root, "Frame", UiPalette.BgRow, UiSprites.ButtonNormal, Image.Type.Sliced);
@@ -97,16 +98,13 @@ public class TeamSelectButtonView : UiWidgetBehaviour
         return shape;
     }
 
-    //왼쪽 끝 불투명 → 칸의 TintWidthRatio 지점에서 투명. 색은 SetTeam 이 칠한다
-    private static Image CreateLeftTint(RectTransform shape)
+    //왼쪽 끝 진하게 → 오른쪽 끝 투명. 색은 SetTeam 이 칠한다 (스프라이트 없이 칸 전체 uv 0~1)
+    private static Image CreateGradientTint(RectTransform shape)
     {
-        Image tint = UiBuilder.CreateImage(shape, "TeamTint", Color.white, UiSprites.GradientHorizontal);
-        RectTransform rect = tint.rectTransform;
+        Image tint = UiBuilder.CreateImage(shape, "TeamTint", Color.white);
 
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = new Vector2(TintWidthRatio, 1f);
-        rect.offsetMin = Vector2.zero;
-        rect.offsetMax = Vector2.zero;
+        tint.material = Resources.Load<Material>(GradientMaterialPath);
+        UiBuilder.Stretch(tint.rectTransform, 0f, 0f, 0f, 0f);
 
         return tint;
     }
