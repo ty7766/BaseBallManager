@@ -49,10 +49,6 @@ BACKDROP = {
     "LgTwins": "white",
     "SsgLanders": "translucent",
 }
-#바탕을 지우면 속이 비는 엠블럼 — 속을 이 색으로 채운 뒤 원래 그림을 얹는다 (LG 는 아치 안이 비어 글자만 남는다)
-FILL_INSIDE = {
-    "LgTwins": (255, 255, 255),
-}
 BACKDROP_LIGHT = 232     # 이보다 밝고
 BACKDROP_GRAY = 14       # 채널 차이가 이보다 작으면 바탕색 후보
 BACKDROP_ALPHA = 235     # translucent: 이보다 투명하면 바탕 후보
@@ -105,45 +101,6 @@ def remove_backdrop(image, kind):
     return Image.fromarray(rgba, "RGBA")
 
 
-def fill_inside(image, color):
-    """엠블럼 윤곽(LG: 아치 → 띠 → V 의 홈플레이트 모양) 안을 채운다. 그림이 이어진 줄 묶음마다 가장 왼쪽 ~ 오른쪽을 칠하고,
-    가운데 가장 넓은 묶음(윤곽 밖으로 튀어나온 글자)은 윤곽에서 빼 위아래 묶음 끝을 직선으로 잇는다.
-    채움은 1px 안쪽으로 줄여 원래 가장자리가 덮는다"""
-    rgba = np.asarray(image, dtype=np.uint8)
-    solid = rgba[..., 3] > 127
-    rows = np.flatnonzero(solid.any(axis=1))
-    left = {y: np.flatnonzero(solid[y])[0] for y in rows}
-    right = {y: np.flatnonzero(solid[y])[-1] for y in rows}
-    blocks = np.split(rows, np.flatnonzero(np.diff(rows) > 1) + 1)
-    widest = max(range(len(blocks)), key=lambda i: max(right[y] - left[y] for y in blocks[i]))
-    skip = widest if 0 < widest < len(blocks) - 1 else -1
-
-    span = np.zeros_like(solid)
-    for i, block in enumerate(blocks):
-        if i != skip:
-            for y in block:
-                span[y, left[y]:right[y] + 1] = True
-    for i in range(len(blocks) - 1):
-        if i + 1 == skip:
-            upper, lower = blocks[i][-1], blocks[i + 2][0]
-        elif i == skip:
-            continue
-        else:
-            upper, lower = blocks[i][-1], blocks[i + 1][0]
-        for y in range(upper + 1, lower):
-            t = (y - upper) / (lower - upper)
-            x0 = round(left[upper] + (left[lower] - left[upper]) * t)
-            x1 = round(right[upper] + (right[lower] - right[upper]) * t)
-            span[y, x0:x1 + 1] = True
-    span = cv2.erode(span.astype(np.uint8), np.ones((3, 3), np.uint8))
-    fill_alpha = cv2.GaussianBlur(span.astype(np.float32), (0, 0), 0.7)
-
-    base = Image.new("RGBA", image.size, color + (0,))
-    base.putalpha(Image.fromarray((fill_alpha * 255).round().astype(np.uint8)))
-    base.alpha_composite(image)
-    return base
-
-
 def trim_and_fit(image):
     """투명 여백을 잘라내고 긴 변을 MAX_SIDE 이하로 줄인다 (작은 원본은 키우지 않는다)"""
     box = image.getchannel("A").point(lambda a: 255 if a > ALPHA_TRIM else 0).getbbox()
@@ -172,8 +129,6 @@ def main():
                 image = im.convert("RGBA")
         if name in BACKDROP:
             image = remove_backdrop(image, BACKDROP[name])
-        if name in FILL_INSIDE:
-            image = fill_inside(image, FILL_INSIDE[name])
         image = trim_and_fit(image)
         target = OUT / f"emblem_{team}.png"
         image.save(target, optimize=True)
