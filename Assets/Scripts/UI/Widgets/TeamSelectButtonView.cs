@@ -4,7 +4,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
-/// 팀 선택 칸 하나. 왼쪽 반을 팀 색으로 물들이고, 엠블럼을 왼쪽 끝에 반쯤 걸쳐 흐리게 깐다
+/// 팀 선택 칸 하나. 왼쪽에서 오른쪽으로 옅어지는 팀 색을 깔고, 엠블럼을 왼쪽 끝에 반쯤 걸쳐 흐리게 둔다
 /// </summary>
 public class TeamSelectButtonView : UiWidgetBehaviour
 {
@@ -14,12 +14,13 @@ public class TeamSelectButtonView : UiWidgetBehaviour
     private const float EmblemHeightRatio = 0.94f;
     //가로로 긴 엠블럼은 이 가로세로비까지만 넓히고 높이를 줄인다
     private const float EmblemMaxAspect = 1.45f;
-    //Linear 색 공간이라 반투명이 진하게 섞인다. 알파는 렌더를 보고 맞춘 값이다
-    private const float EmblemAlpha = 0.07f;
-    private const float EmblemSelectedAlpha = 0.16f;
-    private const float TintWidthRatio = 2f / 3f;
+    private const float TintWidthRatio = 1f;
     private const float TintAlpha = 0.55f;
     private const float LabelRightPadding = 34f;
+
+    //흰색 저알파는 Linear 블렌딩에서 진한 팀 색에 묻힌다. 어둡게 눌러 얹어야 어디서나 위로 떠 보인다
+    private static readonly Color EmblemTint = new Color(0.35f, 0.35f, 0.35f, 0.35f);
+    private static readonly Color EmblemSelectedTint = new Color(0.55f, 0.55f, 0.55f, 0.45f);
 
     [SerializeField] private float _height;
     [SerializeField] private Button _button;
@@ -38,7 +39,7 @@ public class TeamSelectButtonView : UiWidgetBehaviour
 
         view._height = height;
         view._tint = CreateLeftTint(shape.rectTransform);
-        view._emblem = UiBuilder.CreateImage(shape.rectTransform, "TeamEmblem", UiPalette.WithAlpha(Color.white, EmblemAlpha));
+        view._emblem = UiBuilder.CreateImage(shape.rectTransform, "TeamEmblem", EmblemTint);
 
         view._frame = UiBuilder.CreateImage(view.Root, "Frame", UiPalette.BgRow, UiSprites.ButtonNormal, Image.Type.Sliced);
         UiBuilder.Stretch(view._frame.rectTransform, 0f, 0f, 0f, 0f);
@@ -81,7 +82,7 @@ public class TeamSelectButtonView : UiWidgetBehaviour
     public void SetSelected(bool selected)
     {
         _frame.color = selected ? UiPalette.ButtonPrimary : UiPalette.BgRow;
-        _emblem.color = UiPalette.WithAlpha(Color.white, selected ? EmblemSelectedAlpha : EmblemAlpha);
+        _emblem.color = selected ? EmblemSelectedTint : EmblemTint;
     }
 
     //버튼과 같은 모양의 채움으로 잘라 팀 색 · 엠블럼이 둥근 모서리 밖으로 새지 않게 한다
