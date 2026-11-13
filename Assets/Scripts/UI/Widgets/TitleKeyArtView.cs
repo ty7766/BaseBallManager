@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
@@ -27,6 +28,10 @@ public class TitleKeyArtView : UiWidgetBehaviour
     private const float BottomFadeHeight = 1150f;
     private const float BottomFadeFalloff = 1.5f;
     private const float SweepInterval = 4.5f;
+    //실행 직후 긴 프레임에 연출이 통째로 건너뛰지 않도록, 고른 프레임이 몇 번 이어진 뒤 시작한다
+    private const float SteadyFrameSeconds = 0.1f;
+    private const int SteadyFramesNeeded = 3;
+    private const int MaxStartWaitFrames = 30;
 
     //뒤 둘 → 가운데 둘 → 주인공 순서로 깔고 같은 순서로 들어온다 (키 · 가운데 x · 위 y · 높이 · 밝기 · 들어오는 쪽)
     private static readonly PlayerSlot[] Slots =
@@ -50,6 +55,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
     private RawImage _logo;
     private RectTransform _sweep;
     private Sequence _intro;
+    private Coroutine _startWhenSteady;
     private Tween _sweepLoop;
     private Action _onFinished;
 
@@ -81,16 +87,20 @@ public class TitleKeyArtView : UiWidgetBehaviour
     {
         StopAll();
         _onFinished = onFinished;
-        _intro = BuildIntro().OnComplete(FinishIntro);
+        _intro = BuildIntro().OnComplete(FinishIntro).Pause();
+        _startWhenSteady = StartCoroutine(StartWhenSteady());
     }
 
     /// <summary>
-    /// 연출 중이면 끝 상태로 건너뛴다
+    /// 연출 중이면 (시작 대기 중이어도) 끝 상태로 건너뛴다
     /// </summary>
     public void SkipIntro()
     {
-        if (_intro != null && _intro.IsActive() && _intro.IsPlaying())
-            _intro.Complete(true);
+        if (_intro == null || !_intro.IsActive())
+            return;
+
+        StopWaiting();
+        _intro.Complete(true);
     }
 
     /// <summary>
@@ -98,6 +108,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
     /// </summary>
     public void StopAll()
     {
+        StopWaiting();
         _intro?.Kill();
         _sweepLoop?.Kill();
         _intro = null;
@@ -347,6 +358,30 @@ public class TitleKeyArtView : UiWidgetBehaviour
 
         return DOTween.To(() => start, x => _sweep.anchoredPosition = new Vector2(x, 0f), travel, 0.7f)
             .SetEase(Ease.InOutSine);
+    }
+
+    //긴 프레임이 이어지는 동안은 첫 장면에 멈춰 두고, 고른 프레임이 이어지면 연출을 튼다
+    private IEnumerator StartWhenSteady()
+    {
+        int steadyFrames = 0;
+
+        for (int frame = 0; frame < MaxStartWaitFrames && steadyFrames < SteadyFramesNeeded; frame++)
+        {
+            yield return null;
+            steadyFrames = Time.unscaledDeltaTime <= SteadyFrameSeconds ? steadyFrames + 1 : 0;
+        }
+
+        _startWhenSteady = null;
+        _intro?.Play();
+    }
+
+    private void StopWaiting()
+    {
+        if (_startWhenSteady == null)
+            return;
+
+        StopCoroutine(_startWhenSteady);
+        _startWhenSteady = null;
     }
 
     private void FinishIntro()
