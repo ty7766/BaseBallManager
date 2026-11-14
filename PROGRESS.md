@@ -581,6 +581,24 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 - UI 특수문자(`· × — ← → ▲ ▶ ▼ ◀`)는 Pretendard 에 다 있다. `⇄`(교체 화면)만 없는데 맑은 고딕에도 없던 글자다
 - ⏭️ README 크레딧에 "Pretendard — 길형진(orioncactus), SIL OFL 1.1" 도 적는다
 
+### 2-0-U. 🎬 타이틀 키 아트 · 엠블럼 도장 연출 (세션 64 · 11-13~14, `feature/ui-title`)
+
+| 부분 | 한 것 |
+|---|---|
+| DOTween | 1.3.045 공식 배포본 그대로 (`Assets/Plugins/Demigiant`, readme 포함 — 라이선스 조건). Setup 이 `DOTWEEN` 심볼 추가 |
+| 키 아트 | `TitleKeyArtView` — 숯색 바탕 · 마른 붓질(붉은/검은, `WipeReveal` 셰이더로 사선으로 쓸며 등장) · 큰 윤곽 글자 · 10구단 대표 선수(뒤 4 · 가운데 3 · 앞 2 · 주인공 최지훈). 층 그림은 `Design/ui_assets/render_title_art.py` |
+| 화면 비율 | 바탕만 화면을 꽉 채우고, 1080x1920 무대는 위에 붙인다 (19.5:9 에서 좌우가 잘리던 문제) |
+| 엠블럼 | 작성자가 외부 이미지 생성으로 만든 원본(`Design/logo_src/`)을 `render_title_emblem.py` 가 7층으로 자른다 (판 · 공 궤적 · 베 · 이 · 스 · 볼 · 매니저 + `emblem_layers.json`). `TitleEmblemView` 가 판 → 궤적 → 글자 넷 → 매니저 순서로 도장 찍듯 박는다 |
+| 충격 이펙트 | `render_impact_fx.py` 가 16칸 플립북 2장(가산 섬광 · 충격선 · 불똥 / 알파 흙먼지)을 굽고 `UiFlipbook` 이 uvRect 로 넘긴다 |
+| 메뉴 | 연출이 끝나면 칸마다 차례로 튀어 오르고, 새 게임 버튼 둘레가 숨 쉬듯 빛난다 |
+
+- 🔴 **실행 직후 첫 프레임은 길다** — 실시간 트윈(`SetUpdate(true)`)이 그 시간을 한 번에 먹어 연출이 끝 장면으로 건너뛰었다. 고른 프레임 3번이 이어진 뒤 시작한다
+- 🔴 **이펙트를 기본 도형(원 · 타원 고리)으로 만들지 않는다** (작성자 지시). 섬광 · 충격파 · 먼지는 플립북 시퀀스로 굽는다
+- 🔴 Linear 색 공간에서 가산 번쩍임은 생각보다 훨씬 하얗게 날아간다 — 알파 0.4 안팎에서 렌더를 보고 맞춘다
+- 🔴 실제 선수 사진은 키 아트 텍스처에 굽지 않는다 (실행 중에 `PlayerPhotoProvider` 로 얹음). 사진이 없는 PC 에서는 그 자리가 빈다
+- 스피드 엠블럼(`Design/logo_src/speed_emblem.png`)은 대안으로 보관
+- ⏭️ README 크레딧: DOTween (Demigiant)
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.
