@@ -9,6 +9,7 @@ public static class UiPalette
     public static readonly Color BgPanel = Hex("#191A1C");         //패널
     public static readonly Color BgRow = Hex("#212325");           //행 · 칩
     public static readonly Color BgSelected = Hex("#2D3033");      //선택된 행 바탕
+    public static readonly Color BgLight = Hex("#ECEEF1");         //밝은 바탕 (재화 줄 · 글자는 ButtonPrimaryText)
 
     public static readonly Color LineHair = Hex("#2A2C2F");        //구분선
     public static readonly Color LineBorder = Hex("#3C4044");      //테두리
@@ -44,6 +45,7 @@ public static class UiPalette
     public static readonly Color LogHomeRun = Hex("#F7D57A");      //중계 홈런
 
     public static readonly Color AccentGold = Hex("#F2C14E");      //+N점 · R · MY TEAM
+    public static readonly Color BrushDefault = Hex("#D41021");    //배경 붓질 (팀을 고르기 전 · 타이틀과 같은 붉은색)
 
     private static readonly Color[] TeamColors =
     {
@@ -61,6 +63,8 @@ public static class UiPalette
 
     //어두운 바탕 위 팀 색의 최소 밝기 (HSV 의 V)
     private const float TeamColorOnDarkMinValue = 0.6f;
+    //배경 붓질은 가는 결이라 칸 바탕보다 더 밝아야 묻히지 않는다
+    private const float TeamBrushMinValue = 0.8f;
 
     private static readonly string[] TeamOrder =
     {
@@ -72,13 +76,17 @@ public static class UiPalette
     /// </summary>
     public static Color GetTeamColor(string teamName)
     {
-        for (int i = 0; i < TeamOrder.Length; i++)
-        {
-            if (TeamOrder[i] == teamName)
-                return TeamColors[i];
-        }
+        int index = IndexOfTeam(teamName);
 
-        return BgPanel;
+        return index >= 0 ? TeamColors[index] : BgPanel;
+    }
+
+    /// <summary>
+    /// 팀 색 목록에 있는 팀인지
+    /// </summary>
+    public static bool IsKnownTeam(string teamName)
+    {
+        return IndexOfTeam(teamName) >= 0;
     }
 
     /// <summary>
@@ -86,9 +94,15 @@ public static class UiPalette
     /// </summary>
     public static Color GetTeamColorOnDark(string teamName)
     {
-        Color.RGBToHSV(GetTeamColor(teamName), out float hue, out float saturation, out float value);
+        return RaiseValue(GetTeamColor(teamName), TeamColorOnDarkMinValue);
+    }
 
-        return Color.HSVToRGB(hue, saturation, Mathf.Max(value, TeamColorOnDarkMinValue));
+    /// <summary>
+    /// 배경 붓질에 곱할 팀 색. 칸 바탕용보다 밝기를 더 올린다
+    /// </summary>
+    public static Color GetTeamBrushColor(string teamName)
+    {
+        return RaiseValue(GetTeamColor(teamName), TeamBrushMinValue);
     }
 
     /// <summary>
@@ -111,6 +125,26 @@ public static class UiPalette
     }
 
     //명세의 16진 토큰을 그대로 옮겨 적기 위한 변환
+    //팀 순서표에서의 자리. 없으면 -1
+    private static int IndexOfTeam(string teamName)
+    {
+        for (int i = 0; i < TeamOrder.Length; i++)
+        {
+            if (TeamOrder[i] == teamName)
+                return i;
+        }
+
+        return -1;
+    }
+
+    //색상 · 채도는 두고 밝기(HSV 의 V)만 최소값까지 올린다
+    private static Color RaiseValue(Color color, float minValue)
+    {
+        Color.RGBToHSV(color, out float hue, out float saturation, out float value);
+
+        return Color.HSVToRGB(hue, saturation, Mathf.Max(value, minValue));
+    }
+
     private static Color Hex(string html)
     {
         return ColorUtility.TryParseHtmlString(html, out Color parsed) ? parsed : Color.white;

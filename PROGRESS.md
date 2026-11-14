@@ -599,6 +599,38 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 - 스피드 엠블럼(`Design/logo_src/speed_emblem.png`)은 대안으로 보관
 - ⏭️ README 크레딧: DOTween (Demigiant)
 
+✅ PR #22 로 `develop` 머지 (11-14, `9f86a72`) — 2-0-T 폰트 변경도 함께 들어감
+
+### 2-0-V. 🧱 공용 화면 배경 — 타이틀 잇기 (세션 64 · 11-14, `feature/ui-backdrop`)
+
+| 부분 | 한 것 |
+|---|---|
+| 배경 | `render_app_backdrop.py` → `Resources/UI/Backdrop/app_backdrop.png`. 타이틀 바탕을 72% 로 누르고 오른쪽 위 · 왼쪽 아래만 붉은 · 검은 마른 붓질. 가운데는 비운다 |
+| 깔기 | `AppBackdrop.Create(canvasRoot)` — 캔버스 맨 뒤 한 장(EnvelopeParent 로 넘치는 쪽 잘림). `AppFlowController.Initialize` 에서 화면 조립 전에 호출 |
+| 화면 | `UiScreenBehaviour.BakeHierarchy` 가 화면마다 깔던 단색 `Background` 를 없앴다 → 프리팹 19장 다시 구움. 화면이 바뀌어도 배경은 그대로, 본문만 페이드 |
+| 보조 버튼 | `button_normal`(테두리만)은 질감 위에서 글자가 묻혀 `button_normal_fill`(테두리 + 어두운 반투명 채움)을 새로 굽고 `CreateButton` · `UiTabStyle` 비선택이 쓴다. 팀 선택 · 카드 슬롯 테두리는 그대로 `button_normal` |
+
+- 🔴 화면 자식 순서가 하나 당겨졌다 (`Background` 가 0번이던 것). 타이틀 키 아트는 `SetAsFirstSibling` 으로 바꿈
+- 덮어 띄우는 화면(일시정지 · 카드 선택 · 카드 상세)은 자체 `Dim`(0.92~0.96)이 덮는다 — 전에는 그 아래 불투명 바탕이 또 있었다
+- 경기장 사진 느낌이 필요하면 외부 이미지로 `app_backdrop.png` 만 갈아 끼우면 된다
+
+### 2-0-W. 🏠 로비 개편 — 아래 정렬 타일 · 팀 색 붓질 · 입체 엠블럼 (세션 64 · 11-14, `feature/ui-backdrop`)
+
+| 부분 | 한 것 |
+|---|---|
+| 배경 붓질 | `app_backdrop.png`(바탕) + `app_backdrop_brush.png`(흰 결 · 검은 붓) 두 층으로 나눔. `AppBackdrop.SetTeam` 이 붓 층에 팀 색을 곱한다 — 타이틀 · 팀 선택은 `UiPalette.BrushDefault`(붉은색), 팀 확정 · 이어하기 뒤엔 `GetTeamBrushColor`(밝기 V ≥ 0.8). 붓질 4줄 추가 (왼쪽 · 오른쪽 가장자리 가운데쯤) |
+| 메뉴 칸 | `LobbyMenuTileView` — 칸보다 1.3배 큰 아이콘을 왼쪽 끝에 40% 걸쳐 흐리게, 이름은 왼쪽 아래 (Pretendard). 아이콘은 Phosphor Icons Fill (MIT, `Design/ui_assets/icons_src/phosphor` + LICENSE) 을 `render_lobby_icons.py` 가 흰 글리프로 굽는다 (path 의 d 값만 꺼내 다시 씀) |
+| 배치 | 화면 아래 기준으로 쌓음: 라인업 · 뽑기(2칸) / 인벤토리 · 강화 · 훈련(3) / 조합 · 분해 · 골글(3) / 저장 · 빠른 시작(2) / 리그 입장(한 줄, 흰 채움). 라인업이 비면 리그 칸이 흐려지고 못 누른다 |
+| 입체 엠블럼 | `TeamEmblemTokenView` — `EmblemTokenMesh` 가 엠블럼 알파를 GPU 로 읽어(`ReadPixels`, 엠블럼 읽기 가능 불필요) `AlphaContour`(마칭 스퀘어) 로 윤곽을 뽑고 옆벽을 세운 메시 + 앞면 한 장. `CommandBuffer` 로 깊이 있는 렌더 텍스처(1024)에 직접 그린다(카메라 · 레이어 없음). `EmblemToken` 셰이더: 벽 = 윤곽 안쪽 색 × 빛 방향 밝기, 앞면 = 빛 띠. `PremultipliedImage` 로 옅게(알파 0.12) 얹음. 1320 크기(처음의 2배)로 화면 폭을 살짝 넘겨 메뉴 뒤로 깔린다. Y 축 ±20° 7초 왕복, 4.5초마다 빛 띠 + 끝에서 별빛 플립북(`render_lobby_fx.py` → `fx_glint.png`) |
+| 머리 | '베이스볼 매니저' · 팀 이름 · '해금 티어 · 교체 방식' 줄 삭제 (라인업 상태만). 재화 줄은 밝은 바탕(`UiPalette.BgLight`) + 검정 굵은 글자, `CurrencyBarView.Bake(parent, types)` 로 화면마다 고름 — 로비 `WithoutTickets`, 뽑기 `AllTypes` |
+
+- 🔴 엠블럼 그림(`Resources/UI/Emblems`)은 커밋하지 않는다 — 토큰은 실행 중에 불러오고, 없으면 경고 한 줄과 함께 숨는다. 로비 프리팹 · 재질에 엠블럼 참조 없음 확인
+- 🔴 선형 색 공간에서 흰색 저알파 아이콘은 생각보다 훨씬 밝다 — 칸 아이콘 알파 0.035 (0.09 는 회색 덩어리로 보였다), 엠블럼 토큰 0.12 (0.3 이 거의 불투명으로 보였다)
+- 🔴 판을 겹쳐 두께를 내던 첫 방식은 크게 그리면 겹친 판 수만큼 픽셀을 칠해 모바일에서 무겁다 → 윤곽 옆벽 메시로 바꿈
+- 엠블럼 원본이 최대 512px (한화 264 · SSG 380) 이라 2배 크기에서는 살짝 흐리다. 고해상도 원본을 같은 이름으로 넣으면 바로 선명해진다
+- 렌더 텍스처는 로비가 꺼질 때 놓는다 (`OnDisable`)
+- ⏭️ 메뉴 칸 색 입히기 (작성자: 아직 색 넣지 않음) · README 크레딧에 Phosphor Icons (MIT) 추가
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.

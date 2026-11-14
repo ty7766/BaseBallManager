@@ -177,7 +177,7 @@ public static class UiBuilder
         background.color = primary ? UiPalette.ButtonPrimary : UiPalette.BgRow;
         background.raycastTarget = true;
 
-        Sprite sprite = UiSprites.Get(primary ? UiSprites.ButtonPrimary : UiSprites.ButtonNormal);
+        Sprite sprite = UiSprites.Get(primary ? UiSprites.ButtonPrimary : UiSprites.ButtonNormalFill);
 
         if (sprite != null)
         {

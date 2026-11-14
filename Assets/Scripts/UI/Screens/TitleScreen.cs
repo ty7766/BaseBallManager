@@ -69,7 +69,7 @@ public class TitleScreen : UiScreenBehaviour
         if (_keyArt == null)
         {
             _keyArt = TitleKeyArtView.Create(Root);
-            _keyArt.Root.SetSiblingIndex(1);
+            _keyArt.Root.SetAsFirstSibling();
         }
 
         CacheMenuItems();

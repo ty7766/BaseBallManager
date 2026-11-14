@@ -20,7 +20,7 @@ public static class UiTabStyle
 
         if (background != null)
         {
-            background.sprite = UiSprites.Get(selected ? UiSprites.TabOn : UiSprites.ButtonNormal);
+            background.sprite = UiSprites.Get(selected ? UiSprites.TabOn : UiSprites.ButtonNormalFill);
 
             //tab_on 은 어두운 채움 + 아래쪽 강조선을 그림에 이미 담고 있어 흰색으로 그대로 통과시킨다
             background.color = selected ? Color.white : UiPalette.BgRow;
