@@ -6,7 +6,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
-/// 로비 허브. 메뉴 칸은 화면 아래에 붙어 쌓이고(맨 아래 한 줄 = 리그 입장), 비는 위쪽에는 내 팀 입체 엠블럼이 떠 돈다.
+/// 로비 허브. 메뉴 칸은 화면 아래에 붙어 쌓이고(맨 아래 한 줄 = 리그 입장), 뒤에는 내 팀 입체 엠블럼이 크고 옅게 떠 돈다.
 /// 재화 줄은 뽑기권을 뺀 재화만 보여 준다 (뽑기권은 뽑기 화면에서)
 /// </summary>
 public class LobbyScreen : UiScreenBehaviour
@@ -18,13 +18,12 @@ public class LobbyScreen : UiScreenBehaviour
     private const float Gap = 16f;
     private const float BottomMargin = 40f;
     private const float ContentWidth = 1080f - SideMargin * 2f;
-    //위쪽 머리: 재화 줄 · 팀 이름 · 라인업 상태
+    //위쪽 머리: 재화 줄 · 라인업 상태
     private const float CurrencyTop = 32f;
-    private const float TeamTop = 136f;
-    private const float LineupTop = 236f;
-    private const float HeaderBottom = 296f;
-    //입체 엠블럼: 머리와 메뉴 사이 빈 칸 가운데에 놓는 정사각형 크기
-    private const float TokenSize = 660f;
+    private const float LineupTop = 140f;
+    private const float HeaderBottom = 190f;
+    //입체 엠블럼: 머리와 메뉴 사이 빈 칸 가운데에 놓는 정사각형 크기. 화면보다 커서 좌우가 잘리고 메뉴 뒤로 깔린다
+    private const float TokenSize = 1980f;
     private const float TokenMargin = 12f;
 
     //줄마다 높이 · 글자 크기 (아래 줄부터)
@@ -47,7 +46,6 @@ public class LobbyScreen : UiScreenBehaviour
         new MenuSlot("빠른 시작", "quickstart", 1, 1, 2)
     };
 
-    [SerializeField] private TextMeshProUGUI _teamText;
     [SerializeField] private TextMeshProUGUI _lineupText;
     [SerializeField] private CurrencyBarView _currencyBar;
     [SerializeField] private TeamEmblemTokenView _emblemToken;
@@ -65,15 +63,12 @@ public class LobbyScreen : UiScreenBehaviour
     }
 
     /// <summary>
-    /// 팀 · 라인업 상태 · 재화 · 입체 엠블럼을 다시 읽는다
+    /// 라인업 상태 · 재화 · 입체 엠블럼을 다시 읽는다
     /// </summary>
     public void Refresh()
     {
         if (PlayerDataManager.Instance != null)
-        {
-            _teamText.text = PlayerDataManager.Instance.PlayerTeamName;
             _emblemToken.SetTeam(PlayerDataManager.Instance.PlayerTeamName);
-        }
 
         bool lineupReady = LineUpManager.Instance != null && LineUpManager.Instance.IsLineupComplete();
 
@@ -96,17 +91,14 @@ public class LobbyScreen : UiScreenBehaviour
 
     protected override void Build()
     {
+        BuildEmblemToken();
+
         _currencyBar = CurrencyBarView.Bake(Root, CurrencyBarView.WithoutTickets);
         UiBuilder.Place(_currencyBar.Root, (1080f - CurrencyBarView.BarWidth) * 0.5f, CurrencyTop,
             CurrencyBarView.BarWidth, CurrencyBarView.BarHeight);
 
-        _teamText = UiBuilder.CreateText(Root, "Team", 86f, UiPalette.Text1);
-        UiBuilder.Place(_teamText.rectTransform, SideMargin, TeamTop, 700f, 100f);
-
         _lineupText = UiBuilder.CreateText(Root, "LineupState", 32f, UiPalette.Text2);
         UiBuilder.Place(_lineupText.rectTransform, SideMargin, LineupTop, 900f, 44f);
-
-        BuildEmblemToken();
 
         for (int i = 0; i < Slots.Length; i++)
         {
@@ -128,7 +120,7 @@ public class LobbyScreen : UiScreenBehaviour
             UiEffects.Pop(_menuButtons[i].transform, 0.9f, 0.22f, i * 0.03f);
     }
 
-    //머리 아래 ~ 메뉴 위 빈 칸을 늘어나는 영역으로 잡고, 그 가운데에 정사각형 토큰을 둔다
+    //머리 아래 ~ 메뉴 위 빈 칸을 늘어나는 영역으로 잡고 그 가운데에 토큰을 둔다. 맨 먼저 만들어 모든 요소 뒤에 깔린다
     private void BuildEmblemToken()
     {
         RectTransform area = UiBuilder.CreateRect(Root, "EmblemArea");

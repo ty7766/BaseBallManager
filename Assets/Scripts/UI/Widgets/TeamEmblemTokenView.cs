@@ -3,8 +3,8 @@ using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 /// <summary>
-/// 로비에 떠 있는 내 팀 입체 엠블럼. 엠블럼 판을 깊이 방향으로 겹친 토큰을 렌더 텍스처에 그려 반투명하게 얹는다.
-/// Y 축으로 좌우 15도씩 천천히 돌고, 주기마다 빛 띠가 앞면을 가로지른 끝자리에서 별빛이 번쩍인다
+/// 로비 뒤에 크게 떠 있는 내 팀 입체 엠블럼. 윤곽을 따라 옆벽을 세운 토큰을 렌더 텍스처에 그려 옅게 얹는다.
+/// Y 축으로 좌우 20도씩 천천히 돌고, 주기마다 빛 띠가 앞면을 가로지른 끝자리에서 별빛이 번쩍인다
 /// </summary>
 public class TeamEmblemTokenView : UiWidgetBehaviour
 {
@@ -16,25 +16,26 @@ public class TeamEmblemTokenView : UiWidgetBehaviour
     private const int GlintGrid = 4;
     private const int GlintEmptyFrame = GlintGrid * GlintGrid - 1;
 
-    //토큰 모양: 엠블럼 긴 변 = 1 기준 두께, 깊이 방향 판 수 (15도에서 판 사이가 1픽셀 아래로 붙는 수)
-    private const int LayerCount = 48;
+    //토큰 두께 (엠블럼 긴 변 = 1)
     private const float Thickness = 0.15f;
-    //카메라: 엠블럼 1 + 위아래 여백을 담는 높이, 원근이 살짝 느껴지는 화각
-    private const int TextureSize = 768;
+    //카메라: 엠블럼 1 + 위아래 여백을 담는 높이, 원근이 살짝 느껴지는 화각. 깊이 버퍼로 벽끼리 가림을 맞춘다
+    private const int TextureSize = 1024;
+    private const int DepthBits = 16;
     private const float ViewHeight = 1.3f;
     private const float FieldOfView = 26f;
     //움직임: 좌우 최대 각도 · 한 번 왕복 시간, 빛 띠 주기 · 지나가는 시간, 별빛 길이 · 띠 끝 몇 % 에서 터질지
-    private const float MaxTurnDegrees = 15f;
+    private const float MaxTurnDegrees = 20f;
     private const float TurnPeriod = 7f;
     private const float ShineInterval = 4.5f;
     private const float ShineDuration = 0.9f;
     private const float GlintDuration = 0.75f;
     private const float GlintStartRatio = 0.75f;
-    private const float DisplayAlpha = 0.6f;
-    private const float GlintSizeRatio = 0.6f;
+    //선형 색 공간에서 밝은 그림은 알파보다 훨씬 진하게 보인다. 0.12 가 눈으로 30% 남짓
+    private const float DisplayAlpha = 0.12f;
+    private const float GlintSize = 420f;
 
     //별빛 자리: 엠블럼 크기 기준 가운데에서 오른쪽 위
-    private static readonly Vector2 GlintAnchor = new Vector2(0.3f, 0.3f);
+    private static readonly Vector2 GlintAnchor = new Vector2(0.26f, 0.2f);
     private static readonly int ShineCenterId = Shader.PropertyToID("_ShineCenter");
     private static readonly int TurnId = Shader.PropertyToID("_Turn");
     private static readonly Matrix4x4 ViewMatrix = CreateViewMatrix();
@@ -120,8 +121,11 @@ public class TeamEmblemTokenView : UiWidgetBehaviour
         if (_tokenMaterial == null)
             _tokenMaterial = new Material(Resources.Load<Material>(TokenMaterialPath));
 
+        if (_mesh != null)
+            Destroy(_mesh);
+
         _tokenMaterial.mainTexture = _emblem.texture;
-        BuildMesh();
+        _mesh = EmblemTokenMesh.Build(_emblem, Thickness, out _emblemSize);
         PlaceGlint();
         _elapsed = 0f;
     }
@@ -149,71 +153,14 @@ public class TeamEmblemTokenView : UiWidgetBehaviour
         return image;
     }
 
-    //엠블럼 판을 뒤에서 앞으로 LayerCount 장 겹친다. 그리는 순서가 곧 겹침 순서라 깊이 버퍼가 필요 없다
-    private void BuildMesh()
-    {
-        Rect textureRect = _emblem.textureRect;
-        float aspect = textureRect.width / textureRect.height;
-
-        _emblemSize = aspect >= 1f ? new Vector2(1f, 1f / aspect) : new Vector2(aspect, 1f);
-
-        Vector2 uvMin = new Vector2(textureRect.xMin / _emblem.texture.width, textureRect.yMin / _emblem.texture.height);
-        Vector2 uvMax = new Vector2(textureRect.xMax / _emblem.texture.width, textureRect.yMax / _emblem.texture.height);
-        Vector2 half = _emblemSize * 0.5f;
-
-        Vector3[] vertices = new Vector3[LayerCount * 4];
-        Vector2[] uvs = new Vector2[LayerCount * 4];
-        Vector2[] layers = new Vector2[LayerCount * 4];
-        int[] triangles = new int[LayerCount * 6];
-
-        for (int i = 0; i < LayerCount; i++)
-        {
-            float depth = i / (float)(LayerCount - 1);
-            float z = Thickness * (0.5f - depth);
-            Vector2 layer = new Vector2(depth, i == LayerCount - 1 ? 1f : 0f);
-            int first = i * 4;
-
-            vertices[first] = new Vector3(-half.x, -half.y, z);
-            vertices[first + 1] = new Vector3(half.x, -half.y, z);
-            vertices[first + 2] = new Vector3(half.x, half.y, z);
-            vertices[first + 3] = new Vector3(-half.x, half.y, z);
-            uvs[first] = uvMin;
-            uvs[first + 1] = new Vector2(uvMax.x, uvMin.y);
-            uvs[first + 2] = uvMax;
-            uvs[first + 3] = new Vector2(uvMin.x, uvMax.y);
-
-            for (int corner = 0; corner < 4; corner++)
-                layers[first + corner] = layer;
-
-            int triangle = i * 6;
-            triangles[triangle] = first;
-            triangles[triangle + 1] = first + 2;
-            triangles[triangle + 2] = first + 1;
-            triangles[triangle + 3] = first;
-            triangles[triangle + 4] = first + 3;
-            triangles[triangle + 5] = first + 2;
-        }
-
-        if (_mesh == null)
-            _mesh = new Mesh { name = "EmblemToken" };
-
-        _mesh.Clear();
-        _mesh.vertices = vertices;
-        _mesh.uv = uvs;
-        _mesh.uv2 = layers;
-        _mesh.triangles = triangles;
-        _mesh.bounds = new Bounds(Vector3.zero, new Vector3(2f, 2f, 2f));
-    }
-
     //별빛을 엠블럼 오른쪽 위에 둔다. 렌더 텍스처가 ViewHeight 만큼을 위젯 높이에 담는다
     private void PlaceGlint()
     {
         float pixelsPerUnit = Root.rect.height / ViewHeight;
-        float size = Root.rect.height * GlintSizeRatio;
         RectTransform rect = _glint.rectTransform;
 
         rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = new Vector2(size, size);
+        rect.sizeDelta = new Vector2(GlintSize, GlintSize);
         rect.anchoredPosition = Vector2.Scale(GlintAnchor, _emblemSize) * pixelsPerUnit;
     }
 
@@ -236,7 +183,7 @@ public class TeamEmblemTokenView : UiWidgetBehaviour
 
         _commands.Clear();
         _commands.SetRenderTarget(_texture);
-        _commands.ClearRenderTarget(false, true, Color.clear);
+        _commands.ClearRenderTarget(true, true, Color.clear);
         _commands.SetViewProjectionMatrices(ViewMatrix, ProjectionMatrix);
         _commands.DrawMesh(_mesh, Matrix4x4.Rotate(Quaternion.Euler(0f, turn * MaxTurnDegrees, 0f)), _tokenMaterial);
         Graphics.ExecuteCommandBuffer(_commands);
@@ -251,7 +198,7 @@ public class TeamEmblemTokenView : UiWidgetBehaviour
         if (_texture != null)
             return;
 
-        _texture = new RenderTexture(TextureSize, TextureSize, 0, RenderTextureFormat.ARGB32) { name = "EmblemToken" };
+        _texture = new RenderTexture(TextureSize, TextureSize, DepthBits, RenderTextureFormat.ARGB32) { name = "EmblemToken" };
         _texture.Create();
         _display.texture = _texture;
     }

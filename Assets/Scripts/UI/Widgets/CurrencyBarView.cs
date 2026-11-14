@@ -63,8 +63,8 @@ public class CurrencyBarView : UiWidgetBehaviour
         _shownTypes = (CurrencyType[])shownTypes.Clone();
         _amountTexts = new TextMeshProUGUI[_shownTypes.Length];
 
-        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgPanel,
-            UiSprites.PanelSmall, Image.Type.Sliced);
+        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgLight,
+            UiSprites.ButtonPrimary, Image.Type.Sliced);
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
         float cellWidth = BarWidth / _shownTypes.Length;
@@ -78,7 +78,8 @@ public class CurrencyBarView : UiWidgetBehaviour
             UiBuilder.Place(icon.rectTransform, 8f, 22f, 44f, 44f);
             icon.preserveAspect = true;
 
-            _amountTexts[i] = UiBuilder.CreateText(cell, "Amount", 28f, UiPalette.Text1);
+            _amountTexts[i] = UiBuilder.CreateText(cell, "Amount", 28f, UiPalette.ButtonPrimaryText);
+            _amountTexts[i].fontStyle = FontStyles.Bold;
             UiBuilder.Place(_amountTexts[i].rectTransform, 58f, 26f, cellWidth - 66f, 36f);
         }
     }

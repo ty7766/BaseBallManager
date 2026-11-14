@@ -9,6 +9,7 @@ public static class UiPalette
     public static readonly Color BgPanel = Hex("#191A1C");         //패널
     public static readonly Color BgRow = Hex("#212325");           //행 · 칩
     public static readonly Color BgSelected = Hex("#2D3033");      //선택된 행 바탕
+    public static readonly Color BgLight = Hex("#ECEEF1");         //밝은 바탕 (재화 줄 · 글자는 ButtonPrimaryText)
 
     public static readonly Color LineHair = Hex("#2A2C2F");        //구분선
     public static readonly Color LineBorder = Hex("#3C4044");      //테두리
