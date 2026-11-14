@@ -599,6 +599,8 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 - 스피드 엠블럼(`Design/logo_src/speed_emblem.png`)은 대안으로 보관
 - ⏭️ README 크레딧: DOTween (Demigiant)
 
+✅ PR #22 로 `develop` 머지 (11-14, `9f86a72`) — 2-0-T 폰트 변경도 함께 들어감
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.
