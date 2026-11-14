@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 경기 중 화면 최상단 스코어보드 (명세 1-3 · 6-4 · 중계 그래픽 B안).
-/// 양 끝 팀 색 면 위에 로고, 팀 이름은 아래 귀퉁이, 가운데 이사만루 점수 아래 회색 이닝 칩 · 아웃
+/// 양 끝 팀 색 면 · 반쯤 걸친 엠블럼 위에 로고, 팀 이름은 아래 귀퉁이, 가운데 이사만루 점수 아래 회색 이닝 칩 · 아웃
 /// </summary>
 public class ScoreboardView : UiWidgetBehaviour
 {
@@ -19,9 +19,14 @@ public class ScoreboardView : UiWidgetBehaviour
     private const float EdgeInset = 30f;
     private const float FieldRatio = 0.5f;
     private const float InningChipWidth = 150f;
+    private const float ScoreFontSize = 150f;
+    private const float ScoreTop = 14f;
+    private const float ScoreHeight = 160f;
 
     [SerializeField] private Image _awayField;
     [SerializeField] private Image _homeField;
+    [SerializeField] private Image _awayEdgeEmblem;
+    [SerializeField] private Image _homeEdgeEmblem;
     [SerializeField] private TeamEmblemView _awayLogo;
     [SerializeField] private TeamEmblemView _homeLogo;
     [SerializeField] private TextMeshProUGUI _awayNameText;
@@ -61,6 +66,8 @@ public class ScoreboardView : UiWidgetBehaviour
         _homeLogo.SetTeam(homeTeamName);
         BroadcastPanel.PaintTeamField(_awayField, awayTeamName);
         BroadcastPanel.PaintTeamField(_homeField, homeTeamName);
+        BroadcastPanel.PlaceEdgeEmblem(_awayEdgeEmblem, awayTeamName, true);
+        BroadcastPanel.PlaceEdgeEmblem(_homeEdgeEmblem, homeTeamName, false);
         _awayMyTeamTag.gameObject.SetActive(!isPlayerHome);
         _homeMyTeamTag.gameObject.SetActive(isPlayerHome);
 
@@ -115,21 +122,23 @@ public class ScoreboardView : UiWidgetBehaviour
 
         _awayField = BroadcastPanel.CreateTeamField(rect, "AwayField", true, FieldRatio);
         _homeField = BroadcastPanel.CreateTeamField(rect, "HomeField", false, FieldRatio);
+        _awayEdgeEmblem = BroadcastPanel.CreateEdgeEmblem(rect, "AwayEdgeEmblem");
+        _homeEdgeEmblem = BroadcastPanel.CreateEdgeEmblem(rect, "HomeEdgeEmblem");
 
         BuildTeamSide(rect, true);
         BuildTeamSide(rect, false);
 
         float center = BoardWidth * 0.5f;
 
-        _awayScoreText = BroadcastPanel.CreateNumber(rect, "AwayScore", 150f, UiPalette.Text1, TextAlignmentOptions.Right);
-        UiBuilder.Place(_awayScoreText.rectTransform, center - 220f, 14f, 190f, 160f);
+        _awayScoreText = BroadcastPanel.CreateNumber(rect, "AwayScore", ScoreFontSize, UiPalette.Text1, TextAlignmentOptions.MidlineRight);
+        UiBuilder.Place(_awayScoreText.rectTransform, center - 220f, ScoreTop, 190f, ScoreHeight);
 
-        TextMeshProUGUI colon = BroadcastPanel.CreateNumber(rect, "Colon", 70f, UiPalette.Text3);
-        UiBuilder.Place(colon.rectTransform, center - 30f, 46f, 60f, 90f);
+        TextMeshProUGUI colon = BroadcastPanel.CreateNumber(rect, "Colon", 70f, UiPalette.Text3, TextAlignmentOptions.Midline);
+        UiBuilder.Place(colon.rectTransform, center - 30f, ScoreTop, 60f, ScoreHeight);
         colon.text = ":";
 
-        _homeScoreText = BroadcastPanel.CreateNumber(rect, "HomeScore", 150f, UiPalette.Text1, TextAlignmentOptions.MidlineLeft);
-        UiBuilder.Place(_homeScoreText.rectTransform, center + 30f, 14f, 190f, 160f);
+        _homeScoreText = BroadcastPanel.CreateNumber(rect, "HomeScore", ScoreFontSize, UiPalette.Text1, TextAlignmentOptions.MidlineLeft);
+        UiBuilder.Place(_homeScoreText.rectTransform, center + 30f, ScoreTop, 190f, ScoreHeight);
 
         Image inningChip = UiBuilder.CreateImage(rect, "InningChip", UiPalette.LineBorder, UiSprites.CutFillSmall, Image.Type.Sliced);
         UiBuilder.Place(inningChip.rectTransform, center - InningChipWidth * 0.5f, 186f, InningChipWidth, 58f);
@@ -202,8 +211,8 @@ public class ScoreboardView : UiWidgetBehaviour
     //점수가 오른 쪽만 튀어오르고 금색으로 번쩍이며 빛이 터진다
     private static void PlayScoreEffect(TextMeshProUGUI scoreText)
     {
-        UiEffects.Pop(scoreText.transform, 0.68f, 0.34f);
-        UiEffects.Flash(scoreText, UiPalette.AccentGold, 0.5f);
+        UiEffects.Pop(scoreText.transform, 0.84f, 0.26f);
+        UiEffects.Flash(scoreText, UiPalette.AccentGold, 0.4f);
         UiEffects.Burst(scoreText.rectTransform, UiEffectKind.Score);
     }
 }

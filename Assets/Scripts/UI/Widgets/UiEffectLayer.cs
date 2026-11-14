@@ -18,9 +18,9 @@ public class UiEffectLayer
     private const string FlipbookRoot = "UI/MatchFx/";
 
     //가산 합성이라 색은 빛의 색이다. 심(흰빛)은 머티리얼이 더한다
-    private static readonly Color ScoreTint = new Color(1f, 0.6f, 0.18f, 1f);
-    private static readonly Color HomeRunTint = new Color(1f, 0.76f, 0.3f, 1f);
-    private static readonly Color StealTint = new Color(0.45f, 0.8f, 1f, 0.9f);
+    private static readonly Color ScoreTint = new Color(1f, 0.6f, 0.18f, 0.55f);
+    private static readonly Color HomeRunTint = new Color(1f, 0.76f, 0.3f, 0.65f);
+    private static readonly Color StealTint = new Color(0.45f, 0.8f, 1f, 0.6f);
 
     public RectTransform Root => _root;
 
@@ -207,9 +207,9 @@ public class UiEffectLayer
     {
         preset = kind switch
         {
-            UiEffectKind.Score => new FlipbookPreset("fx_score", 380f, 0.55f, ScoreTint),
-            UiEffectKind.HomeRun => new FlipbookPreset("fx_homerun", 680f, 0.85f, HomeRunTint),
-            UiEffectKind.Steal => new FlipbookPreset("fx_steal", 420f, 0.45f, StealTint),
+            UiEffectKind.Score => new FlipbookPreset("fx_score", 240f, 0.45f, ScoreTint),
+            UiEffectKind.HomeRun => new FlipbookPreset("fx_homerun", 440f, 0.7f, HomeRunTint),
+            UiEffectKind.Steal => new FlipbookPreset("fx_steal", 300f, 0.4f, StealTint),
             _ => default
         };
 

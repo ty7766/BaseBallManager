@@ -2,7 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 선수 얼굴 칸. 누끼 사진의 머리 · 어깨만 깎인 칸 안에 잘라 보이고, 칸 바탕은 카드 등급 색으로 옅게 물든다
+/// 선수 얼굴 칸. 누끼 사진의 머리 · 어깨만 깎인 칸 안에 잘라 보이고, 칸 바탕은 카드 등급 색으로 옅게 물든다.
+/// 카드와 같이 등급별 홀로 반사(바탕)와 광택 띠(사진 위)가 반짝인다
 /// </summary>
 public class PlayerFaceView : UiWidgetBehaviour
 {
@@ -11,9 +12,12 @@ public class PlayerFaceView : UiWidgetBehaviour
     private const float CropTopRatio = 0.04f;
     private const float PhotoAspect = 1.25f;
     private const float BackgroundAlpha = 0.42f;
+    //칸이 작아 카드 광택 세기 그대로면 잘 안 보인다
+    private const float ShineBoost = 2.2f;
 
     [SerializeField] private Image _background;
     [SerializeField] private Image _photo;
+    [SerializeField] private Image _shine;
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
@@ -36,8 +40,12 @@ public class PlayerFaceView : UiWidgetBehaviour
         Sprite photo = PlayerPhotoProvider.Get(info.PhotoKey, true);
 
         _background.color = UiPalette.WithAlpha(style.GradeColor, BackgroundAlpha);
+        _background.material = CardMaterials.GetHolo(style);
         _photo.sprite = photo;
         _photo.enabled = photo != null;
+        _shine.material = CardMaterials.Shine;
+        _shine.color = UiPalette.WithAlpha(Color.white, Mathf.Clamp01(style.ShineStrength * ShineBoost));
+        _shine.enabled = true;
     }
 
     /// <summary>
@@ -46,7 +54,9 @@ public class PlayerFaceView : UiWidgetBehaviour
     public void SetEmpty()
     {
         _background.color = UiPalette.BgRow;
+        _background.material = null;
         _photo.enabled = false;
+        _shine.enabled = false;
     }
 
     //생성자 본문. 베이크에서 한 번만 돈다
@@ -64,5 +74,9 @@ public class PlayerFaceView : UiWidgetBehaviour
         _photo = UiBuilder.CreateImage(_background.transform, "Photo", Color.white);
         UiBuilder.Place(_photo.rectTransform, -(photoWidth - width) * 0.5f, -CropTopRatio * photoHeight, photoWidth, photoHeight);
         _photo.enabled = false;
+
+        _shine = UiBuilder.CreateImage(_background.transform, "Shine", Color.white);
+        UiBuilder.Stretch(_shine.rectTransform, 0f, 0f, 0f, 0f);
+        _shine.enabled = false;
     }
 }

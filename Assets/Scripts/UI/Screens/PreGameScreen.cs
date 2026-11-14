@@ -18,7 +18,6 @@ public class PreGameScreen : UiScreenBehaviour
     private const float StarterHeight = 196f;
     private const float StarterCardWidth = 124f;
     private const float StarterCardLift = 22f;
-    private const float StarterCardTilt = 3f;
     private const float StarterTextInset = 184f;
     private const float LineupTop = 628f;
     private const float LineupGap = 16f;
@@ -188,8 +187,8 @@ public class PreGameScreen : UiScreenBehaviour
         label.text = "선발 투수";
         label.characterSpacing = 4f;
 
-        _awayStarterCard = CreateStarterCard("AwayStarterCard", SideMargin + 32f, -StarterCardTilt);
-        _homeStarterCard = CreateStarterCard("HomeStarterCard", SideMargin + PanelWidth - 32f - StarterCardWidth, StarterCardTilt);
+        _awayStarterCard = CreateStarterCard("AwayStarterCard", SideMargin + 32f);
+        _homeStarterCard = CreateStarterCard("HomeStarterCard", SideMargin + PanelWidth - 32f - StarterCardWidth);
 
         _awayStarterName = UiBuilder.CreateText(rect, "AwayStarterName", 40f, UiPalette.Text1);
         UiBuilder.Place(_awayStarterName.rectTransform, StarterTextInset, 30f, 300f, 50f);
@@ -210,8 +209,8 @@ public class PreGameScreen : UiScreenBehaviour
         UiBuilder.PlaceRight(_homeStarterOvr.rectTransform, StarterTextInset, 112f, 160f, 72f);
     }
 
-    //판 위쪽으로 살짝 걸치고 바깥쪽으로 기운 카드. 판 밖이라 판 모양에 잘리지 않는다
-    private CardView CreateStarterCard(string name, float x, float tilt)
+    //판 위쪽으로 살짝 걸친 카드. 판 밖이라 판 모양에 잘리지 않는다
+    private CardView CreateStarterCard(string name, float x)
     {
         CardView card = CardView.Bake(Root, StarterCardWidth, false);
         RectTransform rect = card.Root;
@@ -219,7 +218,6 @@ public class PreGameScreen : UiScreenBehaviour
         rect.name = name;
         UiBuilder.Place(rect, x, StarterTop - StarterCardLift, StarterCardWidth, rect.sizeDelta.y);
         UiBuilder.CenterPivot(rect);
-        rect.localEulerAngles = new Vector3(0f, 0f, tilt);
 
         return card;
     }
@@ -242,7 +240,7 @@ public class PreGameScreen : UiScreenBehaviour
     private static void SetStarter(CardView card, TextMeshProUGUI nameText, TextMeshProUGUI roleText,
         TextMeshProUGUI ovrText, PitcherSnapshot pitcher, bool isPlayerCard)
     {
-        nameText.text = $"<b>{pitcher.Name}</b><size=74%> '{PlayerLabelFormat.Year(pitcher.Year)}</size>";
+        nameText.text = PlayerLabelFormat.NameWithSmallYear(pitcher.Name, pitcher.Year);
         roleText.text = pitcher.Position;
         ovrText.text = pitcher.OVR.ToString();
         ovrText.color = UiPalette.Text1;

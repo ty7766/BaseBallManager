@@ -31,7 +31,7 @@ ICONS = {
     "save": "floppy-disk",
     "quickstart": "lightning",
     "lobby": "house",
-    "postseason": "pennant",
+    "postseason": "crown",
 }
 
 

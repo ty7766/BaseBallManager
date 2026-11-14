@@ -7,7 +7,7 @@ Shader "BaseBallManager/UI/StickerOutline"
         [PerRendererData] _MainTex ("Logo", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
         _OutlineColor ("Outline", Color) = (0.95, 0.96, 0.98, 1)
-        _OutlineWidth ("Outline Width (그림 폭 대비)", Range(0, 0.15)) = 0.055
+        _OutlineWidth ("Outline Width (그림 폭 대비)", Range(0, 0.15)) = 0.04
         _Padding ("Padding (한 변, 그림 폭 대비)", Range(0, 0.3)) = 0.08
 
         _StencilComp ("Stencil Comparison", Float) = 8
@@ -35,7 +35,7 @@ Shader "BaseBallManager/UI/StickerOutline"
         Lighting Off
         ZWrite Off
         ZTest [unity_GUIZTestMode]
-        Blend One One
+        Blend One OneMinusSrcAlpha
         ColorMask [_ColorMask]
 
         Pass
@@ -86,7 +86,12 @@ Shader "BaseBallManager/UI/StickerOutline"
                 half alpha = max(logo.a, outline * _OutlineColor.a);
                 half3 rgb = lerp(_OutlineColor.rgb, logo.rgb, logo.a);
 
-                return fixed4(rgb, alpha) * i.color * CardClip(i.mask);
+                fixed4 color = fixed4(rgb, alpha) * i.color;
+
+                color.a *= CardClip(i.mask);
+                color.rgb *= color.a;
+
+                return color;
             }
             ENDCG
         }

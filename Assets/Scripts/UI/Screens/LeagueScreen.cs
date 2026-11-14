@@ -143,7 +143,7 @@ public class LeagueScreen : UiScreenBehaviour
 
         _saveTile = CreateTile("SaveButton", "저장", "save", 0, menuWidth, menuBottom, OnSaveClicked);
         _lobbyTile = CreateTile("LobbyButton", "로비로", "lobby", 1, menuWidth, menuBottom, OnBackClicked);
-        _postSeasonTile = CreateTile("PostSeasonButton", "가을야구", "postseason", 2, menuWidth, menuBottom, OnPostSeasonClicked);
+        _postSeasonTile = CreateTile("PostSeasonButton", "포스트시즌", "postseason", 2, menuWidth, menuBottom, OnPostSeasonClicked);
 
         _startTile = LobbyMenuTileView.Create(Root, "StartButton", "경기 시작", "league",
             new Vector2(PanelWidth, StartHeight), StartFontSize, true, OnStartClicked, true);

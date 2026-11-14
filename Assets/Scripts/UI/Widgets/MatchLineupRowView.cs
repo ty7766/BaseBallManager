@@ -17,10 +17,6 @@ public class MatchLineupRowView : UiWidgetBehaviour
     private const float OvrWidth = 92f;
     //선형 색 공간에서 흰 저알파는 생각보다 밝게 뜬다
     private const float StripeAlpha = 0.015f;
-    private const string YearCloseTag = "</color></size>";
-
-    //연도는 이름보다 작고 옅게, 굵기 없이
-    private static readonly string YearOpenTag = $"<size=76%><color=#{ColorUtility.ToHtmlStringRGB(UiPalette.Text2)}> '";
 
     [SerializeField] private TextMeshProUGUI _orderText;
     [SerializeField] private TextMeshProUGUI _positionText;
@@ -49,7 +45,7 @@ public class MatchLineupRowView : UiWidgetBehaviour
     {
         _orderText.text = battingOrder.ToString();
         _positionText.text = snapshot.Position;
-        _nameText.text = "<b>" + snapshot.Name + "</b>" + YearOpenTag + PlayerLabelFormat.Year(snapshot.Year) + YearCloseTag;
+        _nameText.text = PlayerLabelFormat.NameWithSmallYear(snapshot.Name, snapshot.Year);
         _ovrText.text = snapshot.OVR.ToString();
         _ovrText.color = UiPalette.Text1;
         HideStars();

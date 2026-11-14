@@ -279,17 +279,10 @@ public class PlayLogView : UiWidgetBehaviour
             UiEffects.SlideUp(Root, _group, 26f, 0.22f);
 
             if (isHomeRun)
-            {
-                UiEffects.Flash(_background, UiPalette.AccentGold, 0.6f);
                 UiEffects.Burst(Root, UiEffectKind.HomeRun);
-                return;
-            }
 
-            if (log.RunsScored <= 0)
-                return;
-
-            UiEffects.Pop(_scoreBadge.transform, 0.5f, 0.32f);
-            UiEffects.Burst(_scoreBadge.rectTransform, UiEffectKind.Score);
+            if (log.RunsScored > 0)
+                UiEffects.Pop(_scoreBadge.transform, 0.75f, 0.24f);
         }
 
         /// <summary>

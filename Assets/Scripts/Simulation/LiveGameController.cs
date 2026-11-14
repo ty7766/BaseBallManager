@@ -52,7 +52,7 @@ public class LiveGameController : MonoBehaviour, IGameInterruptHandler
     }
 
     /// <summary>
-    /// 예약된 교체를 모두 취소한다 (그냥 재개 · 자동 모드)
+    /// 예약된 교체를 모두 취소한다 (재개 · 자동 모드)
     /// </summary>
     public void ClearReservations()
     {

@@ -57,7 +57,7 @@ public class PostSeasonScreen : UiScreenBehaviour
             : PlayerDataManager.Instance.PlayerTeamName;
 
         _stateText.text = postSeason.IsFinished
-            ? "가을야구 종료"
+            ? "포스트시즌 종료"
             : $"{GetRoundName(postSeason.CurrentSeries.Round)} 진행 중";
 
         _championText.text = postSeason.IsFinished && !string.IsNullOrEmpty(postSeason.ChampionTeamName)
@@ -102,7 +102,7 @@ public class PostSeasonScreen : UiScreenBehaviour
     {
         TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
         UiBuilder.Place(title.rectTransform, 32f, 32f, 700f, 60f);
-        title.text = "가을야구";
+        title.text = "포스트시즌";
 
         _stateText = UiBuilder.CreateText(Root, "State", 34f, UiPalette.AccentGold);
         UiBuilder.Place(_stateText.rectTransform, 32f, 100f, 1016f, 48f);
@@ -131,7 +131,7 @@ public class PostSeasonScreen : UiScreenBehaviour
         nextRect.offsetMin = new Vector2(32f, 180f);
         nextRect.offsetMax = new Vector2(-12f, 300f);
 
-        _claimButton = UiBuilder.CreateButton(Root, "Claim", "가을야구 보상 받기", 34f, true, ClaimRewards);
+        _claimButton = UiBuilder.CreateButton(Root, "Claim", "포스트시즌 보상 받기", 34f, true, ClaimRewards);
         RectTransform claimRect = _claimButton.GetComponent<RectTransform>();
 
         claimRect.anchorMin = new Vector2(0.5f, 0f);

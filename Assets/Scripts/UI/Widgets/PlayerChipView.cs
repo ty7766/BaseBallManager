@@ -2,7 +2,7 @@
 using UnityEngine;
 
 /// <summary>
-/// 경기 중 현재 타자 · 투수 칩 (명세 1-1 B 밀도 · 중계 그래픽 B안). 얼굴 사진 + 역할 · 이름 · 보조 줄, 작은 OVR.
+/// 경기 중 현재 타자 · 투수 칩 (명세 1-1 B 밀도 · 중계 그래픽 B안). 얼굴 사진 바로 옆에 OVR · 역할, 그 아래 이름 · 보조 줄.
 /// 바탕은 놓인 판이 맡는다. 오른쪽 칩은 사진 · 글자를 거울처럼 뒤집어 둔다
 /// </summary>
 public class PlayerChipView : UiWidgetBehaviour
@@ -15,7 +15,8 @@ public class PlayerChipView : UiWidgetBehaviour
     private const float FaceWidth = 112f;
     private const float FaceHeight = 140f;
     private const float TextGap = 18f;
-    private const float OvrWidth = 90f;
+    private const float OvrWidth = 72f;
+    private const float OvrGap = 8f;
 
     [SerializeField] private PlayerFaceView _face;
     [SerializeField] private TextMeshProUGUI _roleText;
@@ -62,34 +63,33 @@ public class PlayerChipView : UiWidgetBehaviour
 
         _face = PlayerFaceView.Bake(Root, FaceWidth, FaceHeight);
 
-        float textWidth = width - FaceWidth - TextGap - OvrWidth;
+        float textLeft = FaceWidth + TextGap;
+        float textWidth = width - textLeft;
+        float roleLeft = textLeft + OvrWidth + OvrGap;
         TextAlignmentOptions align = alignRight ? TextAlignmentOptions.MidlineRight : TextAlignmentOptions.MidlineLeft;
 
+        _ovrText = BroadcastPanel.CreateNumber(Root, "Ovr", 44f, UiPalette.Text1, align);
         _roleText = UiBuilder.CreateLabel(Root, "Role", roleLabel, 24f, UiPalette.Text3, align);
         _nameText = UiBuilder.CreateText(Root, "Name", 40f, UiPalette.Text1, align);
         _nameText.fontStyle = FontStyles.Bold;
         _nameText.overflowMode = TextOverflowModes.Ellipsis;
         _detailText = UiBuilder.CreateText(Root, "Detail", 27f, UiPalette.Text2, align);
-        _ovrText = BroadcastPanel.CreateNumber(Root, "Ovr", 44f, UiPalette.Text1,
-            alignRight ? TextAlignmentOptions.TopLeft : TextAlignmentOptions.TopRight);
-
-        float textLeft = FaceWidth + TextGap;
 
         if (alignRight)
         {
             UiBuilder.PlaceRight(_face.Root, 0f, (ChipHeight - FaceHeight) * 0.5f, FaceWidth, FaceHeight);
-            UiBuilder.PlaceRight(_roleText.rectTransform, textLeft, 12f, textWidth, 30f);
-            UiBuilder.PlaceRight(_nameText.rectTransform, textLeft, 46f, textWidth, 52f);
-            UiBuilder.PlaceRight(_detailText.rectTransform, textLeft, 100f, textWidth, 36f);
-            UiBuilder.Place(_ovrText.rectTransform, 0f, 10f, OvrWidth, 56f);
+            UiBuilder.PlaceRight(_ovrText.rectTransform, textLeft, 2f, OvrWidth, 52f);
+            UiBuilder.PlaceRight(_roleText.rectTransform, roleLeft, 14f, textWidth - OvrWidth - OvrGap, 30f);
+            UiBuilder.PlaceRight(_nameText.rectTransform, textLeft, 54f, textWidth, 50f);
+            UiBuilder.PlaceRight(_detailText.rectTransform, textLeft, 104f, textWidth, 36f);
             return;
         }
 
         UiBuilder.Place(_face.Root, 0f, (ChipHeight - FaceHeight) * 0.5f, FaceWidth, FaceHeight);
-        UiBuilder.Place(_roleText.rectTransform, textLeft, 12f, textWidth, 30f);
-        UiBuilder.Place(_nameText.rectTransform, textLeft, 46f, textWidth, 52f);
-        UiBuilder.Place(_detailText.rectTransform, textLeft, 100f, textWidth, 36f);
-        UiBuilder.PlaceRight(_ovrText.rectTransform, 0f, 10f, OvrWidth, 56f);
+        UiBuilder.Place(_ovrText.rectTransform, textLeft, 2f, OvrWidth, 52f);
+        UiBuilder.Place(_roleText.rectTransform, roleLeft, 14f, textWidth - OvrWidth - OvrGap, 30f);
+        UiBuilder.Place(_nameText.rectTransform, textLeft, 54f, textWidth, 50f);
+        UiBuilder.Place(_detailText.rectTransform, textLeft, 104f, textWidth, 36f);
     }
 
     //얼굴 사진 · OVR 색. 내 카드만 카드 종류 색으로 OVR 을 칠한다

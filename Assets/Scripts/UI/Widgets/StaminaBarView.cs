@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 투수 체력 바 (명세 ②). 50% 지점에 눈금, 구간별로 색이 바뀐다. "체력 N/M" 은 바 왼쪽 안에 쓴다 —
+/// 투수 체력 바 (명세 ②). 50% 지점에 눈금, 구간별로 색이 바뀐다. "체력" 은 바 왼쪽 안에 쓴다 —
 /// 채움이 글자를 덮을 만큼 길면 진한 글자, 짧아 빈 칸 위에 서면 흰 글자
 /// </summary>
 public class StaminaBarView : UiWidgetBehaviour
@@ -11,10 +11,11 @@ public class StaminaBarView : UiWidgetBehaviour
     private const float FillInset = 3f;
     private const float TextLeft = 14f;
     //글자 폭이 바의 이 비율쯤이다. 채움이 이보다 길어야 진한 글자가 채움 위에 온전히 선다
-    private const float DarkTextMinRatio = 0.42f;
+    private const float DarkTextMinRatio = 0.2f;
+    private const string Label = "체력";
 
     [SerializeField] private Image _fill;
-    [SerializeField] private TextMeshProUGUI _valueText;
+    [SerializeField] private TextMeshProUGUI _labelText;
     [SerializeField] private float _width;
 
     /// <summary>
@@ -42,14 +43,12 @@ public class StaminaBarView : UiWidgetBehaviour
 
         Root.gameObject.SetActive(true);
 
-        int max = Mathf.Max(1, pitcherState.Snapshot.Stamina);
         float ratio = Mathf.Clamp01(pitcherState.GetFatigueRatio());
         float height = Root.sizeDelta.y;
 
         UiBuilder.Place(_fill.rectTransform, FillInset, FillInset, Mathf.Max(0f, (_width - FillInset * 2f) * ratio), height - FillInset * 2f);
         _fill.color = UiPalette.GetStaminaColor(ratio);
-        _valueText.text = $"체력 {pitcherState.CurrentStamina}/{max}";
-        _valueText.color = ratio >= DarkTextMinRatio ? UiPalette.ButtonPrimaryText : UiPalette.Text1;
+        _labelText.color = ratio >= DarkTextMinRatio ? UiPalette.ButtonPrimaryText : UiPalette.Text1;
     }
 
     //생성자 본문. 베이크에서 한 번만 돈다
@@ -70,8 +69,8 @@ public class StaminaBarView : UiWidgetBehaviour
             UiSprites.StaminaTick);
         UiBuilder.Place(tick.rectTransform, width * 0.5f - 2f, 0f, 4f, height);
 
-        _valueText = UiBuilder.CreateText(Root, "Value", height * 0.58f, UiPalette.ButtonPrimaryText);
-        UiBuilder.Place(_valueText.rectTransform, TextLeft, 0f, width - TextLeft * 2f, height);
-        _valueText.fontStyle = FontStyles.Bold;
+        _labelText = UiBuilder.CreateLabel(Root, "Label", Label, height * 0.58f, UiPalette.ButtonPrimaryText);
+        UiBuilder.Place(_labelText.rectTransform, TextLeft, 0f, width - TextLeft * 2f, height);
+        _labelText.fontStyle = FontStyles.Bold;
     }
 }

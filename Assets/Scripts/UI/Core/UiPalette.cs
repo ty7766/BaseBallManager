@@ -56,7 +56,7 @@ public static class UiPalette
         Hex("#131230"), //두산
         Hex("#CE0E2D"), //SSG
         Hex("#000000"), //KT
-        Hex("#315288"), //NC
+        Hex("#006A80"), //NC (청록 · 마린블루)
         Hex("#570514"), //키움
         Hex("#041E42")  //롯데
     };
