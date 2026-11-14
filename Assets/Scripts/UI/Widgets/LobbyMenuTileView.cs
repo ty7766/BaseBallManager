@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 로비 메뉴 칸 하나. 칸보다 큰 아이콘을 왼쪽 끝에 반쯤 걸쳐 흐리게 깔고, 이름은 왼쪽 아래에 둔다 (팀 선택 칸과 같은 짜임).
-/// 주 칸(리그 입장)은 흰 채움, 나머지는 어두운 반투명 채움
+/// 주 칸(리그 입장)은 흰 채움, 나머지는 어두운 반투명 채움. 리그 화면은 중계 그래픽 판과 같은 깎인 모양을 쓴다
 /// </summary>
 public class LobbyMenuTileView : UiWidgetBehaviour
 {
@@ -31,16 +31,17 @@ public class LobbyMenuTileView : UiWidgetBehaviour
     public Button Button => _button;
 
     /// <summary>
-    /// 칸을 만든다. 아이콘 크기를 칸 높이로 정하므로 크기를 함께 받고, 위치는 호출부가 정한다
+    /// 칸을 만든다. 아이콘 크기를 칸 높이로 정하므로 크기를 함께 받고, 위치는 호출부가 정한다.
+    /// cutShape 를 켜면 둥근 공용 버튼 대신 오른쪽 위 · 왼쪽 아래를 깎은 모양이 된다 (리그 화면)
     /// </summary>
     public static LobbyMenuTileView Create(Transform parent, string name, string label, string iconName,
-        Vector2 size, float fontSize, bool primary, UnityAction onClick)
+        Vector2 size, float fontSize, bool primary, UnityAction onClick, bool cutShape = false)
     {
         LobbyMenuTileView view = CreateNode<LobbyMenuTileView>(parent, name);
         view.Root.sizeDelta = size;
         view._group = view.gameObject.AddComponent<CanvasGroup>();
 
-        Image shape = CreateShapeMask(view.Root);
+        Image shape = CreateShapeMask(view.Root, cutShape ? UiSprites.CutFill : UiSprites.ButtonPrimary);
         Image fill = UiBuilder.CreateImage(shape.rectTransform, "Fill",
             primary ? UiPalette.ButtonPrimary : UiPalette.WithAlpha(UiPalette.BgApp, FillAlpha));
         UiBuilder.Stretch(fill.rectTransform, 0f, 0f, 0f, 0f);
@@ -49,7 +50,8 @@ public class LobbyMenuTileView : UiWidgetBehaviour
 
         if (!primary)
         {
-            Image frame = UiBuilder.CreateImage(view.Root, "Frame", UiPalette.LineBorder, UiSprites.ButtonNormal, Image.Type.Sliced);
+            Image frame = UiBuilder.CreateImage(view.Root, "Frame", UiPalette.LineBorder,
+                cutShape ? UiSprites.CutOutline : UiSprites.ButtonNormal, Image.Type.Sliced);
             UiBuilder.Stretch(frame.rectTransform, 0f, 0f, 0f, 0f);
         }
 
@@ -78,10 +80,10 @@ public class LobbyMenuTileView : UiWidgetBehaviour
         _group.alpha = interactable ? 1f : DisabledAlpha;
     }
 
-    //공용 버튼과 같은 모양으로 잘라 채움 · 아이콘이 둥근 모서리 밖으로 새지 않게 한다
-    private static Image CreateShapeMask(RectTransform root)
+    //칸 모양으로 잘라 채움 · 아이콘이 모서리 밖으로 새지 않게 한다
+    private static Image CreateShapeMask(RectTransform root, string shapeSprite)
     {
-        Image shape = UiBuilder.CreateImage(root, "Shape", Color.white, UiSprites.ButtonPrimary, Image.Type.Sliced);
+        Image shape = UiBuilder.CreateImage(root, "Shape", Color.white, shapeSprite, Image.Type.Sliced);
 
         UiBuilder.Stretch(shape.rectTransform, 0f, 0f, 0f, 0f);
         shape.raycastTarget = true;

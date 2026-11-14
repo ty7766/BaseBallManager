@@ -8,10 +8,13 @@ using UnityEngine.UI;
 /// </summary>
 public class LineScoreView : UiWidgetBehaviour
 {
-    private const float LabelWidth = 150f;
-    private const float SummaryCellWidth = 72f;
-    private const float RegulationCellWidth = 64f;
-    private const float RowHeight = 56f;
+    private const float LabelWidth = 170f;
+    private const float SummaryCellWidth = 80f;
+    private const float RegulationCellWidth = 66f;
+    private const float RowHeight = 72f;
+    private const float TextTop = 12f;
+    private const float TextHeight = 48f;
+    private const float CellFontSize = 38f;
     private const int SummaryColumnCount = 3;
 
     /// <summary>
@@ -45,8 +48,7 @@ public class LineScoreView : UiWidgetBehaviour
     //생성자 본문. 베이크에서 한 번만 돈다
     private void BuildWidget(Transform parent)
     {
-        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgPanel,
-            UiSprites.PanelSmall, Image.Type.Sliced);
+        Image background = BroadcastPanel.Create(Root, "Background");
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
         //행은 표의 폭을 그대로 따라간다. 고정 폭으로 두면 R·H·E 칸이 표 밖으로 밀려 잘린다
@@ -54,22 +56,24 @@ public class LineScoreView : UiWidgetBehaviour
         _awayRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "AwayRow"), 8f + RowHeight, RowHeight);
         _homeRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "HomeRow"), 8f + RowHeight * 2f, RowHeight);
 
-        _awayLabel = UiBuilder.CreateText(_awayRow, "AwayLabel", 32f, UiPalette.Text1);
-        UiBuilder.Place(_awayLabel.rectTransform, 16f, 10f, LabelWidth - 24f, 36f);
+        _awayLabel = UiBuilder.CreateText(_awayRow, "AwayLabel", CellFontSize, UiPalette.Text1);
+        UiBuilder.Place(_awayLabel.rectTransform, 24f, TextTop, LabelWidth - 32f, TextHeight);
+        _awayLabel.fontStyle = FontStyles.Bold;
 
-        _homeLabel = UiBuilder.CreateText(_homeRow, "HomeLabel", 32f, UiPalette.Text1);
-        UiBuilder.Place(_homeLabel.rectTransform, 16f, 10f, LabelWidth - 24f, 36f);
+        _homeLabel = UiBuilder.CreateText(_homeRow, "HomeLabel", CellFontSize, UiPalette.Text1);
+        UiBuilder.Place(_homeLabel.rectTransform, 24f, TextTop, LabelWidth - 32f, TextHeight);
+        _homeLabel.fontStyle = FontStyles.Bold;
 
         string[] summaryHeaders = { "R", "H", "E" };
 
         for (int i = 0; i < SummaryColumnCount; i++)
         {
             TextMeshProUGUI header = UiBuilder.CreateLabel(_inningHeaderRow, "SummaryHeader",
-                summaryHeaders[i], 30f, i == 0 ? UiPalette.AccentGold : UiPalette.Text3,
+                summaryHeaders[i], 32f, i == 0 ? UiPalette.AccentGold : UiPalette.Text3,
                 TextAlignmentOptions.Center);
 
             UiBuilder.PlaceRight(header.rectTransform,
-                (SummaryColumnCount - 1 - i) * SummaryCellWidth + 16f, 10f, SummaryCellWidth, 36f);
+                (SummaryColumnCount - 1 - i) * SummaryCellWidth + 16f, TextTop, SummaryCellWidth, TextHeight);
 
             _awaySummary[i] = CreateSummaryCell(_awayRow, i);
             _homeSummary[i] = CreateSummaryCell(_homeRow, i);
@@ -148,31 +152,29 @@ public class LineScoreView : UiWidgetBehaviour
     {
         while (_inningHeaders.Count < inningCount)
         {
-            _inningHeaders.Add(UiBuilder.CreateText(_inningHeaderRow, "InningHeader", 28f,
+            _inningHeaders.Add(UiBuilder.CreateText(_inningHeaderRow, "InningHeader", 30f,
                 UiPalette.Text3, TextAlignmentOptions.Center));
-            _awayCells.Add(UiBuilder.CreateText(_awayRow, "AwayCell", 32f,
-                UiPalette.Text1, TextAlignmentOptions.Center));
-            _homeCells.Add(UiBuilder.CreateText(_homeRow, "HomeCell", 32f,
-                UiPalette.Text1, TextAlignmentOptions.Center));
+            _awayCells.Add(BroadcastPanel.CreateNumber(_awayRow, "AwayCell", CellFontSize, UiPalette.Text1));
+            _homeCells.Add(BroadcastPanel.CreateNumber(_homeRow, "HomeCell", CellFontSize, UiPalette.Text1));
         }
 
         for (int i = 0; i < inningCount; i++)
         {
             float x = LabelWidth + i * cellWidth;
 
-            UiBuilder.Place(_inningHeaders[i].rectTransform, x, 10f, cellWidth, 36f);
-            UiBuilder.Place(_awayCells[i].rectTransform, x, 10f, cellWidth, 36f);
-            UiBuilder.Place(_homeCells[i].rectTransform, x, 10f, cellWidth, 36f);
+            UiBuilder.Place(_inningHeaders[i].rectTransform, x, TextTop, cellWidth, TextHeight);
+            UiBuilder.Place(_awayCells[i].rectTransform, x, TextTop, cellWidth, TextHeight);
+            UiBuilder.Place(_homeCells[i].rectTransform, x, TextTop, cellWidth, TextHeight);
         }
     }
 
     private TextMeshProUGUI CreateSummaryCell(RectTransform row, int columnIndex)
     {
-        TextMeshProUGUI cell = UiBuilder.CreateText(row, "Summary", 32f,
-            columnIndex == 0 ? UiPalette.AccentGold : UiPalette.Text1, TextAlignmentOptions.Center);
+        TextMeshProUGUI cell = BroadcastPanel.CreateNumber(row, "Summary", CellFontSize,
+            columnIndex == 0 ? UiPalette.AccentGold : UiPalette.Text1);
 
         UiBuilder.PlaceRight(cell.rectTransform,
-            (SummaryColumnCount - 1 - columnIndex) * SummaryCellWidth + 16f, 10f, SummaryCellWidth, 36f);
+            (SummaryColumnCount - 1 - columnIndex) * SummaryCellWidth + 16f, TextTop, SummaryCellWidth, TextHeight);
 
         return cell;
     }

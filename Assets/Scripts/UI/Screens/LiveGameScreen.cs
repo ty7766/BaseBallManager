@@ -4,14 +4,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// ② 경기 중 화면. 타석 결과가 한 줄씩 흐르고 조작은 일시정지뿐이다 (명세 ② · 6-5)
+/// ② 경기 중 화면. 타석 결과가 한 줄씩 흐르고 조작은 일시정지뿐이다 (명세 ② · 6-5 · 중계 그래픽 B안)
 /// </summary>
 public class LiveGameScreen : UiScreenBehaviour
 {
-    private const float MatchupHeight = 196f;
+    private const float SideMargin = 24f;
+    private const float PanelGap = 16f;
+    private const float MatchupHeight = 236f;
     private const float FooterHeight = 120f;
     private const float ChipWidth = 420f;
-    private const float DiamondSize = 160f;
+    private const float ChipInset = 20f;
+    private const float DiamondSize = 150f;
+    private const float StaminaHeight = 44f;
 
     private Action _onPauseRequested;
 
@@ -155,41 +159,48 @@ public class LiveGameScreen : UiScreenBehaviour
 
     protected override void Build()
     {
+        float matchupTop = SideMargin + ScoreboardView.BoardHeight + PanelGap;
+        float logTop = matchupTop + MatchupHeight + PanelGap;
+
         _scoreboard = ScoreboardView.Bake(Root);
+        UiBuilder.Place(_scoreboard.Root, SideMargin, SideMargin, ScoreboardView.BoardWidth, ScoreboardView.BoardHeight);
 
-        RectTransform matchup = UiBuilder.CreateRect(Root, "Matchup");
-        UiBuilder.Place(matchup, 0f, ScoreboardView.BoardHeight, UiBuilder.DesignSize.x, MatchupHeight);
+        Image matchup = BroadcastPanel.Create(Root, "Matchup");
+        RectTransform matchupRect = matchup.rectTransform;
+        UiBuilder.Place(matchupRect, SideMargin, matchupTop, ScoreboardView.BoardWidth, MatchupHeight);
 
-        _batterChip = PlayerChipView.Bake(matchup, "타자", ChipWidth, false);
-        UiBuilder.Place(_batterChip.Root, 24f, 8f, ChipWidth, PlayerChipView.ChipHeight);
+        _batterChip = PlayerChipView.Bake(matchupRect, "타자", ChipWidth, false);
+        UiBuilder.Place(_batterChip.Root, ChipInset, 14f, ChipWidth, PlayerChipView.ChipHeight);
 
-        _pitcherChip = PlayerChipView.Bake(matchup, "투수", ChipWidth, true);
-        UiBuilder.Place(_pitcherChip.Root, 636f, 8f, ChipWidth, PlayerChipView.ChipHeight);
+        _pitcherChip = PlayerChipView.Bake(matchupRect, "투수", ChipWidth, true);
+        UiBuilder.PlaceRight(_pitcherChip.Root, ChipInset, 14f, ChipWidth, PlayerChipView.ChipHeight);
 
-        _diamond = BaseDiamondView.Bake(matchup, DiamondSize);
-        UiBuilder.Place(_diamond.Root, 460f, 14f, DiamondSize, DiamondSize);
+        _diamond = BaseDiamondView.Bake(matchupRect, DiamondSize);
+        UiBuilder.Place(_diamond.Root, (ScoreboardView.BoardWidth - DiamondSize) * 0.5f, 18f, DiamondSize, DiamondSize);
 
-        _staminaBar = StaminaBarView.Bake(matchup, ChipWidth, 22f);
-        UiBuilder.Place(_staminaBar.Root, 636f, 142f, ChipWidth, 22f);
+        _staminaBar = StaminaBarView.Bake(matchupRect, ChipWidth, StaminaHeight);
+        UiBuilder.PlaceRight(_staminaBar.Root, ChipInset, 14f + PlayerChipView.ChipHeight + 10f, ChipWidth, StaminaHeight);
 
         _playLog = PlayLogView.Bake(Root);
-        UiBuilder.Stretch(_playLog.Root, 24f, ScoreboardView.BoardHeight + MatchupHeight + 12f, 24f, FooterHeight + 24f);
+        UiBuilder.Stretch(_playLog.Root, SideMargin, logTop, SideMargin, FooterHeight + SideMargin + PanelGap);
 
         RectTransform footer = UiBuilder.CreateRect(Root, "Footer");
         footer.anchorMin = new Vector2(0f, 0f);
         footer.anchorMax = new Vector2(1f, 0f);
         footer.pivot = new Vector2(0.5f, 0f);
-        footer.offsetMin = new Vector2(24f, 16f);
-        footer.offsetMax = new Vector2(-24f, 16f + FooterHeight);
+        footer.offsetMin = new Vector2(SideMargin, 16f);
+        footer.offsetMax = new Vector2(-SideMargin, 16f + FooterHeight);
 
         _modeText = UiBuilder.CreateText(footer, "Mode", 30f, UiPalette.Text2);
         UiBuilder.Place(_modeText.rectTransform, 8f, 10f, 300f, 40f);
+        _modeText.fontStyle = FontStyles.Bold;
 
         _pauseHintText = UiBuilder.CreateText(footer, "PauseHint", 26f, UiPalette.StateReserved);
         UiBuilder.Place(_pauseHintText.rectTransform, 8f, 54f, 640f, 36f);
 
         _pauseButton = UiBuilder.CreateButton(footer, "PauseButton", "일시정지", 38f, false,
             OnPauseClicked, out _pauseLabel);
+        BroadcastPanel.ApplyButtonStyle(_pauseButton, false);
         UiBuilder.PlaceRight(_pauseButton.GetComponent<RectTransform>(), 0f, 8f, 320f, 104f);
 
         _pauseIcon = UiBuilder.CreateImage(_pauseButton.transform, "PauseIcon",

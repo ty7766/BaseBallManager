@@ -9,9 +9,13 @@ using UnityEngine.UI;
 /// </summary>
 public class StatTableView : UiWidgetBehaviour
 {
-    private const float RowHeight = 72f;
-    private const float HeaderHeight = 56f;
-    private const float NumberSize = 32f;
+    private const float RowHeight = 88f;
+    private const float HeaderHeight = 64f;
+    private const float NumberSize = 38f;
+    private const float NameSize = 34f;
+    private const float HeaderSize = 28f;
+    private const float TextTop = 20f;
+    private const float TextHeight = 48f;
 
     [SerializeField] private RectTransform _nameColumn;
     [SerializeField] private RectTransform _numberContent;
@@ -50,8 +54,8 @@ public class StatTableView : UiWidgetBehaviour
         _nameColumn.offsetMin = new Vector2(0f, 0f);
         _nameColumn.offsetMax = new Vector2(nameWidth, 0f);
 
-        TextMeshProUGUI nameHeader = UiBuilder.CreateText(_nameColumn, "NameHeader", 28f, UiPalette.Text3);
-        UiBuilder.Place(nameHeader.rectTransform, 12f, 14f, nameWidth - 16f, 32f);
+        TextMeshProUGUI nameHeader = UiBuilder.CreateText(_nameColumn, "NameHeader", HeaderSize, UiPalette.Text3);
+        UiBuilder.Place(nameHeader.rectTransform, 20f, 14f, nameWidth - 24f, 36f);
         nameHeader.text = nameHeaderText;
 
         ScrollRect scroll = UiBuilder.CreateTableScroll(Root, "NumberScroll", out _numberContent);
@@ -69,10 +73,10 @@ public class StatTableView : UiWidgetBehaviour
 
         for (int i = 0; i < numericHeaders.Length; i++)
         {
-            TextMeshProUGUI cell = UiBuilder.CreateText(headerRow, "Header", 26f,
+            TextMeshProUGUI cell = UiBuilder.CreateText(headerRow, "Header", HeaderSize,
                 UiPalette.Text3, TextAlignmentOptions.Center);
 
-            UiBuilder.Place(cell.rectTransform, i * cellWidth, 14f, cellWidth, 32f);
+            UiBuilder.Place(cell.rectTransform, i * cellWidth, 14f, cellWidth, 36f);
             cell.text = numericHeaders[i];
         }
 
@@ -133,17 +137,17 @@ public class StatTableView : UiWidgetBehaviour
             UiBuilder.PlaceRow(background.rectTransform, y, RowHeight);
             _rowBackgrounds.Add(background);
 
-            TextMeshProUGUI name = UiBuilder.CreateText(_nameColumn, "Name", 30f, UiPalette.Text1);
-            UiBuilder.Place(name.rectTransform, 12f, y + 18f, _nameWidth - 16f, 36f);
+            TextMeshProUGUI name = UiBuilder.CreateText(_nameColumn, "Name", NameSize, UiPalette.Text1);
+            UiBuilder.Place(name.rectTransform, 20f, y + TextTop, _nameWidth - 24f, TextHeight);
+            name.overflowMode = TextOverflowModes.Ellipsis;
             _nameCells.Add(name);
 
             TextMeshProUGUI[] numbers = new TextMeshProUGUI[_numericHeaders.Length];
 
             for (int column = 0; column < numbers.Length; column++)
             {
-                numbers[column] = UiBuilder.CreateText(_numberContent, "Cell", NumberSize,
-                    UiPalette.Text2, TextAlignmentOptions.Center);
-                UiBuilder.Place(numbers[column].rectTransform, column * _cellWidth, y + 18f, _cellWidth, 36f);
+                numbers[column] = BroadcastPanel.CreateNumber(_numberContent, "Cell", NumberSize, UiPalette.Text1);
+                UiBuilder.Place(numbers[column].rectTransform, column * _cellWidth, y + TextTop, _cellWidth, TextHeight);
             }
 
             _numberCells.Add(numbers);

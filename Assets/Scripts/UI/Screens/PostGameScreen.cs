@@ -19,9 +19,16 @@ public class PostGameScreen : UiScreenBehaviour
         "이닝", "투구", "상대", "피안타", "피홈런", "실점", "볼넷", "탈삼진"
     };
 
+    private const float SideMargin = 24f;
+    private const float PanelWidth = 1032f;
     private const float LineScoreTop = 350f;
-    private const float TabTop = 556f;
-    private const float TableTop = 636f;
+    private const float TabTop = 606f;
+    private const float TableTop = 690f;
+    private const float TableBottom = 176f;
+    private const float TableInset = 8f;
+    private const float NameColumnWidth = 300f;
+    private const float ReturnHeight = 120f;
+    private const float ReturnBottom = 32f;
 
     private Action _onReturn;
 
@@ -99,14 +106,14 @@ public class PostGameScreen : UiScreenBehaviour
             TextAlignmentOptions.Center);
         UiBuilder.Place(_resultText.rectTransform, 340f, 84f, 400f, 84f);
 
-        _scoreText = UiBuilder.CreateText(Root, "Score", 96f, UiPalette.Text1, TextAlignmentOptions.Center);
+        _scoreText = BroadcastPanel.CreateNumber(Root, "Score", 100f, UiPalette.Text1);
         UiBuilder.Place(_scoreText.rectTransform, 290f, 172f, 500f, 110f);
 
         _detailText = UiBuilder.CreateText(Root, "Detail", 34f, UiPalette.Text2, TextAlignmentOptions.Center);
         UiBuilder.Place(_detailText.rectTransform, 290f, 288f, 500f, 44f);
 
         _lineScore = LineScoreView.Bake(Root);
-        UiBuilder.Place(_lineScore.Root, 24f, LineScoreTop, 1032f, LineScoreView.TotalHeight);
+        UiBuilder.Place(_lineScore.Root, SideMargin, LineScoreTop, PanelWidth, LineScoreView.TotalHeight);
 
         _hitterTabButton = UiBuilder.CreateButton(Root, "HitterTab", "타자 기록", 32f, true, ShowHitters);
         UiBuilder.Place(_hitterTabButton.GetComponent<RectTransform>(), 24f, TabTop, 250f, 64f);
@@ -120,20 +127,22 @@ public class PostGameScreen : UiScreenBehaviour
         _homeTabButton = UiBuilder.CreateButton(Root, "HomeTab", "HOME", 30f, false, ShowHome);
         UiBuilder.Place(_homeTabButton.GetComponent<RectTransform>(), 826f, TabTop, 220f, 64f);
 
-        _hitterTable = StatTableView.Bake(Root, HitterHeaders, 230f, 78f);
-        UiBuilder.Stretch(_hitterTable.Root, 24f, TableTop, 24f, 180f);
+        Image tablePanel = BroadcastPanel.Create(Root, "TablePanel");
+        UiBuilder.Stretch(tablePanel.rectTransform, SideMargin, TableTop, SideMargin, TableBottom);
 
-        _pitcherTable = StatTableView.Bake(Root, PitcherHeaders, 230f, 100f);
-        UiBuilder.Stretch(_pitcherTable.Root, 24f, TableTop, 24f, 180f);
+        _hitterTable = StatTableView.Bake(tablePanel.transform, HitterHeaders, NameColumnWidth, 92f);
+        UiBuilder.Stretch(_hitterTable.Root, TableInset, TableInset, TableInset, TableInset);
 
-        Button returnButton = UiBuilder.CreateButton(Root, "ReturnButton", "리그로 돌아가기", 40f, true, OnReturnClicked);
-        RectTransform returnRect = returnButton.GetComponent<RectTransform>();
+        _pitcherTable = StatTableView.Bake(tablePanel.transform, PitcherHeaders, NameColumnWidth, 112f);
+        UiBuilder.Stretch(_pitcherTable.Root, TableInset, TableInset, TableInset, TableInset);
 
-        returnRect.anchorMin = new Vector2(0f, 0f);
-        returnRect.anchorMax = new Vector2(1f, 0f);
+        LobbyMenuTileView returnTile = LobbyMenuTileView.Create(Root, "ReturnButton", "리그로 돌아가기", "postseason",
+            new Vector2(PanelWidth, ReturnHeight), 42f, true, OnReturnClicked, true);
+        RectTransform returnRect = returnTile.Root;
+
+        returnRect.anchorMin = returnRect.anchorMax = new Vector2(0.5f, 0f);
         returnRect.pivot = new Vector2(0.5f, 0f);
-        returnRect.offsetMin = new Vector2(24f, 32f);
-        returnRect.offsetMax = new Vector2(-24f, 144f);
+        returnRect.anchoredPosition = new Vector2(0f, ReturnBottom);
     }
 
     //탭 상태에 맞는 표만 보여준다

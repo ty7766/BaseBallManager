@@ -8,10 +8,10 @@ public class SimulationStealLog
     public int OutCountBefore { get; }      //시도 시점의 아웃 카운트
 
     public int RunnerInstanceId { get; }    //선수별 기록 집계 키
-    public string RunnerName { get; }       //로그 출력용 주자 이름
+    public string RunnerName { get; }       //로그 출력용 주자 이름 (`이름 '연도`)
 
     public int PitcherInstanceId { get; }   //도루자 아웃을 이닝에 더할 투수 (기록 집계 키)
-    public string PitcherName { get; }      //로그 출력용 투수 이름
+    public string PitcherName { get; }      //로그 출력용 투수 이름 (`이름 '연도`)
 
     /// <summary>
     /// 출발 베이스 (1 = 1루에서 2루로 / 2 = 2루에서 3루로)

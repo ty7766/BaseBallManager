@@ -48,19 +48,20 @@ public class PlayLogView : UiWidgetBehaviour
 
     private void BuildWidget(Transform parent)
     {
-        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgPanel,
-            UiSprites.PanelLarge, Image.Type.Sliced);
+        Image background = BroadcastPanel.Create(Root, "Background");
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
-        TextMeshProUGUI header = UiBuilder.CreateText(Root, "Header", 32f, UiPalette.Text3);
-        UiBuilder.Place(header.rectTransform, 24f, 12f, 200f, 40f);
+        TextMeshProUGUI header = UiBuilder.CreateText(Root, "Header", 30f, UiPalette.Text2);
+        UiBuilder.Place(header.rectTransform, 28f, 12f, 200f, 40f);
         header.text = "중계";
+        header.fontStyle = FontStyles.Bold;
 
         _scroll = UiBuilder.CreateVerticalScroll(Root, "LogScroll", out _content);
         UiBuilder.Stretch(_scroll.GetComponent<RectTransform>(), 12f, 58f, 12f, 12f);
         _scroll.onValueChanged.AddListener(OnScrolled);
 
         _jumpToLatestButton = UiBuilder.CreateButton(Root, "JumpToLatest", "최신으로", 28f, false, JumpToLatest);
+        BroadcastPanel.ApplyButtonStyle(_jumpToLatestButton, false);
 
         RectTransform jumpRect = _jumpToLatestButton.GetComponent<RectTransform>();
 
@@ -110,7 +111,7 @@ public class PlayLogView : UiWidgetBehaviour
 
         LogRow row = TakeRow(RowHeight);
 
-        row.SetBatterLog(log, GetAttackTeamColor(log.IsTopInning));
+        row.SetBatterLog(log);
         ScrollToLatest();
     }
 
@@ -126,7 +127,7 @@ public class PlayLogView : UiWidgetBehaviour
 
         LogRow row = TakeRow(RowHeight);
 
-        row.SetStealLog(log, GetAttackTeamColor(log.IsTopInning));
+        row.SetStealLog(log);
         ScrollToLatest();
     }
 
@@ -191,14 +192,6 @@ public class PlayLogView : UiWidgetBehaviour
         _autoScroll = true;
         _jumpToLatestButton.gameObject.SetActive(false);
         _scroll.verticalNormalizedPosition = 0f;
-    }
-
-    private Color GetAttackTeamColor(bool isTopInning)
-    {
-        string attackTeam = isTopInning ? _awayTeamName : _homeTeamName;
-        Color teamColor = UiPalette.GetTeamColor(attackTeam);
-
-        return teamColor.r + teamColor.g + teamColor.b < 0.45f ? UiPalette.Text2 : teamColor;
     }
 
     //중계 행 하나. 헤더 · 타석 · 도루 세 모양을 부분 토글로 공유한다
@@ -267,15 +260,13 @@ public class PlayLogView : UiWidgetBehaviour
         /// <summary>
         /// 타석 결과 모양. 득점이 있으면 금색 배지가 붙는다
         /// </summary>
-        public void SetBatterLog(SimulationBatterLog log, Color inningChipColor)
+        public void SetBatterLog(SimulationBatterLog log)
         {
-            SetCommon(log.Inning, log.IsTopInning, inningChipColor);
+            SetCommon(log.Inning, log.IsTopInning);
 
             _sentenceText.text = PlayLogTextProvider.BuildBatterSentence(log);
             _sentenceText.color = PlayLogTextProvider.GetOutcomeColor(log.Outcome);
-            _sentenceText.fontStyle = PlayLogTextProvider.IsBoldOutcome(log.Outcome)
-                ? FontStyles.Bold
-                : FontStyles.Normal;
+            _sentenceText.fontStyle = FontStyles.Normal;
 
             bool isHomeRun = log.Outcome == BatterOutcome.HomeRun;
 
@@ -304,9 +295,9 @@ public class PlayLogView : UiWidgetBehaviour
         /// <summary>
         /// 도루 결과 모양
         /// </summary>
-        public void SetStealLog(SimulationStealLog log, Color inningChipColor)
+        public void SetStealLog(SimulationStealLog log)
         {
-            SetCommon(log.Inning, log.IsTopInning, inningChipColor);
+            SetCommon(log.Inning, log.IsTopInning);
 
             _sentenceText.text = PlayLogTextProvider.BuildStealSentence(log);
             _sentenceText.color = PlayLogTextProvider.GetStealColor(log);
@@ -323,10 +314,11 @@ public class PlayLogView : UiWidgetBehaviour
                 UiEffects.Burst(Root, UiEffectKind.Steal);
         }
 
-        private void SetCommon(int inning, bool isTopInning, Color inningChipColor)
+        //이닝 칩은 공격 팀과 상관없이 같은 회색이다
+        private void SetCommon(int inning, bool isTopInning)
         {
             _inningChip.gameObject.SetActive(true);
-            _inningChip.color = inningChipColor;
+            _inningChip.color = UiPalette.LineBorder;
             _inningText.text = PlayLogTextProvider.GetInningChipText(inning, isTopInning);
             _sentenceText.fontSize = SentenceSize;
         }

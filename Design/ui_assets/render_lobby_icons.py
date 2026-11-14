@@ -1,5 +1,6 @@
 """
-로비 메뉴 아이콘 — Phosphor Icons (MIT, icons_src/phosphor/LICENSE.txt) Fill 굵기의 윤곽만 뽑아 흰 글리프로 굽는다.
+로비 · 리그 메뉴 아이콘 — Phosphor Icons (MIT, icons_src/phosphor/LICENSE.txt) Fill 굵기의 윤곽만 뽑아 흰 글리프로 굽는다.
+Phosphor 에 없는 모양은 같은 256 격자 · 같은 굵기로 직접 그려 icons_src/authored/ 에 둔다.
 원본 SVG 에서 path 의 d 값만 꺼내 새 SVG 로 다시 쓰므로 원본의 다른 요소는 그려지지 않는다
 
 사용법
@@ -13,7 +14,7 @@ from pathlib import Path
 
 from render_button_art import render
 
-SOURCE = Path(__file__).resolve().parent / "icons_src" / "phosphor"
+SOURCES = [Path(__file__).resolve().parent / "icons_src" / folder for folder in ("phosphor", "authored")]
 SIZE = 128
 PHOSPHOR_VIEWBOX = 256
 
@@ -29,11 +30,14 @@ ICONS = {
     "goldenglove": "trophy",
     "save": "floppy-disk",
     "quickstart": "lightning",
+    "lobby": "house",
+    "postseason": "pennant",
 }
 
 
 def glyph_body(icon_name):
-    text = (SOURCE / f"{icon_name}-fill.svg").read_text(encoding="utf-8")
+    source = next(folder / f"{icon_name}-fill.svg" for folder in SOURCES if (folder / f"{icon_name}-fill.svg").exists())
+    text = source.read_text(encoding="utf-8")
     paths = re.findall(r'<path[^>]*\sd="([^"]+)"', text)
     if not paths:
         raise ValueError(f"{icon_name}: path 가 없습니다")
@@ -43,5 +47,9 @@ def glyph_body(icon_name):
 
 
 if __name__ == "__main__":
+    import sys
+    only = set(sys.argv[1:])
     for key, icon in ICONS.items():
+        if only and key not in only:
+            continue
         render(f"icon_{key}", glyph_body(icon), "Lobby/Icons", SIZE, SIZE)
