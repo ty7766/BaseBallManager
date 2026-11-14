@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 타이틀 키 아트. 바탕 · 붓질 · 선수 다섯 · 로고를 층으로 깔고 DOTween 으로 등장 연출을 한다.
+/// 타이틀 키 아트. 바탕 · 붓질 · 10구단 선수 · 엠블럼을 층으로 깔고 DOTween 으로 등장 연출을 한다.
 /// 선수 사진은 실행 중에 Resources/Photos 에서 불러 얹는다 (실제 선수 사진은 커밋하지 않는다)
 /// </summary>
 public class TitleKeyArtView : UiWidgetBehaviour
@@ -16,6 +16,9 @@ public class TitleKeyArtView : UiWidgetBehaviour
     private const string AdditiveMaterialPath = "UI/Materials/AdditiveLight";
     private const string GradientMaterialPath = "UI/Materials/GradientDither";
     private const string SheenSprite = "Fx/card_sheen";
+    private const string SparkSprite = "Fx/spark";
+    private const string EmblemTexture = "title_emblem";
+    private const string RingTexture = "title_ring";
 
     private const float ArtWidth = 1080f;
     private const float ArtHeight = 1920f;
@@ -23,8 +26,14 @@ public class TitleKeyArtView : UiWidgetBehaviour
     //사진 아래 30% 를 투명하게 녹인다 (WipeReveal 을 세로로: 진행 = 1 / (1 + 폭))
     private const float PhotoFadeSoftness = 0.3f;
     private const float PhotoFadeProgress = 1f / (1f + PhotoFadeSoftness);
-    private const float LogoWidth = 820f;
-    private const float LogoBottom = 450f;
+    private const float LogoWidth = 880f;
+    private const float LogoBottom = 440f;
+    //엠블럼 착지: 크게 떨어져 내려와 박히는 순간 번쩍임 · 충격파 · 불꽃이 터진다
+    private const float LogoDropScale = 2.2f;
+    private const float LogoDropDuration = 0.24f;
+    private const float RingStartScale = 0.35f;
+    private const int SparkCount = 14;
+    private const int SparkSeed = 26;
     private const float BottomFadeHeight = 1150f;
     private const float BottomFadeFalloff = 1.5f;
     private const float SweepInterval = 4.5f;
@@ -55,6 +64,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
 
     private readonly List<PlayerLayer> _players = new List<PlayerLayer>(10);
     private readonly List<Material> _ownedMaterials = new List<Material>(3);
+    private readonly List<Spark> _sparks = new List<Spark>(SparkCount);
 
     private RectTransform _art;
     private RawImage _background;
@@ -63,6 +73,8 @@ public class TitleKeyArtView : UiWidgetBehaviour
     private RawImage _blackBrush;
     private Material _photoFade;
     private RawImage _logo;
+    private Image _logoFlash;
+    private RawImage _ring;
     private RectTransform _sweep;
     private Sequence _intro;
     private Coroutine _startWhenSteady;
@@ -125,7 +137,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
         _sweepLoop = null;
     }
 
-    //층 순서: 바탕 → 큰 글자 → 붉은 붓질 → 검은 붓질 → 선수(뒤 · 가운데 · 앞 · 주인공) → 아래 어둠 → 로고
+    //층 순서: 바탕 → 큰 글자 → 붉은 붓질 → 검은 붓질 → 선수(뒤 · 가운데 · 앞 · 주인공) → 아래 어둠 → 충격파 → 엠블럼 → 불꽃
     //바탕만 화면을 꽉 채우고(넘치면 잘림), 나머지 1080x1920 무대는 위에 붙여 가로가 잘리지 않게 한다
     private void BuildLayers()
     {
@@ -265,30 +277,32 @@ public class TitleKeyArtView : UiWidgetBehaviour
         rect.anchoredPosition = Vector2.zero;
     }
 
-    //로고 모양으로 잘린 빛줄기가 주기적으로 훑고 지나간다
+    //충격파(뒤) → 엠블럼(번쩍임 · 빛줄기를 엠블럼 모양으로 자름) → 불꽃(앞)
     private void CreateLogo()
     {
-        Texture2D texture = Resources.Load<Texture2D>(ArtRoot + "title_logo");
+        Texture2D texture = Resources.Load<Texture2D>(ArtRoot + EmblemTexture);
+        float height = texture != null ? LogoWidth * texture.height / texture.width : LogoWidth * 0.52f;
+        Vector2 center = new Vector2(0f, LogoBottom + height * 0.5f);
+        Material additive = Resources.Load<Material>(AdditiveMaterialPath);
+
+        _ring = CreateImpactRing(center, additive);
+
         RectTransform rect = UiBuilder.CreateRect(Root, "Logo");
 
         _logo = rect.gameObject.AddComponent<RawImage>();
         _logo.texture = texture;
         _logo.raycastTarget = false;
         rect.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+        PlaceAtBottom(rect, center, new Vector2(LogoWidth, height));
 
-        float height = texture != null ? LogoWidth * texture.height / texture.width : LogoWidth * 0.27f;
-
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.sizeDelta = new Vector2(LogoWidth, height);
-        rect.anchoredPosition = new Vector2(0f, LogoBottom + height * 0.5f);
+        _logoFlash = UiBuilder.CreateImage(rect, "Flash", new Color(1f, 1f, 1f, 0f));
+        _logoFlash.material = additive;
+        UiBuilder.Stretch(_logoFlash.rectTransform, 0f, 0f, 0f, 0f);
 
         _sweep = UiBuilder.CreateRect(rect, "Sweep");
         _sweep.anchorMin = _sweep.anchorMax = new Vector2(0f, 0.5f);
         _sweep.sizeDelta = new Vector2(180f, height * 1.6f);
         _sweep.localRotation = Quaternion.Euler(0f, 0f, -18f);
-
-        Material additive = Resources.Load<Material>(AdditiveMaterialPath);
 
         for (int side = -1; side <= 1; side += 2)
         {
@@ -299,6 +313,52 @@ public class TitleKeyArtView : UiWidgetBehaviour
             half.rectTransform.offsetMin = half.rectTransform.offsetMax = Vector2.zero;
             half.rectTransform.localScale = new Vector3(side < 0 ? -1f : 1f, 1f, 1f);
         }
+
+        CreateSparks(center, additive);
+    }
+
+    //엠블럼보다 넓적한 타원 고리. 박히는 순간 바깥으로 퍼지며 사라진다
+    private RawImage CreateImpactRing(Vector2 center, Material additive)
+    {
+        RectTransform rect = UiBuilder.CreateRect(Root, "ImpactRing");
+        RawImage ring = rect.gameObject.AddComponent<RawImage>();
+
+        ring.texture = Resources.Load<Texture2D>(ArtRoot + RingTexture);
+        ring.material = additive;
+        ring.raycastTarget = false;
+        PlaceAtBottom(rect, center, new Vector2(LogoWidth * 1.1f, LogoWidth * 0.62f));
+
+        return ring;
+    }
+
+    //엠블럼 가운데에서 사방으로 튀는 불꽃. 방향은 고르게 나누고 조금씩 흔든다 (가로로 더 멀리)
+    private void CreateSparks(Vector2 center, Material additive)
+    {
+        System.Random random = new System.Random(SparkSeed);
+
+        for (int i = 0; i < SparkCount; i++)
+        {
+            float angle = (i + (float)random.NextDouble() * 0.6f) / SparkCount * Mathf.PI * 2f;
+            float distance = 260f + (float)random.NextDouble() * 220f;
+            Vector2 offset = new Vector2(Mathf.Cos(angle) * distance * 1.35f, Mathf.Sin(angle) * distance * 0.8f);
+            Color color = i % 3 == 0 ? new Color(1f, 0.35f, 0.3f, 0f) : new Color(1f, 0.92f, 0.75f, 0f);
+            Image image = UiBuilder.CreateImage(Root, "Spark" + i, color, SparkSprite);
+            float size = 34f + (float)random.NextDouble() * 30f;
+
+            image.material = additive;
+            image.raycastTarget = false;
+            PlaceAtBottom(image.rectTransform, center, new Vector2(size, size));
+            image.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle * Mathf.Rad2Deg);
+            _sparks.Add(new Spark(image, center, offset));
+        }
+    }
+
+    private static void PlaceAtBottom(RectTransform rect, Vector2 center, Vector2 size)
+    {
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = size;
+        rect.anchoredPosition = center;
     }
 
     private Sequence BuildIntro()
@@ -320,11 +380,35 @@ public class TitleKeyArtView : UiWidgetBehaviour
         float heroAt = PlayerEntryStart + HeroWave * WaveInterval;
 
         sequence.Insert(heroAt + 0.11f, _art.DOShakeAnchorPos(0.3f, 14f, 18, 90f, false, true));
-        sequence.Insert(heroAt + 0.36f, _logo.DOFade(1f, 0.15f));
-        sequence.Insert(heroAt + 0.36f, _logo.rectTransform.DOScale(1f, 0.38f).SetEase(Ease.OutBack, 2.2f));
-        sequence.Insert(heroAt + 0.76f, SweepTween());
+        float logoAt = heroAt + 0.36f;
+        float impactAt = logoAt + LogoDropDuration;
+
+        sequence.Insert(logoAt, _logo.DOFade(1f, 0.1f));
+        sequence.Insert(logoAt, _logo.rectTransform.DOScale(1f, LogoDropDuration).SetEase(Ease.InQuad));
+        InsertLogoImpact(sequence, impactAt);
+        sequence.Insert(impactAt + 0.45f, SweepTween());
 
         return sequence;
+    }
+
+    //엠블럼이 박히는 순간: 튕김 · 번쩍임 · 충격파 · 불꽃 · 짧은 흔들림
+    private void InsertLogoImpact(Sequence sequence, float at)
+    {
+        sequence.Insert(at, _logo.rectTransform.DOPunchScale(Vector3.one * 0.07f, 0.35f, 7, 0.6f));
+        sequence.Insert(at, _logoFlash.DOFade(0.85f, 0.03f));
+        sequence.Insert(at + 0.03f, _logoFlash.DOFade(0f, 0.4f).SetEase(Ease.OutQuad));
+        sequence.Insert(at, _ring.DOFade(0.9f, 0.04f));
+        sequence.Insert(at, _ring.rectTransform.DOScale(1.7f, 0.5f).SetEase(Ease.OutCubic));
+        sequence.Insert(at + 0.06f, _ring.DOFade(0f, 0.44f).SetEase(Ease.OutQuad));
+        sequence.Insert(at, _art.DOShakeAnchorPos(0.25f, 9f, 20, 90f, false, true));
+
+        foreach (Spark spark in _sparks)
+        {
+            sequence.Insert(at, spark.Image.DOFade(1f, 0.02f));
+            sequence.Insert(at, spark.Rect.DOAnchorPos(spark.Home + spark.Offset, 0.55f).SetEase(Ease.OutCubic));
+            sequence.Insert(at, spark.Rect.DOScale(0.2f, 0.55f).SetEase(Ease.InQuad));
+            sequence.Insert(at + 0.2f, spark.Image.DOFade(0f, 0.35f));
+        }
     }
 
     //연출 시작 상태: 바탕 · 글자 · 로고 투명, 붓질 숨김, 선수는 옆으로 밀려 투명
@@ -338,8 +422,18 @@ public class TitleKeyArtView : UiWidgetBehaviour
         SetWipe(_redBrush, 0f);
         SetWipe(_blackBrush, 0f);
         SetAlpha(_logo, 0f);
-        _logo.rectTransform.localScale = Vector3.one * 1.8f;
+        _logo.rectTransform.localScale = Vector3.one * LogoDropScale;
+        SetAlpha(_logoFlash, 0f);
+        SetAlpha(_ring, 0f);
+        _ring.rectTransform.localScale = Vector3.one * RingStartScale;
         _sweep.anchoredPosition = new Vector2(-200f, 0f);
+
+        foreach (Spark spark in _sparks)
+        {
+            SetAlpha(spark.Image, 0f);
+            spark.Rect.anchoredPosition = spark.Home;
+            spark.Rect.localScale = Vector3.one;
+        }
 
         foreach (PlayerLayer player in _players)
         {
@@ -449,6 +543,23 @@ public class TitleKeyArtView : UiWidgetBehaviour
             Tone = tone;
             EntrySide = entrySide;
             Wave = wave;
+        }
+    }
+
+    //불꽃 하나. 엠블럼 가운데(Home)에서 Offset 만큼 튄다
+    private readonly struct Spark
+    {
+        public readonly Image Image;
+        public readonly RectTransform Rect;
+        public readonly Vector2 Home;
+        public readonly Vector2 Offset;
+
+        public Spark(Image image, Vector2 home, Vector2 offset)
+        {
+            Image = image;
+            Rect = image.rectTransform;
+            Home = home;
+            Offset = offset;
         }
     }
 

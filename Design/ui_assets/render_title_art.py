@@ -9,8 +9,9 @@
     title_brush_red.png    붉은 붓질 · 잉크 튐 (WipeReveal 로 사선으로 쓸며 나타남)
     title_brush_black.png  검은 붓질
     title_bigtext.png      뒤 큰 윤곽 글자 MANAGER
-    title_logo.png         로고 (잘라낸 크기)
+    title_ring.png         엠블럼이 박힐 때 퍼지는 충격파 고리
 선수는 실행 중에 Resources/Photos 에서 불러 얹는다 — 실제 선수 사진은 커밋하지 않는다
+엠블럼(title_emblem.png)은 외부 이미지 생성 결과를 다듬어 넣은 것 (원본 Design/logo_src/)
 """
 import math
 import sys
@@ -166,14 +167,12 @@ save_rgba(red_tex, red_alpha * 0.92, "title_brush_red.png")
 save_rgba(np.full(3, 0.03, np.float32), black_alpha * 0.85, "title_brush_black.png")
 save_rgba(np.ones(3, np.float32), np.asarray(big, np.float32) / 255 * 0.16, "title_bigtext.png")
 
-# 로고: 이사만루 Bold 제목 + 붉은 사선 띠 + 영문 (잘라낸 크기로)
-logo = Image.new("RGBA", (W, 420), (0, 0, 0, 0))
-d = ImageDraw.Draw(logo)
-f_main = ImageFont.truetype(str(PROJECT / "Assets/Resources/UI/Fonts/Card/esamanru Bold.ttf"), 124)
-f_sub = ImageFont.truetype(str(PROJECT / "Assets/Resources/UI/Fonts/Pretendard/Pretendard-Regular.ttf"), 34)
-d.polygon([(240, 230), (870, 146), (892, 188), (262, 272)], fill=(204, 16, 30, 255))
-d.text((W / 2, 150), "베이스볼 매니저", font=f_main, anchor="mm", fill=(255, 255, 255, 255), stroke_width=5, stroke_fill=(10, 10, 12, 255))
-d.text((W / 2, 300), "B A S E B A L L   M A N A G E R", font=f_sub, anchor="mm", fill=(210, 210, 215, 255))
-logo = logo.crop(logo.getchannel("A").getbbox())
-logo.save(OUT / "title_logo.png", optimize=True)
-print("title_logo.png", logo.size)
+# 충격파 고리: 가는 고리 + 안쪽으로 번지는 흐린 띠, 둘레를 따라 세기가 고르지 않게 (엠블럼이 박힐 때 퍼짐)
+RS = 512
+ry, rx = np.mgrid[0:RS, 0:RS].astype(np.float32)
+rr = np.hypot(rx - RS / 2, ry - RS / 2) / (RS / 2)
+around = np.arctan2(ry - RS / 2, rx - RS / 2)
+streak = 0.65 + 0.35 * field((1, 64), 1, 16, 70, 3)[0][((around + math.pi) / (2 * math.pi) * 63).astype(int)]
+ring = (np.exp(-((rr - 0.86) / 0.022) ** 2) * 0.95 + np.exp(-((rr - 0.80) / 0.09) ** 2) * 0.35 * (rr < 0.86)) * streak
+Image.fromarray((np.dstack([np.ones((RS, RS, 3)), np.clip(ring, 0, 1)]) * 255 + 0.5).astype(np.uint8), "RGBA").save(OUT / "title_ring.png", optimize=True)
+print("title_ring.png", (RS, RS))
