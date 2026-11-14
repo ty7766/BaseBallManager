@@ -14,6 +14,7 @@ public class AppFlowController : MonoBehaviour
     private LiveGameController _interruptController;
     private ToastView _toast;
     private UiEffectLayer _effectLayer;
+    private AppBackdrop _backdrop;
 
     private TitleScreen _titleScreen;
     private TeamSelectScreen _teamSelectScreen;
@@ -54,7 +55,7 @@ public class AppFlowController : MonoBehaviour
         _interruptController = interruptController;
         _router = new UiRouter(canvasRoot);
 
-        AppBackdrop.Create(canvasRoot);
+        _backdrop = new AppBackdrop(canvasRoot);
         BuildScreens();
 
         _toast = new ToastView(canvasRoot);
@@ -202,6 +203,7 @@ public class AppFlowController : MonoBehaviour
             : "새 게임을 시작하면 팀을 고르고 뽑기권을 받습니다";
 
         _titleScreen.SetSaveAvailable(hasSave, notice);
+        _backdrop.ResetBrushColor();
         _router.Show(_titleScreen);
     }
 
@@ -233,6 +235,9 @@ public class AppFlowController : MonoBehaviour
                 LeagueManager.Instance.LoadPostSeason();
         }
 
+        if (PlayerDataManager.Instance != null)
+            _backdrop.SetTeam(PlayerDataManager.Instance.PlayerTeamName);
+
         ShowToast("이어하기", true);
         ShowLobby();
     }
@@ -247,6 +252,7 @@ public class AppFlowController : MonoBehaviour
 
         GameFlowManager.Instance.CompleteTutorial();
         GameFlowManager.Instance.SaveGame();
+        _backdrop.SetTeam(teamName);
 
         ShowToast("뽑기권을 받았습니다. 뽑기 → 라인업 순서로 준비하세요", true);
         ShowLobby();

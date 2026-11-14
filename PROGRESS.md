@@ -614,6 +614,21 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 - 덮어 띄우는 화면(일시정지 · 카드 선택 · 카드 상세)은 자체 `Dim`(0.92~0.96)이 덮는다 — 전에는 그 아래 불투명 바탕이 또 있었다
 - 경기장 사진 느낌이 필요하면 외부 이미지로 `app_backdrop.png` 만 갈아 끼우면 된다
 
+### 2-0-W. 🏠 로비 개편 — 아래 정렬 타일 · 팀 색 붓질 · 입체 엠블럼 (세션 64 · 11-14, `feature/ui-backdrop`)
+
+| 부분 | 한 것 |
+|---|---|
+| 배경 붓질 | `app_backdrop.png`(바탕) + `app_backdrop_brush.png`(흰 결 · 검은 붓) 두 층으로 나눔. `AppBackdrop.SetTeam` 이 붓 층에 팀 색을 곱한다 — 타이틀 · 팀 선택은 `UiPalette.BrushDefault`(붉은색), 팀 확정 · 이어하기 뒤엔 `GetTeamBrushColor`(밝기 V ≥ 0.8). 붓질 4줄 추가 (왼쪽 · 오른쪽 가장자리 가운데쯤) |
+| 메뉴 칸 | `LobbyMenuTileView` — 칸보다 1.3배 큰 아이콘을 왼쪽 끝에 40% 걸쳐 흐리게, 이름은 왼쪽 아래 (Pretendard). 아이콘은 Phosphor Icons Fill (MIT, `Design/ui_assets/icons_src/phosphor` + LICENSE) 을 `render_lobby_icons.py` 가 흰 글리프로 굽는다 (path 의 d 값만 꺼내 다시 씀) |
+| 배치 | 화면 아래 기준으로 쌓음: 라인업 · 뽑기(2칸) / 인벤토리 · 강화 · 훈련(3) / 조합 · 분해 · 골글(3) / 저장 · 빠른 시작(2) / 리그 입장(한 줄, 흰 채움). 라인업이 비면 리그 칸이 흐려지고 못 누른다 |
+| 입체 엠블럼 | `TeamEmblemTokenView` — 엠블럼 판 48장을 깊이 방향으로 겹친 메시를 `CommandBuffer` 로 렌더 텍스처에 직접 그린다(카메라 · 레이어 없음). `EmblemToken` 셰이더가 옆면을 어둡게 · 앞면에 빛 띠, `PremultipliedImage` 셰이더로 반투명(0.6) 얹음. Y 축 ±15° 7초 왕복, 4.5초마다 빛 띠 + 끝에서 별빛 플립북(`render_lobby_fx.py` → `fx_glint.png`) |
+| 머리 | '베이스볼 매니저' · '해금 티어 · 교체 방식' 줄 삭제. 재화 줄은 `CurrencyBarView.Bake(parent, types)` 로 화면마다 고름 — 로비 `WithoutTickets`, 뽑기 `AllTypes` |
+
+- 🔴 엠블럼 그림(`Resources/UI/Emblems`)은 커밋하지 않는다 — 토큰은 실행 중에 불러오고, 없으면 경고 한 줄과 함께 숨는다. 로비 프리팹 · 재질에 엠블럼 참조 없음 확인
+- 🔴 선형 색 공간에서 흰색 저알파 아이콘은 생각보다 훨씬 밝다 — 칸 아이콘 알파 0.035 (0.09 는 회색 덩어리로 보였다)
+- 렌더 텍스처는 로비가 꺼질 때 놓는다 (`OnDisable`)
+- ⏭️ 메뉴 칸 색 입히기 (작성자: 아직 색 넣지 않음) · README 크레딧에 Phosphor Icons (MIT) 추가
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.

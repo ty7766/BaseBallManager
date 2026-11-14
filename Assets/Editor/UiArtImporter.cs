@@ -1,14 +1,17 @@
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 
 /// <summary>
 /// UI 그림 폴더별 임포트 설정을 고정한다. 새 PNG 가 Multiple 스프라이트로 들어가 조각마다 나뉘는 것을 막는다.
-/// 엠블럼 = Single 스프라이트(Image), 타이틀 키 아트 · 공용 배경 = 일반 텍스처(RawImage)
+/// 엠블럼 · 로비 아이콘 = Single 스프라이트(Image), 타이틀 키 아트 · 공용 배경 · 로비 이펙트 = 일반 텍스처(RawImage)
 /// </summary>
 public class UiArtImporter : AssetPostprocessor
 {
     private const string EmblemFolder = "Assets/Resources/UI/Emblems/";
     private const int EmblemMaxSize = 512;
+    private const string LobbyIconFolder = "Assets/Resources/UI/Lobby/Icons/";
+    private const int LobbyIconMaxSize = 256;
+    private const string LobbyFolder = "Assets/Resources/UI/Lobby/";
     private const string TitleFolder = "Assets/Resources/UI/Title/";
     private const string BackdropFolder = "Assets/Resources/UI/Backdrop/";
     private const int FullScreenMaxSize = 2048;
@@ -17,20 +20,22 @@ public class UiArtImporter : AssetPostprocessor
     private void OnPreprocessTexture()
     {
         if (assetPath.StartsWith(EmblemFolder))
-            ImportEmblem((TextureImporter)assetImporter);
-        else if (assetPath.StartsWith(TitleFolder) || assetPath.StartsWith(BackdropFolder))
+            ImportSingleSprite((TextureImporter)assetImporter, EmblemMaxSize);
+        else if (assetPath.StartsWith(LobbyIconFolder))
+            ImportSingleSprite((TextureImporter)assetImporter, LobbyIconMaxSize);
+        else if (assetPath.StartsWith(TitleFolder) || assetPath.StartsWith(BackdropFolder) || assetPath.StartsWith(LobbyFolder))
             ImportFullScreenArt((TextureImporter)assetImporter);
     }
 
-    //엠블럼: 축소해 그려지므로 밉맵을 켠다
-    private static void ImportEmblem(TextureImporter importer)
+    //엠블럼 · 아이콘: 축소해 그려지므로 밉맵을 켠다
+    private static void ImportSingleSprite(TextureImporter importer, int maxSize)
     {
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Single;
         importer.alphaIsTransparency = true;
         importer.mipmapEnabled = true;
         importer.wrapMode = TextureWrapMode.Clamp;
-        importer.maxTextureSize = EmblemMaxSize;
+        importer.maxTextureSize = maxSize;
 
         TextureImporterSettings settings = new TextureImporterSettings();
 

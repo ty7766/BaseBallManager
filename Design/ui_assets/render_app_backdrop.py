@@ -1,13 +1,14 @@
 """
-공용 화면 배경 — 타이틀 바탕을 어둡게 누르고, 오른쪽 위 · 왼쪽 아래 모서리만 붉은 · 검은 마른 붓질이 스친다.
+공용 화면 배경 — 타이틀 바탕을 어둡게 누르고, 모서리 · 가장자리만 마른 붓질이 스친다.
 가운데는 UI 가 올라가므로 조용히 비워 둔다
 
 사용법
     python Design/ui_assets/render_title_art.py   (title_bg.png 가 먼저 있어야 한다)
     python Design/ui_assets/render_app_backdrop.py
 
-출력
-    Assets/Resources/UI/Backdrop/app_backdrop.png   1080x1920 불투명 · AppBackdrop 이 캔버스 맨 뒤에 깔고 넘치는 쪽을 자른다
+출력 (1080x1920 · AppBackdrop 이 캔버스 맨 뒤에 깔고 넘치는 쪽을 자른다)
+    Assets/Resources/UI/Backdrop/app_backdrop.png         바탕 (불투명)
+    Assets/Resources/UI/Backdrop/app_backdrop_brush.png   붓질 — 색 붓은 흰 결, 검은 붓은 검정. 실행 중에 팀 색을 곱해 칠한다
 """
 import math
 from pathlib import Path
@@ -23,7 +24,6 @@ OUT.mkdir(parents=True, exist_ok=True)
 W, H = 1080, 1920
 Y, X = np.mgrid[0:H, 0:W].astype(np.float32)
 U, V = X / W, Y / H
-RED = np.array([0.78, 0.06, 0.12], np.float32)
 BASE_DARKEN = 0.72
 
 
@@ -47,18 +47,9 @@ def screen(a, b):
     return 1 - (1 - a) * (1 - b)
 
 
-def over(dst, src, alpha):
-    a = alpha[..., None]
-    return dst * (1 - a) + src * a
-
-
 def grain(rgb, amount=1.8, seed=91):
     g = blur(np.random.default_rng(seed).normal(0, 1, (H, W)).astype(np.float32), 0.6)[..., None] * (amount / 255)
     return np.clip(rgb + g, 0, 1)
-
-
-def vignette(rgb, strength):
-    return rgb * (1 - strength * np.clip(((U - 0.5) / 0.62) ** 2 + ((V - 0.5) / 0.78) ** 2, 0, 1))[..., None]
 
 
 # ── 마른 붓질 하나: 길이 방향으로 늘어진 결 + 끝으로 갈수록 물감이 마름 (타이틀 붓질과 같은 결) ──
@@ -92,19 +83,47 @@ def scratches(count, seed, angle=-62, spread=20):
     return a
 
 
-def render():
+COLOR_STROKES = [((1260, -60), (700, 330), 190, 51, 0.5, 1.0), ((1180, 160), (840, 420), 80, 52, 0.6, 0.9),
+                 ((-120, 1790), (330, 1520), 150, 53, 0.55, 0.85), ((-60, 1610), (240, 1430), 60, 58, 0.6, 0.8),
+                 ((1210, 870), (930, 1090), 120, 59, 0.55, 0.8), ((-90, 760), (170, 600), 80, 60, 0.6, 0.75)]
+BLACK_STROKES = [((1200, 60), (860, 300), 50, 54, 0.6), ((-80, 1700), (220, 1540), 40, 55, 0.6),
+                 ((1190, 950), (990, 1100), 36, 61, 0.6)]
+COLOR_ALPHA = 0.85
+BLACK_ALPHA = 0.8
+BLACK_LEVEL = 0.02
+#붓 결의 밝기 폭. 타이틀 붉은 붓과 같은 0.72 ~ 1.07 을 1 로 나눠 담고, 팀 색을 곱한다
+GRAIN_LOW, GRAIN_SPAN = 0.72, 0.35
+
+
+def vignette_factor(strength=0.4):
+    return 1 - strength * np.clip(((U - 0.5) / 0.62) ** 2 + ((V - 0.5) / 0.78) ** 2, 0, 1)
+
+
+def render_base():
     bg = np.asarray(Image.open(SOURCE).convert("RGB")).astype(np.float32) / 255 * BASE_DARKEN
-    red = np.maximum(dry_brush((1260, -60), (700, 330), 190, 51, 0.5), dry_brush((1180, 160), (840, 420), 80, 52, 0.6) * 0.9)
-    red = np.maximum(red, dry_brush((-120, 1790), (330, 1520), 150, 53, 0.55) * 0.85)
-    black = np.maximum(dry_brush((1200, 60), (860, 300), 50, 54, 0.6), dry_brush((-80, 1700), (220, 1540), 40, 55, 0.6))
-    tex = RED * (0.72 + 0.35 * field((H, W), 30, 18, 56, 3))[..., None]
-    out = over(bg, tex, red * 0.85)
-    out = over(out, np.full(3, 0.02, np.float32), black * 0.8)
-    out = screen(out, (blur(scratches(160, 57), 0.4) * 0.08)[..., None])
-    return grain(vignette(out, 0.4))
+    out = screen(bg, (blur(scratches(160, 57), 0.4) * 0.08)[..., None])
+    return grain(out * vignette_factor()[..., None])
+
+
+def render_brush():
+    color = np.zeros((H, W), np.float32)
+    for p0, p1, width, seed, dryness, weight in COLOR_STROKES:
+        color = np.maximum(color, dry_brush(p0, p1, width, seed, dryness) * weight)
+    black = np.zeros((H, W), np.float32)
+    for p0, p1, width, seed, dryness in BLACK_STROKES:
+        black = np.maximum(black, dry_brush(p0, p1, width, seed, dryness))
+    shade = (GRAIN_LOW + GRAIN_SPAN * field((H, W), 30, 18, 56, 3)) / (GRAIN_LOW + GRAIN_SPAN)
+    a_color, a_black = color * COLOR_ALPHA, black * BLACK_ALPHA
+    alpha = a_color * (1 - a_black) + a_black
+    premul = shade * a_color * (1 - a_black) + BLACK_LEVEL * a_black
+    gray = np.where(alpha > 1e-4, premul / np.maximum(alpha, 1e-4), 0) * vignette_factor()
+    return gray, alpha
 
 
 if __name__ == "__main__":
-    rgb = render()
-    Image.fromarray((np.clip(rgb, 0, 1) * 255 + 0.5).astype(np.uint8)).save(OUT / "app_backdrop.png", optimize=True)
-    print("app_backdrop.png", (W, H))
+    base = render_base()
+    Image.fromarray((np.clip(base, 0, 1) * 255 + 0.5).astype(np.uint8)).save(OUT / "app_backdrop.png", optimize=True)
+    gray, alpha = render_brush()
+    rgba = np.dstack([np.repeat(np.clip(gray, 0, 1)[..., None], 3, axis=2), np.clip(alpha, 0, 1)])
+    Image.fromarray((rgba * 255 + 0.5).astype(np.uint8), "RGBA").save(OUT / "app_backdrop_brush.png", optimize=True)
+    print("app_backdrop.png · app_backdrop_brush.png", (W, H))

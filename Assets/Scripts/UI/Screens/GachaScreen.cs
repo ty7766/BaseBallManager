@@ -118,7 +118,7 @@ public class GachaScreen : UiScreenBehaviour
         UiBuilder.Place(title.rectTransform, 32f, 32f, 500f, 60f);
         title.text = "뽑기";
 
-        _currencyBar = CurrencyBarView.Bake(Root);
+        _currencyBar = CurrencyBarView.Bake(Root, CurrencyBarView.AllTypes);
         UiBuilder.Place(_currencyBar.Root, 24f, 100f, 1032f, CurrencyBarView.BarHeight);
 
         Image tabTrack = UiBuilder.CreateImage(Root, "TabTrack", Color.white, TabTrackSprite, Image.Type.Sliced);
