@@ -9,9 +9,8 @@
     title_brush_red.png    붉은 붓질 · 잉크 튐 (WipeReveal 로 사선으로 쓸며 나타남)
     title_brush_black.png  검은 붓질
     title_bigtext.png      뒤 큰 윤곽 글자 MANAGER
-    title_ring.png         엠블럼이 박힐 때 퍼지는 충격파 고리
 선수는 실행 중에 Resources/Photos 에서 불러 얹는다 — 실제 선수 사진은 커밋하지 않는다
-엠블럼(title_emblem.png)은 외부 이미지 생성 결과를 다듬어 넣은 것 (원본 Design/logo_src/)
+엠블럼 층은 render_title_emblem.py, 충격 이펙트 플립북은 render_impact_fx.py 가 만든다
 """
 import math
 import sys
@@ -166,13 +165,3 @@ print("title_bg.png", (W, H))
 save_rgba(red_tex, red_alpha * 0.92, "title_brush_red.png")
 save_rgba(np.full(3, 0.03, np.float32), black_alpha * 0.85, "title_brush_black.png")
 save_rgba(np.ones(3, np.float32), np.asarray(big, np.float32) / 255 * 0.16, "title_bigtext.png")
-
-# 충격파 고리: 가는 고리 + 안쪽으로 번지는 흐린 띠, 둘레를 따라 세기가 고르지 않게 (엠블럼이 박힐 때 퍼짐)
-RS = 512
-ry, rx = np.mgrid[0:RS, 0:RS].astype(np.float32)
-rr = np.hypot(rx - RS / 2, ry - RS / 2) / (RS / 2)
-around = np.arctan2(ry - RS / 2, rx - RS / 2)
-streak = 0.65 + 0.35 * field((1, 64), 1, 16, 70, 3)[0][((around + math.pi) / (2 * math.pi) * 63).astype(int)]
-ring = (np.exp(-((rr - 0.86) / 0.022) ** 2) * 0.95 + np.exp(-((rr - 0.80) / 0.09) ** 2) * 0.35 * (rr < 0.86)) * streak
-Image.fromarray((np.dstack([np.ones((RS, RS, 3)), np.clip(ring, 0, 1)]) * 255 + 0.5).astype(np.uint8), "RGBA").save(OUT / "title_ring.png", optimize=True)
-print("title_ring.png", (RS, RS))
