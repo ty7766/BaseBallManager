@@ -54,6 +54,7 @@ public class AppFlowController : MonoBehaviour
         _interruptController = interruptController;
         _router = new UiRouter(canvasRoot);
 
+        AppBackdrop.Create(canvasRoot);
         BuildScreens();
 
         _toast = new ToastView(canvasRoot);

@@ -15,6 +15,7 @@ public static class UiSprites
     public const string RowEmpty = "Match/row_empty";
     public const string RowPitching = "Match/row_pitching";
     public const string ButtonNormal = "Match/button_normal";
+    public const string ButtonNormalFill = "Match/button_normal_fill";
     public const string ButtonPrimary = "Match/button_primary";
     public const string ButtonDisabled = "Match/button_disabled";
     public const string BaseDiamondEmpty = "Match/base_diamond_empty";

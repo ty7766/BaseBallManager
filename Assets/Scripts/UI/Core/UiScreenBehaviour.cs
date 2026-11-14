@@ -160,7 +160,8 @@ public abstract class UiScreenBehaviour : MonoBehaviour
     }
 
     /// <summary>
-    /// 프리팹을 굽는 에디터 도구가 호출한다. 배경과 본문을 코드로 조립하고 참조를 채운다
+    /// 프리팹을 굽는 에디터 도구가 호출한다. 본문을 코드로 조립하고 참조를 채운다.
+    /// 바탕은 화면마다 두지 않고 캔버스 맨 뒤의 공용 배경(AppBackdrop)이 비친다
     /// </summary>
     public void BakeHierarchy()
     {
@@ -170,9 +171,6 @@ public abstract class UiScreenBehaviour : MonoBehaviour
             _fadeGroup = gameObject.AddComponent<CanvasGroup>();
 
         UiBuilder.Stretch(Root, 0f, 0f, 0f, 0f);
-
-        Image background = UiBuilder.CreateImage(Root, "Background", UiPalette.BgApp);
-        UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
         Build();
     }

@@ -601,6 +601,19 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 
 ✅ PR #22 로 `develop` 머지 (11-14, `9f86a72`) — 2-0-T 폰트 변경도 함께 들어감
 
+### 2-0-V. 🧱 공용 화면 배경 — 타이틀 잇기 (세션 64 · 11-14, `feature/ui-backdrop`)
+
+| 부분 | 한 것 |
+|---|---|
+| 배경 | `render_app_backdrop.py` → `Resources/UI/Backdrop/app_backdrop.png`. 타이틀 바탕을 72% 로 누르고 오른쪽 위 · 왼쪽 아래만 붉은 · 검은 마른 붓질. 가운데는 비운다 |
+| 깔기 | `AppBackdrop.Create(canvasRoot)` — 캔버스 맨 뒤 한 장(EnvelopeParent 로 넘치는 쪽 잘림). `AppFlowController.Initialize` 에서 화면 조립 전에 호출 |
+| 화면 | `UiScreenBehaviour.BakeHierarchy` 가 화면마다 깔던 단색 `Background` 를 없앴다 → 프리팹 19장 다시 구움. 화면이 바뀌어도 배경은 그대로, 본문만 페이드 |
+| 보조 버튼 | `button_normal`(테두리만)은 질감 위에서 글자가 묻혀 `button_normal_fill`(테두리 + 어두운 반투명 채움)을 새로 굽고 `CreateButton` · `UiTabStyle` 비선택이 쓴다. 팀 선택 · 카드 슬롯 테두리는 그대로 `button_normal` |
+
+- 🔴 화면 자식 순서가 하나 당겨졌다 (`Background` 가 0번이던 것). 타이틀 키 아트는 `SetAsFirstSibling` 으로 바꿈
+- 덮어 띄우는 화면(일시정지 · 카드 선택 · 카드 상세)은 자체 `Dim`(0.92~0.96)이 덮는다 — 전에는 그 아래 불투명 바탕이 또 있었다
+- 경기장 사진 느낌이 필요하면 외부 이미지로 `app_backdrop.png` 만 갈아 끼우면 된다
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.

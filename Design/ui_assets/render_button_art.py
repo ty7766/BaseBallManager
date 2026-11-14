@@ -7,6 +7,7 @@
 출력 (48×48 → 2배 96×96 · PPU 200 · 9-슬라이스 테두리 36px)
     Assets/Resources/UI/Match/button_primary.png    주 버튼 흰 채움 (글자 #0A111D)
     Assets/Resources/UI/Match/button_normal.png     보조 버튼 흰 테두리 (색은 Image 색으로 틴트)
+    Assets/Resources/UI/Match/button_normal_fill.png 보조 버튼 테두리 + 어두운 반투명 채움 (질감 배경 위에서 글자가 묻히지 않게)
     Assets/Resources/UI/Match/button_disabled.png   비활성 버튼
     Assets/Resources/UI/Match/tab_on.png            켜진 탭 (어두운 채움 + 아래 흰 줄)
     Assets/Resources/UI/Common/icon_filter.png      깔때기 필터 아이콘 48 → 2배
@@ -109,6 +110,7 @@ ICONS = {
 SPRITES = {
     "button_primary": filled("#F3F6FA"),
     "button_normal": ringed(None, 3, "#FFFFFF"),
+    "button_normal_fill": ringed("rgba(115,115,115,0.82)", 3, "#FFFFFF"),
     "button_disabled": ringed("#121B2B", 2, "#1C2739"),
     "tab_on": tab_on(),
 }
