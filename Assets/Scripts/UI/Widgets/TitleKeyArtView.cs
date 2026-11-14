@@ -331,7 +331,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
         return ring;
     }
 
-    //엠블럼 가운데에서 사방으로 튀는 불꽃. 방향은 고르게 나누고 조금씩 흔든다 (가로로 더 멀리)
+    //엠블럼 가운데에서 사방으로 튀는 불똥. 날아가는 쪽으로 길쭉하게, 방향은 고르게 나누고 조금씩 흔든다 (가로로 더 멀리)
     private void CreateSparks(Vector2 center, Material additive)
     {
         System.Random random = new System.Random(SparkSeed);
@@ -343,11 +343,11 @@ public class TitleKeyArtView : UiWidgetBehaviour
             Vector2 offset = new Vector2(Mathf.Cos(angle) * distance * 1.35f, Mathf.Sin(angle) * distance * 0.8f);
             Color color = i % 3 == 0 ? new Color(1f, 0.35f, 0.3f, 0f) : new Color(1f, 0.92f, 0.75f, 0f);
             Image image = UiBuilder.CreateImage(Root, "Spark" + i, color, SparkSprite);
-            float size = 34f + (float)random.NextDouble() * 30f;
+            float size = 46f + (float)random.NextDouble() * 36f;
 
             image.material = additive;
             image.raycastTarget = false;
-            PlaceAtBottom(image.rectTransform, center, new Vector2(size, size));
+            PlaceAtBottom(image.rectTransform, center, new Vector2(size * 1.8f, size * 0.55f));
             image.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle * Mathf.Rad2Deg);
             _sparks.Add(new Spark(image, center, offset));
         }
@@ -395,8 +395,8 @@ public class TitleKeyArtView : UiWidgetBehaviour
     private void InsertLogoImpact(Sequence sequence, float at)
     {
         sequence.Insert(at, _logo.rectTransform.DOPunchScale(Vector3.one * 0.07f, 0.35f, 7, 0.6f));
-        sequence.Insert(at, _logoFlash.DOFade(0.85f, 0.03f));
-        sequence.Insert(at + 0.03f, _logoFlash.DOFade(0f, 0.4f).SetEase(Ease.OutQuad));
+        sequence.Insert(at, _logoFlash.DOFade(0.55f, 0.03f));
+        sequence.Insert(at + 0.03f, _logoFlash.DOFade(0f, 0.28f).SetEase(Ease.OutQuad));
         sequence.Insert(at, _ring.DOFade(0.9f, 0.04f));
         sequence.Insert(at, _ring.rectTransform.DOScale(1.7f, 0.5f).SetEase(Ease.OutCubic));
         sequence.Insert(at + 0.06f, _ring.DOFade(0f, 0.44f).SetEase(Ease.OutQuad));
