@@ -631,6 +631,8 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 - 렌더 텍스처는 로비가 꺼질 때 놓는다 (`OnDisable`)
 - ⏭️ 메뉴 칸 색 입히기 (작성자: 아직 색 넣지 않음) · README 크레딧에 Phosphor Icons (MIT) 추가
 
+✅ PR #23 으로 `develop` 머지 (11-14, `1a40d65`) — 2-0-V 공용 배경도 함께 들어감
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.
