@@ -22,8 +22,8 @@ public class LobbyScreen : UiScreenBehaviour
     private const float CurrencyTop = 32f;
     private const float LineupTop = 140f;
     private const float HeaderBottom = 190f;
-    //입체 엠블럼: 머리와 메뉴 사이 빈 칸 가운데에 놓는 정사각형 크기. 화면보다 커서 좌우가 잘리고 메뉴 뒤로 깔린다
-    private const float TokenSize = 1980f;
+    //입체 엠블럼: 머리와 메뉴 사이 빈 칸 가운데에 놓는 정사각형 크기. 화면 폭을 살짝 넘겨 메뉴 뒤로 깔린다
+    private const float TokenSize = 1320f;
     private const float TokenMargin = 12f;
 
     //줄마다 높이 · 글자 크기 (아래 줄부터)
