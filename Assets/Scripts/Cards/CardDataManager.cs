@@ -85,8 +85,6 @@ public class CardDataManager : SingletonBehaviour<CardDataManager>
 
         foreach (PitcherMasterData pitcher in loader.LoadPitchers())
         {
-            //타자와 투수는 딕셔너리가 달라 각자의 TryAdd로는 교차 중복을 못 잡는다.
-            //같은 cardId가 양쪽에 있으면 GetCardMasterData가 늘 타자를 돌려줘 조회 경로마다 다른 카드가 된다
             if (_hitters.ContainsKey(pitcher.CardId))
             {
                 Debug.LogError($"[CardDataManager]: cardId {pitcher.CardId}가 타자·투수 CSV에 모두 있습니다. 투수 카드를 버립니다");

@@ -130,12 +130,12 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         return view;
     }
 
-    //생성자 본문. 베이크에서 한 번만 돈다
     protected override void BindEvents()
     {
         Bind(_button, OnClicked);
     }
 
+    //생성자 본문. 베이크에서 한 번만 돈다
     private void BuildWidget(Transform parent, float width, bool withBack)
     {
         _hasBack = withBack;
@@ -153,8 +153,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _button.interactable = false;
         _button.onClick.AddListener(OnClicked);
 
-        //시그·골글 테두리 광은 카드 뒤에 깐다 (명세 6-6). 9-슬라이스 테두리도 카드 축소 비율을 따라야
-        //고리가 카드 가장자리에 붙는다. 그대로 두면 작은 카드에서 고리가 카드 안쪽으로 파고든다
         _glow = CreateLayer(Root, "Glow", "Card/card_fx_glow_signature", -180f, -180f, BaseWidth + 360f, BaseHeight + 360f);
         _glow.type = Image.Type.Sliced;
         _glow.pixelsPerUnitMultiplier = 1f / _scale;
@@ -169,12 +167,9 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
             _back.gameObject.SetActive(false);
         }
 
-        // --- 앞면: 배경 -> 사진 뒤 그림자 -> 선수 -> 하단 물감 띠 -> 글자 -> 광택 (명세 1-2 · 6-6) ---
-        //배경 그림은 완전 불투명이라 맨 아래다. 골글 월계수는 그 위, 사진 뒤에 깐다
         _frontBase = CreateLayer(_front, "Base", null, 0f, 0f, BaseWidth, BaseHeight);
         _overlay = CreateHiddenLayer(_front, "Overlay", 0f, 0f, BaseWidth, BaseHeight);
 
-        //그림자·빛 번짐은 사진 칸보다 넓게 퍼지므로 카드 전체 칸에 깔고 셰이더가 사진 위치를 안다
         _photoBack = CreateHiddenLayer(_front, "PhotoBack", 0f, 0f, BaseWidth, BaseHeight);
         _photo = CreateHiddenLayer(_front, "Photo", 0f, PhotoTop, BaseWidth, PhotoHeight);
         _foreground = CreateHiddenLayer(_front, "Foreground", 0f, 0f, BaseWidth, BaseHeight);
@@ -208,7 +203,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _emptyText = CreateCardText(_front, "Empty", 120f, 60f, 880f, 1278f, 200f, TextAlignmentOptions.Center);
         _emptyText.gameObject.SetActive(false);
 
-        // --- 뒷면 ---
         if (!_hasBack)
             return;
 
@@ -274,7 +268,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _photoKey = info.PhotoKey;
         ApplyPhoto();
 
-        //노말은 어두운 배경이라 흰 숫자, 시그·골글은 밝은 배경이라 진한 새김색
         Material ovrMaterial = style.IsLightBase ? CardTextMaterials.LightShadow : CardTextMaterials.Shadow;
 
         _ovrText.text = info.FinalOvr.ToString();

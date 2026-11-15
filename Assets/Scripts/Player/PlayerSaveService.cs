@@ -88,7 +88,6 @@ public class PlayerSaveService
         foreach (CardInstanceSaveData cardData in saveData.Cards)
             cards.Add(ToCardInstance(cardData));
 
-        //검증을 통과했으므로 아래 복원은 실패하지 않는다. 실패하면 검증기와 복원기의 규칙이 어긋난 것이다
         if (!PlayerDataManager.Instance.Restore(saveData.PlayerTeamName,
                 (LeagueTier)saveData.HighestUnlockedTier, saveData.TutorialCompleted,
                 (SubstitutionMode)saveData.SubstitutionMode)

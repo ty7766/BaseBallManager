@@ -12,7 +12,6 @@ public class CardIdDrawer : PropertyDrawer
     public override void OnGUI(Rect position, SerializedProperty property,
 GUIContent label)
     {
-        //int 외의 타입에 붙은 경우 방어
         if (property.propertyType != SerializedPropertyType.Integer)
         {
             EditorGUI.LabelField(position, label.text, "[CardId]는 int 필드에만 사용 가능");
@@ -27,8 +26,6 @@ GUIContent label)
         {
             CardIdAttribute cardIdAttribute = (CardIdAttribute)attribute;
 
-            //콜백은 몇 프레임 뒤에 실행된다.
-            //SerializedProperty는 그때 이미 무효이므로 경로만 붙잡아 둔다.
             SerializedObject owner = property.serializedObject;
             string propertyPath = property.propertyPath;
 
@@ -56,17 +53,12 @@ GUIContent label)
     {
         IReadOnlyList<CardEntry> source = GetEntries(cardIdAttribute.Filter);
 
-        //① 필드 자체에 포지션이 고정된 경우 (투수 배열 - SP/RP/CP)
         if (!string.IsNullOrEmpty(cardIdAttribute.FixedPosition))
             return FilterByPositionText(source, cardIdAttribute.FixedPosition);
 
-        //② 슬롯마다 포지션이 달라지는 경우 (타자 라인업)
-        //   포지션 필드를 못 찾으면 필터 없이 전체 노출.
-        //   아무것도 못 고르는 것보다 관대하게 동작하는 편이 낫다.
         if (!TryGetSlotPosition(property, cardIdAttribute.PositionFieldName, out HitterPosition slotPosition))
             return source;
 
-        //DH는 모든 포지션 카드가 들어갈 수 있는 와일드카드
         if (slotPosition == HitterPosition.DH)
             return source;
 
@@ -104,7 +96,6 @@ GUIContent label)
         if (string.IsNullOrEmpty(fieldName))
             return false;
 
-        //"_lineup.Array.data[0]._cardId" -> "_lineup.Array.data[0]._position"
         int lastDot = property.propertyPath.LastIndexOf('.');
         if (lastDot < 0)
             return false;

@@ -126,8 +126,7 @@ Claude 세션에는 Unity MCP가 없어 **화면을 본 검증만 빠져 있다.
 - **`GameObject.Find` 는 비활성 오브젝트를 못 찾는다.** 꺼둔 캔버스를 다시 켜려면 `GetRootGameObjects()` 를 쓴다
 - **Editor 비포커스면 Update 가 안 돈다** → 트윈이 시작값에서 멈춘다 (alpha 0 · scale 0.82).
   캡처 전에 `Application.runInBackground = true` 를 켠다. 게임 버그가 아니다
-- **에디트 모드 Game 뷰는 렌더되지 않고, Scene 뷰는 Overlay 캔버스 내용을 캡처에 담지 않는다.**
-  `UiPreviewBuilder` 미리보기는 **재생 중에** 띄워야 보인다 (게임 캔버스는 꺼둔다)
+- **에디트 모드 Game 뷰는 렌더되지 않고, Scene 뷰는 Overlay 캔버스 내용을 캡처에 담지 않는다.** 화면 확인은 재생 중에 한다
 - TMP 컴포넌트는 `get_components` 로 덤프하지 않는다 (textInfo 가 거대하다). 스크린샷으로 본다
 
 #### Game 뷰 해상도
@@ -696,6 +695,7 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 - 🔴 버그: `PlayLogView` 스크롤 리스너를 Build(베이크)에서만 걸어 프리팹에 안 남았다 → 위로 올려도 자동 스크롤이 안 멈추고 '최신으로' 버튼이 한 번도 안 떴다. `BindEvents` 로 옮김
 - `CardView` 길게 누르기: 카드마다 돌던 Update → 공용 트윈 시계(`UiAnimator`)로. 누르는 동안에만 돈다. 꺼질 때 끊어 숨은 카드에서 상세가 열리지 않게
 - 에디터 Game 뷰를 가로 Free Aspect(캔버스 1080×616) → 1080×2340 세로로 (폰과 같은 화면)
+- 🧹 정리: 테스트 캡처 `Assets/Screenshots`(72장) · 미리보기 도구 `UiPreviewBuilder`(구운 프리팹 + `UiSceneBuilder` 로 대체) · 일회성 `LeagueTierDefaultsFiller`(다시 누르면 입력한 티어 값을 덮어씀) · 안 쓰는 `Match/scrollbar_handle · scrollbar_track`(Common 스크롤바로 대체) · 2D 템플릿 잔재(`Lit2DSceneTemplate` · `URP2DSceneTemplate.unity`) · 빈 `Prefabs/` `Sounds/` 삭제. 메서드 안 주석 81줄 · 구분선 4줄 삭제(주석 규칙), 위치가 어긋난 '생성자 본문' 주석 2곳 바로잡음
 - ⏭️ 남은 후보: 동적 폰트 아틀라스(새 한글 글리프 첫 등장 때 래스터화 히치 — 기기 실측 필요) · 경기 첫 진입 16ms(사진 · 연출 첫 로드) · 썸네일 · 카드 아트 POT 압축
 
 ### 2-0. 남은 일 한눈에 (세션 48 기준)

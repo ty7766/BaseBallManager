@@ -51,7 +51,6 @@ public class LineScoreView : UiWidgetBehaviour
         Image background = BroadcastPanel.Create(Root, "Background");
         UiBuilder.Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
-        //행은 표의 폭을 그대로 따라간다. 고정 폭으로 두면 R·H·E 칸이 표 밖으로 밀려 잘린다
         _inningHeaderRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "InningHeaderRow"), 8f, RowHeight);
         _awayRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "AwayRow"), 8f + RowHeight, RowHeight);
         _homeRow = UiBuilder.PlaceRow(UiBuilder.CreateRect(Root, "HomeRow"), 8f + RowHeight * 2f, RowHeight);

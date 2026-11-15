@@ -220,21 +220,18 @@ public class LineUpScreen : UiScreenBehaviour
         _tab = Tab.Hitter;
     }
 
-
     //야수 칸도 프리팹에 굽지 않고 런타임에 한 번만 만든다
     private void EnsureFieldSlots()
     {
         if (_fieldSlots.Count > 0)
             return;
 
-        //DH 까지 포함해 9자리를 야구장 좌표대로 깐다
         for (int i = 0; i <= DhSlotIndex; i++)
         {
             _fieldSlots.Add(new FieldSlot(_formation, HitterSlotLabels[i],
                 HitterSlotPoints[i].x, HitterSlotPoints[i].y, SlotCardWidth, OpenDetail));
         }
 
-        //벤치 5장은 야구장 아래에 간격을 두고 가로 한 줄로
         float step = SmallCardWidth + BenchCardGap;
         float left = (FieldWidth - (BenchSlotCount * step - BenchCardGap)) * 0.5f;
 
@@ -355,9 +352,6 @@ public class LineUpScreen : UiScreenBehaviour
 
         return index;
     }
-
-
-
 
     private void PickHitter(HitterPosition slot)
     {
@@ -650,5 +644,4 @@ public class LineUpScreen : UiScreenBehaviour
             _onOrderChanged?.Invoke(_battingOrder + 1);
         }
     }
-
 }

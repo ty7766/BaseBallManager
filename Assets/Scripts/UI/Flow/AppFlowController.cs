@@ -258,8 +258,6 @@ public class AppFlowController : MonoBehaviour
         ShowLobby();
     }
 
-    // ---------------------------------------------------------------- 로비
-
     //로비에는 카드가 없으므로 올려 둔 선수 사진을 이때 한꺼번에 내린다
     private void ShowLobby()
     {
@@ -296,8 +294,6 @@ public class AppFlowController : MonoBehaviour
 
         ShowToast(saved ? "저장했습니다" : "저장에 실패했습니다", saved);
     }
-
-    // ---------------------------------------------------------------- 리그
 
     private void EnterLeague()
     {
@@ -413,8 +409,6 @@ public class AppFlowController : MonoBehaviour
         ShowLobby();
     }
 
-    // ---------------------------------------------------------------- 경기
-
     private void OnPreGameStart()
     {
         if (LeagueManager.Instance == null || !_hasCurrentGame)
@@ -507,8 +501,6 @@ public class AppFlowController : MonoBehaviour
     {
         ShowLeague();
     }
-
-    // ---------------------------------------------------------------- 공용 오버레이
 
     //카드 선택 모달. 선택이 끝나면 모달을 닫고 콜백을 넘긴다
     private void OpenCardPicker(string title, int count,

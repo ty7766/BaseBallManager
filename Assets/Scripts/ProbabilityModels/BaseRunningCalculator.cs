@@ -185,7 +185,6 @@ public class BaseRunningCalculator
 
         state.AddOut();
 
-        //3아웃이면 득점이 무효다. 막지 않으면 AddRun이 공수가 바뀐 뒤의 팀에 점수를 준다
         if (state.IsGameOver || state.IsTopInning != wasTopInning)
             return;
 

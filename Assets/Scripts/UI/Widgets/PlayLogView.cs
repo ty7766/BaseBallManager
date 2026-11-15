@@ -44,13 +44,13 @@ public class PlayLogView : UiWidgetBehaviour
         return view;
     }
 
-    //생성자 본문. 베이크에서 한 번만 돈다
     protected override void BindEvents()
     {
         Bind(_jumpToLatestButton, JumpToLatest);
         _scroll.onValueChanged.AddListener(OnScrolled);
     }
 
+    //생성자 본문. 베이크에서 한 번만 돈다
     private void BuildWidget(Transform parent)
     {
         Image background = BroadcastPanel.Create(Root, "Background");

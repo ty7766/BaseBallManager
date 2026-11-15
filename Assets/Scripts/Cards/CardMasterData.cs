@@ -48,10 +48,6 @@ public abstract class CardMasterData
         CardGrade = cardGrade;
         Position = position;
         OVR = ovr;
-        //photo 열이 비면 `이름_팀` 을 키로 쓴다 (노말·시그는 같은 사진).
-        //팀을 붙이면 동명이인이 저절로 갈리고, 이적한 선수는 팀별 유니폼 사진을 쓰게 된다.
-        //골든글러브만 특별 사진이라 접미사를 더 붙인다.
-        //특정 카드만 다른 사진을 쓸 때는 photo 열에 직접 적으면 그것이 우선한다
         PhotoKey = string.IsNullOrWhiteSpace(photoKey)
             ? BuildPhotoKey(teamName, name, cardType)
             : photoKey.Trim();

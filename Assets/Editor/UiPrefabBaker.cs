@@ -188,7 +188,6 @@ public static class UiPrefabBaker
             return 0;
         }
 
-        //프리팹에서 깨어날 때 FadeIn이 알파를 올리므로 저장 시점 값은 1로 둔다
         CanvasGroup group = screen.Root.GetComponent<CanvasGroup>();
 
         if (group != null)

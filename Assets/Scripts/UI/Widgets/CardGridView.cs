@@ -174,7 +174,6 @@ public class CardGridView : UiWidgetBehaviour
             int plannedRows = (_items.Count + leading + _columns - 1) / _columns;
             float blockHeight = plannedRows * _rowPitch - RowGap;
 
-            //가운데에서 살짝 위로 올린다
             _offsetY = Mathf.Max(0f, (_centerInHeight - blockHeight) * 0.5f - CenterNudgeUp);
         }
 

@@ -72,12 +72,10 @@ public abstract class UiWidgetBehaviour : MonoBehaviour
     {
         RectTransform rect = UiBuilder.CreateRect(parent, name);
 
-        //끈 채로 붙여야 자식이 없는 시점에 OnEnable 이 돌지 않는다
         rect.gameObject.SetActive(false);
 
         T widget = rect.gameObject.AddComponent<T>();
 
-        //BuildWidget 이 리스너를 직접 건다. OnEnable 이 또 묶지 않도록 표시해 둔다
         widget._eventsBound = true;
 
         rect.gameObject.SetActive(true);

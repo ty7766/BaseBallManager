@@ -54,7 +54,6 @@ public class TeamEmblemView : UiWidgetBehaviour
 
         if (logo != null)
         {
-            //로고 PNG 가 투명 배경이므로 판을 비워 로고만 보이게 한다
             _plate.sprite = null;
             _plate.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
             _logo.sprite = logo;

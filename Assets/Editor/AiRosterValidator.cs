@@ -62,7 +62,6 @@ public static class AiRosterValidator
     {
         int errorCount = 0;
 
-        //팀명이 비어 있으면 로그에서 팀을 구분할 수 없으므로 에셋 파일명으로 대체
         string teamLabel = string.IsNullOrEmpty(team.TeamName) ? team.name : team.TeamName;
 
         if (string.IsNullOrEmpty(team.TeamName))
@@ -71,7 +70,6 @@ public static class AiRosterValidator
             errorCount++;
         }
 
-        //팀 전체(타자 9 + 투수 11)를 한 통에 놓고 중복을 본다
         HashSet<int> usedCardIds = new HashSet<int>();
         HashSet<string> usedPeople = new HashSet<string>();
 
@@ -102,7 +100,6 @@ public static class AiRosterValidator
             errorCount++;
         }
 
-        //포지션별 등장 횟수 - HitterPosition은 0부터 1씩 증가하므로 enum 값을 인덱스로 사용
         int[] positionCounts = new int[System.Enum.GetValues(typeof(HitterPosition)).Length];
 
         for (int i = 0; i < slots.Count; i++)
@@ -115,11 +112,9 @@ public static class AiRosterValidator
             errorCount += ValidateCard(slot.CardId, hitterCardIds, "타자", teamLabel, slotLabel, team,
                 usedCardIds, usedPeople, out CardEntry entry);
 
-            //카드를 못 찾았으면 포지션 비교가 불가능
             if (entry.CardId == 0)
                 continue;
 
-            //DH는 어느 포지션 카드든 올 수 있음 (세션 32·33 확정)
             if (slot.Position == HitterPosition.DH)
                 continue;
 
@@ -197,7 +192,6 @@ public static class AiRosterValidator
     {
         entry = default;
 
-        //빈 슬롯 센티넬은 0 (cardId는 1부터 시작)
         if (cardId == 0)
         {
             Debug.LogError($"[AiRosterValidator] {teamLabel} {slotLabel}: 슬롯이 비어 있습니다", context);
@@ -220,21 +214,18 @@ public static class AiRosterValidator
 
         int errorCount = 0;
 
-        //cardId가 시뮬의 InstanceId 자리에 들어가므로(세션 30) 한 팀 안에서 겹치면 주자 추적이 깨짐
         if (!usedCardIds.Add(cardId))
         {
             Debug.LogError($"[AiRosterValidator] {teamLabel} {slotLabel}: cardId {cardId}({entry.Name})가 이 팀에 두 번 들어 있습니다", context);
             errorCount++;
         }
 
-        //동일 인물 판정 키는 (이름, 팀) - 강화용 동일성 판정과 다른 규칙 (세션 33)
         if (!usedPeople.Add($"{entry.Name}/{entry.TeamName}"))
         {
             Debug.LogError($"[AiRosterValidator] {teamLabel} {slotLabel}: {entry.Name}({entry.TeamName}) 선수가 이 팀에 두 번 나옵니다", context);
             errorCount++;
         }
 
-        //다른 팀 선수 편성은 의도일 수 있으므로 경고만
         if (entry.TeamName != teamLabel)
         {
             Debug.LogWarning($"[AiRosterValidator] {teamLabel} {slotLabel}: {entry.Name} 선수의 소속은 {entry.TeamName}입니다", context);

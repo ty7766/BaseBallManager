@@ -35,14 +35,12 @@ public static class AiRosterSeedImporter
         if (!TryReadSeed(PitcherSeedPath, PitcherSeedColumns, out Dictionary<string, int> pitcherHeaders, out List<string[]> pitcherRows))
             return;
 
-        //팀 초안 수집 - 딕셔너리는 조회용, 리스트는 순서 보존용
         Dictionary<string, TeamDraft> draftLookup = new Dictionary<string, TeamDraft>();
         List<TeamDraft> drafts = new List<TeamDraft>();
 
         int errorCount = FillHitters(hitterRows, hitterHeaders, draftLookup, drafts)
                        + FillPitchers(pitcherRows, pitcherHeaders, draftLookup, drafts);
 
-        //에셋을 하나도 만들기 전에 중단 - 반쯤 채워진 에셋이 남는 것을 막음
         if (errorCount > 0)
         {
             Debug.LogError($"[AiRosterSeedImporter] 씨앗 CSV 오류 {errorCount}건. 에셋을 만들지 않고 중단했습니다");
@@ -51,7 +49,6 @@ public static class AiRosterSeedImporter
 
         EnsureFolder(OutputRoot);
 
-        //세트별로 생성한 팀 에셋을 모아둠
         Dictionary<string, List<AiTeamRosterData>> teamsBySet = new Dictionary<string, List<AiTeamRosterData>>();
         List<string> setNames = new List<string>();
 
@@ -62,7 +59,6 @@ public static class AiRosterSeedImporter
 
             AiTeamRosterData teamAsset = WriteTeamAsset(draft, setFolder);
 
-            //필드명 불일치 - WriteTeamAsset에서 이미 로그를 남겼음
             if (teamAsset == null)
                 return;
 
@@ -95,7 +91,6 @@ public static class AiRosterSeedImporter
         headers = null;
         rows = null;
 
-        //씨앗 CSV는 Resources 밖에 있으므로 AssetDatabase로 읽음
         TextAsset asset = AssetDatabase.LoadAssetAtPath<TextAsset>(assetPath);
 
         if (asset == null)
@@ -114,7 +109,6 @@ public static class AiRosterSeedImporter
 
         headers = ParseHeaders(lines[0].Trim());
 
-        //필요한 열이 하나라도 없으면 행 파싱을 시작하지 않음
         foreach (string column in requiredColumns)
         {
             if (!headers.ContainsKey(column))
@@ -164,7 +158,6 @@ public static class AiRosterSeedImporter
         {
             string[] cols = rows[i];
 
-            //헤더 1줄 + 0부터 시작하는 인덱스 -> 실제 CSV 줄 번호
             int lineNumber = i + 2;
 
             if (cols.Length < headers.Count)
@@ -202,7 +195,6 @@ public static class AiRosterSeedImporter
             TeamDraft draft = GetOrCreateDraft(rosterSet, teamName, draftLookup, drafts);
             int slotIndex = battingOrder - 1;
 
-            //빈 슬롯 센티넬은 0 (cardId는 1부터 시작)
             if (draft.HitterCardIds[slotIndex] != 0)
             {
                 Debug.LogError($"[AiRosterSeedImporter] {HitterSeedPath} {lineNumber}번 줄: {teamName} {battingOrder}번 타순이 중복입니다");
@@ -335,7 +327,6 @@ public static class AiRosterSeedImporter
         string assetPath = $"{folderPath}/AiTeamRoster_{draft.TeamName}.asset";
         AiTeamRosterData asset = AssetDatabase.LoadAssetAtPath<AiTeamRosterData>(assetPath);
 
-        //없으면 새로 만들고, 있으면 기존 에셋을 덮어씀 (참조를 끊지 않기 위해 지우지 않음)
         if (asset == null)
         {
             asset = ScriptableObject.CreateInstance<AiTeamRosterData>();
@@ -365,7 +356,6 @@ public static class AiRosterSeedImporter
         {
             SerializedProperty slotProperty = lineupProperty.GetArrayElementAtIndex(i);
 
-            //HitterPosition은 0부터 1씩 증가하므로 enum 값을 그대로 인덱스로 쓸 수 있음
             slotProperty.FindPropertyRelative(FieldSlotPosition).enumValueIndex = (int)draft.Positions[i];
             slotProperty.FindPropertyRelative(FieldSlotCardId).intValue = draft.HitterCardIds[i];
         }
@@ -411,7 +401,6 @@ public static class AiRosterSeedImporter
         serializedAsset.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(asset);
 
-        //팀 수가 어긋나도 에셋은 만들되 눈에 띄게 알림
         if (teams.Count != AiRosterSet.TeamCount)
         {
             Debug.LogWarning($"[AiRosterSeedImporter] 세트 '{rosterSetName}'의 팀 수가 {teams.Count}개입니다 (기대: {AiRosterSet.TeamCount})");
