@@ -669,6 +669,13 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 | 경기 준비 | 선발 카드 기울기 제거 |
 | 공용 | `PlayerLabelFormat.NameWithSmallYear` — 굵은 이름 + 작고 옅은 '연도 (타순 · 교체 줄 · 선발 판 · 미리보기 공용) |
 
+#### 세션 66-2 (11-15) — Android 텍스처 압축
+
+- 🔴 첫 APK 803MB · 텍스처 2.1GB. 원인 두 겹: ① Player Settings 의 Android 압축 형식이 `ETC` 하나라 텍스처마다 둔 ASTC 지정이 RGBA32 로 풀렸다 → `ASTC` 로. ② **NPOT + 밉맵이면 압축 자체가 안 된다**(POT 이거나 밉맵을 끄면 ASTC 로 들어감, 직접 확인)
+- `PlayerPhotoImporter`: 원본 사진(768×960, 360폭 넘는 카드 · 타이틀에만 씀)은 밉맵 끔 → 3.9MB → 0.33MB. 썸네일은 작게 줄여 그려지므로 밉맵 유지
+- 결과: 텍스처 2,157MB → 630MB, APK 803MB → 315MB
+- ⏭️ 남은 RGBA32: 썸네일 289MB(320×400) · 카드 아트 180MB(1398×1957). 밉맵을 지키며 누르려면 POT 크기로 바꿔야 한다(빈 여백을 붙인 POT 캔버스 + 스프라이트 영역 지정) — 셰이더 UV 영향 확인 후 진행
+
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
 **코드 결함은 전부 닫혔다.** 남은 것은 데이터 입력 · 인스펙터 수치 · 미착수 기능뿐이다.
