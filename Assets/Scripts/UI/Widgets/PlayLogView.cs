@@ -13,6 +13,8 @@ public class PlayLogView : UiWidgetBehaviour
     private const float HeaderHeight = 56f;
     private const float RowGap = 4f;
     private const float SentenceSize = 38f;
+    //최신 따라가기 중에 보이는 줄 위로 더 켜 둘 줄 수. 위로 끌기 시작해 자동 스크롤이 풀리기 전까지 빈 줄이 비치지 않게 한다
+    private const int KeepBufferRows = 6;
 
     [SerializeField] private ScrollRect _scroll;
     [SerializeField] private RectTransform _content;
@@ -27,6 +29,8 @@ public class PlayLogView : UiWidgetBehaviour
     private bool _lastIsTopInning;
     private bool _hasLastInning;
     private bool _autoScroll = true;
+    //이 번호 앞의 줄은 꺼 두었다. 한 경기 100줄 가까이 쌓이면 RectMask2D 가 매 프레임 전부를 훑는다
+    private int _firstActiveRow;
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
@@ -44,6 +48,7 @@ public class PlayLogView : UiWidgetBehaviour
     protected override void BindEvents()
     {
         Bind(_jumpToLatestButton, JumpToLatest);
+        _scroll.onValueChanged.AddListener(OnScrolled);
     }
 
     private void BuildWidget(Transform parent)
@@ -58,7 +63,6 @@ public class PlayLogView : UiWidgetBehaviour
 
         _scroll = UiBuilder.CreateVerticalScroll(Root, "LogScroll", out _content);
         UiBuilder.Stretch(_scroll.GetComponent<RectTransform>(), 12f, 58f, 12f, 12f);
-        _scroll.onValueChanged.AddListener(OnScrolled);
 
         _jumpToLatestButton = UiBuilder.CreateButton(Root, "JumpToLatest", "최신으로", 28f, false, JumpToLatest);
         BroadcastPanel.ApplyButtonStyle(_jumpToLatestButton, false);
@@ -94,6 +98,7 @@ public class PlayLogView : UiWidgetBehaviour
         _contentHeight = 0f;
         _hasLastInning = false;
         _autoScroll = true;
+        _firstActiveRow = 0;
 
         _jumpToLatestButton.gameObject.SetActive(false);
         _content.sizeDelta = new Vector2(0f, 0f);
@@ -168,11 +173,14 @@ public class PlayLogView : UiWidgetBehaviour
 
     private void ScrollToLatest()
     {
-        if (_autoScroll)
-            _scroll.verticalNormalizedPosition = 0f;
+        if (!_autoScroll)
+            return;
+
+        _scroll.verticalNormalizedPosition = 0f;
+        HideOldRows();
     }
 
-    //사용자가 위로 올리면 자동 스크롤을 멈춘다
+    //사용자가 위로 올리면 자동 스크롤을 멈추고 꺼 둔 지난 줄을 다시 켠다
     private void OnScrolled(Vector2 position)
     {
         if (_usedRowCount == 0)
@@ -185,6 +193,11 @@ public class PlayLogView : UiWidgetBehaviour
 
         _autoScroll = !scrolledUp;
         _jumpToLatestButton.gameObject.SetActive(scrolledUp);
+
+        if (scrolledUp)
+            ShowOldRows();
+        else
+            HideOldRows();
     }
 
     private void JumpToLatest()
@@ -192,6 +205,32 @@ public class PlayLogView : UiWidgetBehaviour
         _autoScroll = true;
         _jumpToLatestButton.gameObject.SetActive(false);
         _scroll.verticalNormalizedPosition = 0f;
+        HideOldRows();
+    }
+
+    //최신 줄부터 뷰포트를 채울 만큼 + KeepBufferRows 줄만 남기고 끈다. 자리는 그대로라 화면이 밀리지 않는다
+    private void HideOldRows()
+    {
+        float viewHeight = _scroll.viewport != null ? _scroll.viewport.rect.height : 0f;
+
+        if (viewHeight <= 0f)
+            return;
+
+        int keepRows = Mathf.CeilToInt(viewHeight / (HeaderHeight + RowGap)) + KeepBufferRows;
+        int firstKept = Mathf.Max(0, _usedRowCount - keepRows);
+
+        for (int i = _firstActiveRow; i < firstKept; i++)
+            _rows[i].Root.gameObject.SetActive(false);
+
+        _firstActiveRow = Mathf.Max(_firstActiveRow, firstKept);
+    }
+
+    private void ShowOldRows()
+    {
+        for (int i = 0; i < _firstActiveRow; i++)
+            _rows[i].Root.gameObject.SetActive(true);
+
+        _firstActiveRow = 0;
     }
 
     //중계 행 하나. 헤더 · 타석 · 도루 세 모양을 부분 토글로 공유한다

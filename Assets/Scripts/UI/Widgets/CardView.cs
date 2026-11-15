@@ -101,8 +101,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
     private Action _onClick;
     private Action _onLongPress;
-    private float _pressSeconds;
-    private bool _pressing;
+    private UiTween _pressTween;
     private bool _longPressFired;
     private bool _showBack;
     private float _displayWidth;
@@ -377,38 +376,25 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
     void IPointerDownHandler.OnPointerDown(PointerEventData eventData)
     {
-        _pressing = true;
-        _pressSeconds = 0f;
         _longPressFired = false;
+        UiAnimator.Cancel(_pressTween);
+        _pressTween = _onLongPress == null ? null : UiAnimator.Play(LongPressSeconds, OnPressProgress, OnLongPressReached);
     }
 
     void IPointerUpHandler.OnPointerUp(PointerEventData eventData)
     {
-        _pressing = false;
-        HidePressGauge();
+        StopPress();
     }
 
     void IPointerExitHandler.OnPointerExit(PointerEventData eventData)
     {
-        _pressing = false;
-        HidePressGauge();
+        StopPress();
     }
 
-    //길게 누르는 동안만 세며 게이지를 채운다. 한 번 터지면 손을 뗄 때까지 다시 터지지 않는다
-    private void Update()
+    //누르던 중 화면이 꺼지면 숨은 카드에서 상세 보기가 열리지 않게 끊는다
+    private void OnDisable()
     {
-        if (!_pressing || _longPressFired || _onLongPress == null)
-            return;
-
-        _pressSeconds += Time.unscaledDeltaTime;
-        ShowPressGauge(Mathf.InverseLerp(PressGaugeDelay, LongPressSeconds, _pressSeconds));
-
-        if (_pressSeconds < LongPressSeconds)
-            return;
-
-        _longPressFired = true;
-        HidePressGauge();
-        _onLongPress();
+        StopPress();
     }
 
     /// <summary>
@@ -719,6 +705,29 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
             return;
 
         _onClick?.Invoke();
+    }
+
+    //길게 누르는 동안 게이지를 채운다. 카드마다 Update 를 돌리지 않고 공용 트윈 시계에 맡긴다
+    private void OnPressProgress(float progress)
+    {
+        ShowPressGauge(Mathf.InverseLerp(PressGaugeDelay, LongPressSeconds, progress * LongPressSeconds));
+    }
+
+    //다 채우면 한 번만 터진다. 손을 뗄 때 딸려 오는 클릭은 OnClicked 가 버린다
+    private void OnLongPressReached()
+    {
+        _pressTween = null;
+        _longPressFired = true;
+        HidePressGauge();
+        _onLongPress?.Invoke();
+    }
+
+    //누르기를 멈추고 게이지를 숨긴다
+    private void StopPress()
+    {
+        UiAnimator.Cancel(_pressTween);
+        _pressTween = null;
+        HidePressGauge();
     }
 
     //카드 가운데 원형 게이지. 어두운 원판 위 흐린 고리를 흰색으로 시계 방향 채운다
