@@ -711,6 +711,7 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 | 7 | 로비 뽑기 아이콘을 부채꼴 카드로 | `Design/ui_assets/render_gacha_fan_icon.py` 신규(PIL 8배 그려 축소). 카드 3장 ±25° + 앞 카드 별, 카드 사이 틈. `render_lobby_icons.py` 목록에서 gacha 제거(덮어쓰기 방지) |
 | 8 | 조합 "3성 → 4성 승급" · "N성 카드 / 이름" 문구 제거 | 결과 카드가 떠 있으면 안내 칸을 비움(`BuildResultMessage` 삭제). 알림 "N성 카드를 받았습니다" · 승급 이펙트는 유지 |
 | 9 | 카드 뒷면 OVR 라벨 작게 · 숫자 이사만루 | `<size=80%>OVR</size>` + 숫자는 `UiFontProvider.WrapCardFont` 로 `<font="CardFont">` 태그. TMP 는 이 태그를 `Resources/Fonts & Materials/` 에서 찾으므로 `TMP_Text.OnFontAssetRequest` 로 카드 폰트 자산을 돌려준다(정적 생성자에서 1회 구독) |
+| 10 | 자동 저장 · 저장 버튼 제거 | `GameFlowManager.AutoSave`(플레이어 + 진행 중 정규시즌). 시점 = 로비 복귀 · 빠른 시작 · 리그 입장 · `OnApplicationPause(true)` · `OnApplicationQuit`. 새 게임 / 이어하기 성공 전에는 저장 안 함(빈 상태 덮어쓰기 방지). 로비 저장 칸 제거(빠른 시작 한 줄), 리그 화면 2칸. `icon_save.png` 삭제 |
 
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
