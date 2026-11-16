@@ -2,6 +2,7 @@
 로비 · 리그 메뉴 아이콘 — Phosphor Icons (MIT, icons_src/phosphor/LICENSE.txt) Fill 굵기의 윤곽만 뽑아 흰 글리프로 굽는다.
 Phosphor 에 없는 모양은 같은 256 격자 · 같은 굵기로 직접 그려 icons_src/authored/ 에 둔다.
 원본 SVG 에서 path 의 d 값만 꺼내 새 SVG 로 다시 쓰므로 원본의 다른 요소는 그려지지 않는다
+뽑기 아이콘(부채처럼 펼친 카드)은 겹친 카드 사이에 틈을 파야 해서 render_gacha_fan_icon.py 가 따로 굽는다
 
 사용법
     python Design/ui_assets/render_lobby_icons.py
@@ -21,7 +22,6 @@ PHOSPHOR_VIEWBOX = 256
 ICONS = {
     "league": "baseball",
     "lineup": "clipboard-text",
-    "gacha": "cards",
     "inventory": "archive",
     "enhance": "arrow-fat-lines-up",
     "train": "barbell",

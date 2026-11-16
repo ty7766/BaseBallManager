@@ -469,17 +469,13 @@ public class CombineScreen : CardWorkScreen
         }
     }
 
-    //방금 조합한 결과 — 승급이면 금색
+    //방금 조합한 결과 — 등급 · 이름
     private string BuildResultMessage()
     {
         if (_lastResult == null || !CardDisplayInfo.TryCreate(_lastResult.InstanceId, out CardDisplayInfo result))
             return null;
 
-        string name = PlayerLabelFormat.NameWithYear(result.Name, result.Year);
-
-        return _lastResult.IsUpgraded
-            ? $"<color=#F2C14E>{GetGradeLabel(_lastResult.BaseGrade)} → {GetGradeLabel(_lastResult.Grade)} 승급!</color>\n{name}"
-            : $"{GetGradeLabel(_lastResult.Grade)} 카드\n{name}";
+        return $"{GetGradeLabel(_lastResult.Grade)} 카드\n{PlayerLabelFormat.NameWithYear(result.Name, result.Year)}";
     }
 
     private void OnMaterialsChanged()
@@ -534,9 +530,7 @@ public class CombineScreen : CardWorkScreen
         UiEffects.Pop(_resultCard.Root, 0.5f, 0.36f);
         UiEffects.Burst(_resultCard.Root, result.IsUpgraded ? UiEffectKind.GradeUp : UiEffectKind.Enhance);
 
-        Notify(result.IsUpgraded
-            ? $"{GetGradeLabel(result.BaseGrade)} → {GetGradeLabel(result.Grade)} 승급!"
-            : $"{GetGradeLabel(result.Grade)} 카드를 받았습니다", true);
+        Notify($"{GetGradeLabel(result.Grade)} 카드를 받았습니다", true);
 
         yield return new WaitForSecondsRealtime(0.4f);
 
