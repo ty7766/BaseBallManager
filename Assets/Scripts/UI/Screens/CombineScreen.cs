@@ -430,14 +430,14 @@ public class CombineScreen : CardWorkScreen
         _streamRoots[index].gameObject.SetActive(filled || _surging);
     }
 
-    //재료가 없으면 처음 안내 또는 방금 받은 결과, 노말 재료면 확률 막대, 시그 · 골글이면 같은 종류 1장
+    //재료가 없으면 처음 안내(결과 카드가 떠 있으면 비움), 노말 재료면 확률 막대, 시그 · 골글이면 같은 종류 1장
     private void RefreshInfo()
     {
         bool showOdds = false;
 
         if (_materialIds.Count == 0)
         {
-            _infoText.text = BuildResultMessage() ?? "조합할 카드를\n선택하세요";
+            _infoText.text = _lastResult == null ? "조합할 카드를\n선택하세요" : string.Empty;
         }
         else if (CardDisplayInfo.TryCreate(_materialIds[0], out CardDisplayInfo first) && first.CardType != CardType.Normal)
         {
@@ -467,15 +467,6 @@ public class CombineScreen : CardWorkScreen
             _oddsTexts[i].text = $"{odds[i] * 100f:0.#}%";
             _oddsTexts[i].color = odds[i] > 0f ? UiPalette.Text1 : UiPalette.TextOff;
         }
-    }
-
-    //방금 조합한 결과 — 등급 · 이름
-    private string BuildResultMessage()
-    {
-        if (_lastResult == null || !CardDisplayInfo.TryCreate(_lastResult.InstanceId, out CardDisplayInfo result))
-            return null;
-
-        return $"{GetGradeLabel(_lastResult.Grade)} 카드\n{PlayerLabelFormat.NameWithYear(result.Name, result.Year)}";
     }
 
     private void OnMaterialsChanged()

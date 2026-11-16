@@ -657,7 +657,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     {
         _backNameText.text = PlayerLabelFormat.NameWithYear(info.Name, info.Year);
         _backDetailText.text = $"{info.Position} · {info.TeamName} · {GradeLabel(info.CardGrade)}";
-        _backOvrText.text = "OVR " + info.FinalOvr;
+        _backOvrText.text = $"<size=80%>OVR</size> {UiFontProvider.WrapCardFont(info.FinalOvr.ToString())}";
         _backOvrText.color = typeColor;
 
         string[] labels = info.StatLabels;
