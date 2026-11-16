@@ -29,7 +29,6 @@ public class LeagueScreen : UiScreenBehaviour
 
     private Action _onStartGame;
     private Action _onToggleMode;
-    private Action _onSave;
     private Action _onClaimRewards;
     private Action _onBackToLobby;
     private Action _onOpenPostSeason;
@@ -47,19 +46,17 @@ public class LeagueScreen : UiScreenBehaviour
     [SerializeField] private TextMeshProUGUI _modeHintText;
     [SerializeField] private LobbyMenuTileView _startTile;
     [SerializeField] private LobbyMenuTileView _claimTile;
-    [SerializeField] private LobbyMenuTileView _saveTile;
     [SerializeField] private LobbyMenuTileView _lobbyTile;
     [SerializeField] private LobbyMenuTileView _postSeasonTile;
 
     /// <summary>
     /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
     /// </summary>
-    public void Initialize(Action onStartGame, Action onToggleMode, Action onSave, Action onClaimRewards,
+    public void Initialize(Action onStartGame, Action onToggleMode, Action onClaimRewards,
         Action onBackToLobby, Action onOpenPostSeason)
     {
         _onStartGame = onStartGame;
         _onToggleMode = onToggleMode;
-        _onSave = onSave;
         _onClaimRewards = onClaimRewards;
         _onBackToLobby = onBackToLobby;
         _onOpenPostSeason = onOpenPostSeason;
@@ -112,7 +109,6 @@ public class LeagueScreen : UiScreenBehaviour
     {
         Bind(_startTile.Button, OnStartClicked);
         Bind(_claimTile.Button, OnClaimClicked);
-        Bind(_saveTile.Button, OnSaveClicked);
         Bind(_lobbyTile.Button, OnBackClicked);
         Bind(_postSeasonTile.Button, OnPostSeasonClicked);
         _modeSwitch.SetToggleHandler(OnToggleModeClicked);
@@ -139,11 +135,10 @@ public class LeagueScreen : UiScreenBehaviour
 
         BuildModePanel(modeBottom);
 
-        float menuWidth = (PanelWidth - Gap * 2f) / 3f;
+        float menuWidth = (PanelWidth - Gap) / 2f;
 
-        _saveTile = CreateTile("SaveButton", "저장", "save", 0, menuWidth, menuBottom, OnSaveClicked);
-        _lobbyTile = CreateTile("LobbyButton", "로비로", "lobby", 1, menuWidth, menuBottom, OnBackClicked);
-        _postSeasonTile = CreateTile("PostSeasonButton", "포스트시즌", "postseason", 2, menuWidth, menuBottom, OnPostSeasonClicked);
+        _lobbyTile = CreateTile("LobbyButton", "로비로", "lobby", 0, menuWidth, menuBottom, OnBackClicked);
+        _postSeasonTile = CreateTile("PostSeasonButton", "포스트시즌", "postseason", 1, menuWidth, menuBottom, OnPostSeasonClicked);
 
         _startTile = LobbyMenuTileView.Create(Root, "StartButton", "경기 시작", "league",
             new Vector2(PanelWidth, StartHeight), StartFontSize, true, OnStartClicked, true);
@@ -264,11 +259,6 @@ public class LeagueScreen : UiScreenBehaviour
     private void OnToggleModeClicked()
     {
         _onToggleMode?.Invoke();
-    }
-
-    private void OnSaveClicked()
-    {
-        _onSave?.Invoke();
     }
 
     private void OnClaimClicked()

@@ -170,12 +170,11 @@ public class AppFlowController : MonoBehaviour
             () => ShowScreen(_combineScreen),
             () => ShowScreen(_dismantleScreen),
             () => ShowScreen(_goldenGloveCraftScreen),
-            SaveAll,
             QuickStart
         });
 
         _leagueScreen.Initialize(OnStartGameRequested, OnToggleSubstitutionMode,
-            SaveAll, OnClaimSeasonRewards, ShowLobby, () => ShowScreen(_postSeasonScreen));
+            OnClaimSeasonRewards, ShowLobby, () => ShowScreen(_postSeasonScreen));
         _preGameScreen.Initialize(OnPreGameStart);
         _liveGameScreen.Initialize(OnPauseRequested);
         _pauseScreen.Initialize(OnSubstitutionApplied, OnSubstitutionSkipped);
@@ -251,16 +250,16 @@ public class AppFlowController : MonoBehaviour
         }
 
         GameFlowManager.Instance.CompleteTutorial();
-        GameFlowManager.Instance.SaveGame();
         _backdrop.SetTeam(teamName);
 
         ShowToast("뽑기권을 받았습니다. 뽑기 → 라인업 순서로 준비하세요", true);
         ShowLobby();
     }
 
-    //로비에는 카드가 없으므로 올려 둔 선수 사진을 이때 한꺼번에 내린다
+    //로비로 올 때마다 자동 저장하고, 로비에는 카드가 없으므로 올려 둔 선수 사진을 한꺼번에 내린다
     private void ShowLobby()
     {
+        AutoSave();
         _router.Show(_lobbyScreen);
         PlayerPhotoProvider.UnloadAll();
     }
@@ -280,19 +279,16 @@ public class AppFlowController : MonoBehaviour
             return;
         }
 
-        SaveAll();
+        AutoSave();
         ShowToast("자동 뽑기와 라인업 편성을 마쳤습니다", true);
         _lobbyScreen.Refresh();
     }
 
-    private void SaveAll()
+    //카드 · 재화를 바꾸는 화면은 모두 로비에서 들어가고 로비로 나오므로 로비 복귀가 저장 시점이다
+    private static void AutoSave()
     {
-        bool saved = GameFlowManager.Instance != null && GameFlowManager.Instance.SaveGame();
-
-        if (LeagueManager.Instance != null && LeagueManager.Instance.IsSeasonRunning)
-            LeagueManager.Instance.SaveLeague();
-
-        ShowToast(saved ? "저장했습니다" : "저장에 실패했습니다", saved);
+        if (GameFlowManager.Instance != null)
+            GameFlowManager.Instance.AutoSave();
     }
 
     private void EnterLeague()
@@ -320,8 +316,7 @@ public class AppFlowController : MonoBehaviour
             return;
         }
 
-        GameFlowManager.Instance.SaveGame();
-        LeagueManager.Instance.SaveLeague();
+        GameFlowManager.Instance.AutoSave();
 
         ShowLeague();
     }
@@ -403,7 +398,6 @@ public class AppFlowController : MonoBehaviour
         }
 
         LeagueManager.Instance.DeleteSavedLeague();
-        GameFlowManager.Instance.SaveGame();
 
         ShowToast("다음 리그를 시작할 수 있습니다", true);
         ShowLobby();

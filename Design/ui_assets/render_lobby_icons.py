@@ -28,7 +28,6 @@ ICONS = {
     "combine": "flask",
     "dismantle": "recycle",
     "goldenglove": "trophy",
-    "save": "floppy-disk",
     "quickstart": "lightning",
     "lobby": "house",
     "postseason": "crown",

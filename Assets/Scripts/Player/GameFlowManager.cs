@@ -30,10 +30,25 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
     };
 
     private PlayerSaveService _saveService;
+    //새 게임을 시작했거나 불러온 뒤에만 자동 저장한다 (빈 상태로 세이브를 덮어쓰지 않게)
+    private bool _isGameActive;
 
     protected override void OnSingletonAwake()
     {
         _saveService = new PlayerSaveService(new LocalFileStorage());
+    }
+
+    //백그라운드로 내려갈 때 저장한다. 모바일은 이 뒤에 예고 없이 종료될 수 있다
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused)
+            AutoSave();
+    }
+
+    //정상 종료 직전 저장
+    private void OnApplicationQuit()
+    {
+        AutoSave();
     }
 
     /// <summary>
@@ -49,7 +64,9 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
     /// </summary>
     public bool ContinueGame()
     {
-        return _saveService.Load();
+        _isGameActive = _saveService.Load();
+
+        return _isGameActive;
     }
 
     /// <summary>
@@ -58,6 +75,22 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
     public bool SaveGame()
     {
         return _saveService.Save();
+    }
+
+    /// <summary>
+    /// 플레이어 진행과 진행 중인 정규시즌을 함께 저장한다. 게임을 시작하거나 불러오기 전이면 하지 않는다
+    /// </summary>
+    public bool AutoSave()
+    {
+        if (!_isGameActive)
+            return false;
+
+        bool saved = _saveService.Save();
+
+        if (LeagueManager.Instance != null && LeagueManager.Instance.IsSeasonRunning)
+            saved &= LeagueManager.Instance.SaveLeague();
+
+        return saved;
     }
 
     /// <summary>
@@ -82,6 +115,7 @@ public class GameFlowManager : SingletonBehaviour<GameFlowManager>
             return false;
 
         GrantStartingSignatureCard(teamName);
+        _isGameActive = true;
 
         return true;
     }

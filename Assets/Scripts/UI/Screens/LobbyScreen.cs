@@ -11,7 +11,7 @@ using UnityEngine.UI;
 /// </summary>
 public class LobbyScreen : UiScreenBehaviour
 {
-    private const int MenuCount = 11;
+    private const int MenuCount = 10;
     private const int LeagueIndex = 0;
     //칸 배치: 좌우 여백 · 칸 사이 · 바닥 여백
     private const float SideMargin = 32f;
@@ -42,8 +42,7 @@ public class LobbyScreen : UiScreenBehaviour
         new MenuSlot("카드 조합", "combine", 2, 0, 3),
         new MenuSlot("카드 분해", "dismantle", 2, 1, 3),
         new MenuSlot("골든글러브 제작", "goldenglove", 2, 2, 3),
-        new MenuSlot("저장", "save", 1, 0, 2),
-        new MenuSlot("빠른 시작", "quickstart", 1, 1, 2)
+        new MenuSlot("빠른 시작", "quickstart", 1, 0, 1)
     };
 
     [SerializeField] private TextMeshProUGUI _lineupText;
