@@ -45,7 +45,7 @@ public static class UiPalette
     public static readonly Color LogHomeRun = Hex("#F7D57A");      //중계 홈런
 
     public static readonly Color AccentGold = Hex("#F2C14E");      //+N점 · R · MY TEAM
-    public static readonly Color BrushDefault = Hex("#D41021");    //배경 붓질 (팀을 고르기 전 · 타이틀과 같은 붉은색)
+    public static readonly Color BrushDefault = Hex("#D41021");    //배경 붓질 (팀을 고르기 전 · 붉은색)
 
     private static readonly Color[] TeamColors =
     {
@@ -56,7 +56,7 @@ public static class UiPalette
         Hex("#131230"), //두산
         Hex("#CE0E2D"), //SSG
         Hex("#000000"), //KT
-        Hex("#006A80"), //NC (청록 · 마린블루)
+        Hex("#005E7E"), //NC (짙은 청록 · 마린블루)
         Hex("#570514"), //키움
         Hex("#041E42")  //롯데
     };
