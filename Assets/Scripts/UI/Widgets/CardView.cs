@@ -107,7 +107,8 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     private float _displayWidth;
     private string _photoKey;
     private bool _cardFontApplied;
-    private float _ovrMaxWidth;
+    //두 자리 중 가장 넓은 숫자 (예: "00"). 폭 자체가 아니라 문자열을 들고 있다가 매번 같이 잰다
+    private string _ovrWidestTwoDigits;
     [SerializeField] private bool _hasBack;
     //게이지 · 자물쇠는 처음 쓸 때 만든다. 이미 구운 화면 프리팹을 다시 굽지 않아도 된다
     private RectTransform _pressGauge;
@@ -489,25 +490,36 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _nameText.fontSharedMaterial = CardTextMaterials.Shadow;
         _enhanceText.font = cardFont;
         _enhanceText.fontSharedMaterial = CardTextMaterials.Emboss;
-        _ovrMaxWidth = MeasureWidestTwoDigits();
+        _ovrWidestTwoDigits = FindWidestTwoDigits();
     }
 
-    //세 자리 OVR 은 두 자리 최대 폭에 맞춰 가로로만 누른다. 키는 그대로라 숫자 크기가 같아 보인다
+    //세 자리 OVR 은 두 자리 최대 폭에 맞춰 가로로만 누른다. Awake 전 TMP 는 폭을 1/10 로 재므로 기준도 매번 같은 순간에 잰다
     private void FitOvrWidth()
     {
+        float maxWidth = _ovrText.GetPreferredValues(_ovrWidestTwoDigits).x;
         float width = _ovrText.GetPreferredValues(_ovrText.text).x;
-        float squeeze = _ovrMaxWidth > 0f && width > _ovrMaxWidth ? _ovrMaxWidth / width : 1f;
+        float squeeze = maxWidth > 0f && width > maxWidth ? maxWidth / width : 1f;
 
         _ovrText.rectTransform.localScale = new Vector3(squeeze, 1f, 1f);
     }
 
     //숫자마다 폭이 다른 글꼴이라 00 ~ 99 중 가장 넓은 것을 기준으로 삼는다
-    private float MeasureWidestTwoDigits()
+    private string FindWidestTwoDigits()
     {
-        float widest = 0f;
+        string widest = "00";
+        float widestWidth = 0f;
 
         for (int digit = 0; digit <= 9; digit++)
-            widest = Mathf.Max(widest, _ovrText.GetPreferredValues(digit.ToString() + digit).x);
+        {
+            string twoDigits = digit.ToString() + digit;
+            float width = _ovrText.GetPreferredValues(twoDigits).x;
+
+            if (width <= widestWidth)
+                continue;
+
+            widestWidth = width;
+            widest = twoDigits;
+        }
 
         return widest;
     }
