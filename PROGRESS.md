@@ -708,6 +708,9 @@ input/{이름_팀}.jpg → python PhotoPipeline/build_photos.py --install → As
 | 4 | 🔴 라인업 두 번째 교체부터 후보 OVR 이 세로로 찌그러짐 | `CardView` 가 세 자리 OVR 을 누를 기준(두 자리 최대 폭)을 처음 한 번 재서 캐시. 카드 선택 창은 숨긴 채 칸을 만들어 TMP Awake 전 → 폭을 1/10 로 잼. 칸을 재사용하는 두 번째부터 깨어난 뒤 잰 실제 폭과 섞여 1/10 로 눌림 → 기준 문자열을 들고 매번 같은 순간에 함께 잰다 |
 | 5 | 김민준(SSG 투수)이 2B | 데이터 행 오류(동명이인 아님). 타자 CSV `131 … 2B` 삭제 → 투수 CSV `50386,김민준,SSG,26,N,3,RP,72,61,63,38,58` 추가. ⚠️ **역할 · 능력치는 임시값**(N 3성 RP 최빈값) — 작성자가 실제 값으로 고칠 것. 세이브에 131 이 있으면 목록에서 빠진다 |
 | 6 | 인벤토리 확장 전에 확인 팝업 | `ConfirmPopupView` 신규(B 판 · 배경 흐림, 런타임 생성이라 베이크 무관). "정말 확장하시겠습니까?" / "보관함 +10칸 · 비용 : 골드 1,000" / 보유 골드. 확인만 확장, 취소 · 바깥 · 뒤로 · 화면 떠남은 닫기만 |
+| 7 | 로비 뽑기 아이콘을 부채꼴 카드로 | `Design/ui_assets/render_gacha_fan_icon.py` 신규(PIL 8배 그려 축소). 카드 3장 ±25° + 앞 카드 별, 카드 사이 틈. `render_lobby_icons.py` 목록에서 gacha 제거(덮어쓰기 방지) |
+| 8 | 조합 "3성 → 4성 승급" · "N성 카드 / 이름" 문구 제거 | 결과 카드가 떠 있으면 안내 칸을 비움(`BuildResultMessage` 삭제). 알림 "N성 카드를 받았습니다" · 승급 이펙트는 유지 |
+| 9 | 카드 뒷면 OVR 라벨 작게 · 숫자 이사만루 | `<size=80%>OVR</size>` + 숫자는 `UiFontProvider.WrapCardFont` 로 `<font="CardFont">` 태그. TMP 는 이 태그를 `Resources/Fonts & Materials/` 에서 찾으므로 `TMP_Text.OnFontAssetRequest` 로 카드 폰트 자산을 돌려준다(정적 생성자에서 1회 구독) |
 
 ### 2-0. 남은 일 한눈에 (세션 48 기준)
 
