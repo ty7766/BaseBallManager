@@ -27,7 +27,7 @@ W, H = 1080, 1920
 RNG = np.random.default_rng(26)
 Y, X = np.mgrid[0:H, 0:W].astype(np.float32)
 U, V = X / W, Y / H
-GREEN = np.array([0.06, 0.50, 0.20], np.float32)
+GREEN = np.array([0.03, 0.32, 0.14], np.float32)
 
 
 def blur(a, s):

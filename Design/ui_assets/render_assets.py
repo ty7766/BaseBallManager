@@ -74,10 +74,10 @@ def card_assets():
 
     cx, cy = 349.5, 489.5
     asset("Card", "card_slot_empty", 699, 979,
-          '<rect width="699" height="979" fill="rgba(255,255,255,0.04)"/>'
-          '<rect x="3" y="3" width="693" height="973" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="6" stroke-dasharray="28 18"/>'
-          f'<path d="M{cx} {cy - 60}V{cy + 60}M{cx - 60} {cy}H{cx + 60}" stroke="rgba(255,255,255,0.35)" stroke-width="12"/>',
-          scale=1, usage="빈 카드 슬롯 (라인업 · 조합 재료 칸). 카드 절반 크기")
+          '<rect width="699" height="979" fill="rgba(63,74,98,0.94)"/>'
+          '<rect x="3" y="3" width="693" height="973" fill="none" stroke="rgba(200,212,232,0.6)" stroke-width="6" stroke-dasharray="28 18"/>'
+          f'<path d="M{cx} {cy - 60}V{cy + 60}M{cx - 60} {cy}H{cx + 60}" stroke="rgba(200,212,232,0.6)" stroke-width="12"/>',
+          scale=1, usage="빈 카드 슬롯 (라인업 · 조합 재료 칸). 거의 불투명해 뒤 선이 비치지 않는다")
 
     # card_fx_glow_{signature,goldenglove} 는 카드 모양(사선 모서리)을 따라야 해서 card_shape.py 가 만든다
 
@@ -119,8 +119,8 @@ def match_assets():
     asset("Match", "log_inning_header", 16, 2, '<rect width="16" height="2" fill="#1C2739"/>', usage="이닝 구분선 (가로로 늘림)")
     asset("Match", "badge_score", 32, 32, box(32, 32, "#F2C14E", radius=2), border=[6, 6, 6, 6], mode="Sliced", usage="+N점 배지")
 
-    asset("Match", "panel_large", 32, 32, box(32, 32, "#0E1522", 2, "#1C2739"), border=[8, 8, 8, 8], mode="Sliced", usage="화면 단위 패널 · 스코어보드")
-    asset("Match", "panel_small", 32, 32, box(32, 32, "#121B2B", 2, "#1C2739"), border=[8, 8, 8, 8], mode="Sliced", usage="칩 · 목록 섹션 · 모달 요약")
+    asset("Match", "panel_large", 32, 32, box(32, 32, "#FFFFFF", 2, "#FFFFFF"), border=[8, 8, 8, 8], mode="Sliced", tint="UiPalette.BgPanel 등", usage="화면 단위 패널 · 스코어보드 (흰 판에 색을 곱한다)")
+    asset("Match", "panel_small", 32, 32, box(32, 32, "#FFFFFF", 2, "#FFFFFF"), border=[8, 8, 8, 8], mode="Sliced", tint="UiPalette.BgRow 등", usage="칩 · 목록 섹션 · 모달 요약 (흰 판에 색을 곱한다)")
     asset("Match", "button_primary", 32, 32, box(32, 32, "#F3F6FA"), border=[4, 4, 4, 4], mode="Sliced", usage="주 버튼 (글자 #0A111D)")
     asset("Match", "button_normal", 32, 32, box(32, 32, None, 3, WHITE), border=[10, 10, 10, 10], mode="Sliced",
           tint="보조 #2A3953 · 일시정지 #F3F6FA · 예약됨 #8EC5FF (+바탕 하늘 10%)", usage="테두리 버튼")

@@ -6,60 +6,59 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
-/// 뽑기 화면. 일반 · 시그니쳐를 1회 또는 10회 돌리고, 결과는 뒷면으로 나눠 깔아 눌러 · 밀어 뒤집게 한다.
-/// 10회 버튼 아래 줄 오른쪽 기록 보기로 지금까지 뽑은 카드를 최신 순으로 본다
+/// 뽑기 로비. 위에서 가운데 아래까지 큰 배너(일반 · 시그니쳐)를 좌우로 넘기고, 아래 뽑기권 버튼으로 1회 · 10회를 돌린다.
+/// 뽑으면 화면 전체를 덮는 연출 무대에서 카드를 뒤집고, 다 뒤집은 뒤 확인을 누르면 이 로비로 돌아온다
 /// </summary>
 public class GachaScreen : UiScreenBehaviour
 {
     private const int TenRollCount = 10;
-    //구장 조명 배경. 화면 폭 1080 기준으로 위에 붙이고, 세로가 짧은 기기는 아래가 잘린다
-    private const string StageSprite = "Gacha/gacha_bg";
-    private const float StageWidth = 1080f;
-    private const float StageHeight = 2340f;
-    //탭: 어두운 바탕 안에서 고른 쪽에 흰 바탕이 깔린다 (공용 버튼과 같은 모서리)
-    private const string TabTrackSprite = "Gacha/tab_track";
-    private const string TabPillSprite = "Gacha/tab_pill";
-    private const float TabTop = 210f;
-    private const float TabHeight = 96f;
-    private const float TabInset = 8f;
     //뽑기권 모양 버튼. 절취선 왼쪽은 카드 그림 칸이라 글자는 그 오른쪽 가운데에 둔다. 일반 뽑기는 파랑, 시그니쳐는 분홍
     private const string TicketOnceBlueSprite = "Gacha/ticket_once_blue";
     private const string TicketTenBlueSprite = "Gacha/ticket_ten_blue";
     private const string TicketOncePinkSprite = "Gacha/ticket_once_pink";
     private const string TicketTenPinkSprite = "Gacha/ticket_ten_pink";
     private const float TicketStubWidth = 150f;
+    private const float TicketWidth = 500f;
     private const float DisabledAlpha = 0.4f;
-    //뽑기 버튼 · 그 아래 줄 오른쪽 끝 네모난 기록 보기
-    private const float RollTop = 326f;
-    private const float RollHeight = 130f;
-    private const float HistoryRowTop = 472f;
-    private const float HistoryButtonSize = 104f;
-    private const float ResultAreaTop = HistoryRowTop + HistoryButtonSize + 16f;
-    private const float ResultAreaBottom = 184f;
+    //화면 아래부터: 로비로 · 뽑기권 버튼 · 천장 안내 · 배너 넘김 점 · 배너
+    private const float BackBottom = 40f;
+    private const float BackHeight = 120f;
+    private const float TicketBottom = 184f;
+    private const float TicketHeight = 130f;
+    private const float PityBottom = 330f;
+    private const float PityHeight = 40f;
+    private const float DotsBottom = 388f;
+    private const float DotHeight = 12f;
+    private const float DotWidth = 24f;
+    private const float DotActiveWidth = 56f;
+    private const float DotGap = 12f;
+    private const float BannerTop = 204f;
+    private const float BannerBottom = 420f;
+    private const string GuaranteeBadge = "10회 뽑기 시 4성 이상 1장 확정";
+
+    //배너 순서 (좌우로 넘긴다)
+    private static readonly GachaType[] BannerOrder = { GachaType.Normal, GachaType.Signature };
 
     private Action _onBack;
     private Action<int> _onCardSelected;
     private Action<string, bool> _onNotify;
 
     [SerializeField] private CurrencyBarView _currencyBar;
-    [SerializeField] private Button _normalTabButton;
-    [SerializeField] private Button _signatureTabButton;
-    [SerializeField] private TextMeshProUGUI _normalTabLabel;
-    [SerializeField] private TextMeshProUGUI _signatureTabLabel;
+    [SerializeField] private GachaBannerView _banner;
+    [SerializeField] private Image[] _dots = new Image[BannerOrder.Length];
+    [SerializeField] private TextMeshProUGUI _pityText;
     [SerializeField] private Button _rollOnceButton;
     [SerializeField] private Button _rollTenButton;
     [SerializeField] private TextMeshProUGUI _rollOnceLabel;
     [SerializeField] private TextMeshProUGUI _rollTenLabel;
-    [SerializeField] private Button _historyButton;
-    [SerializeField] private RectTransform _resultArea;
-    [SerializeField] private TextMeshProUGUI _emptyText;
 
     private readonly List<int> _resultInstanceIds = new List<int>(TenRollCount);
     private readonly List<CardDisplayInfo> _resultCards = new List<CardDisplayInfo>(TenRollCount);
-    private GachaRevealView _reveal;
+    private readonly List<CardDisplayInfo> _featured = new List<CardDisplayInfo>(GachaBannerView.FeaturedCount);
+    private GachaRevealStage _stage;
     private GachaHistoryPanel _historyPanel;
 
-    private GachaType _gachaType = GachaType.Normal;
+    private int _bannerIndex;
 
     /// <summary>
     /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
@@ -72,97 +71,40 @@ public class GachaScreen : UiScreenBehaviour
     }
 
     /// <summary>
-    /// 보유 뽑기권을 다시 읽어 버튼을 켜고 끈다
+    /// 재화 · 배너 · 천장 · 뽑기권 버튼을 지금 상태로 다시 그린다
     /// </summary>
     public void Refresh()
     {
         _currencyBar.Refresh();
 
-        CurrencyType ticketType = GetTicketType();
+        GachaType gachaType = BannerOrder[_bannerIndex];
+        bool signature = gachaType == GachaType.Signature;
+        CurrencyType ticketType = signature ? CurrencyType.SignatureTicket : CurrencyType.NormalTicket;
         int tickets = CurrencyManager.Instance == null ? 0 : CurrencyManager.Instance.GetAmount(ticketType);
 
-        bool signature = _gachaType == GachaType.Signature;
+        RefreshBanner(gachaType);
+        RefreshDots();
+        _pityText.text = BuildPityText(gachaType);
 
         SetTicketSprite(_rollOnceButton, signature ? TicketOncePinkSprite : TicketOnceBlueSprite);
         SetTicketSprite(_rollTenButton, signature ? TicketTenPinkSprite : TicketTenBlueSprite);
         SetTicketEnabled(_rollOnceButton, _rollOnceLabel, tickets >= 1);
         SetTicketEnabled(_rollTenButton, _rollTenLabel, tickets >= TenRollCount);
-
-        SetTabSelected(_normalTabButton, _normalTabLabel, _gachaType == GachaType.Normal);
-        SetTabSelected(_signatureTabButton, _signatureTabLabel, _gachaType == GachaType.Signature);
-    }
-
-    protected override void BindEvents()
-    {
-        Bind(_normalTabButton, () => SelectType(GachaType.Normal));
-        Bind(_signatureTabButton, () => SelectType(GachaType.Signature));
-        Bind(_rollOnceButton, RollOnce);
-        Bind(_rollTenButton, RollTen);
-        Bind(_historyButton, OpenHistory);
-        BindButton("BackButton", OnBackClicked);
-    }
-
-    protected override void Build()
-    {
-        Image stage = UiBuilder.CreateImage(Root, "StageLights", Color.white, StageSprite);
-        RectTransform stageRect = stage.rectTransform;
-
-        stageRect.anchorMin = new Vector2(0.5f, 1f);
-        stageRect.anchorMax = new Vector2(0.5f, 1f);
-        stageRect.pivot = new Vector2(0.5f, 1f);
-        stageRect.anchoredPosition = Vector2.zero;
-        stageRect.sizeDelta = new Vector2(StageWidth, StageHeight);
-        stage.gameObject.SetActive(stage.sprite != null);
-
-        TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
-        UiBuilder.Place(title.rectTransform, 32f, 32f, 500f, 60f);
-        title.text = "뽑기";
-
-        _currencyBar = CurrencyBarView.Bake(Root, CurrencyBarView.AllTypes);
-        UiBuilder.Place(_currencyBar.Root, 24f, 100f, 1032f, CurrencyBarView.BarHeight);
-
-        Image tabTrack = UiBuilder.CreateImage(Root, "TabTrack", Color.white, TabTrackSprite, Image.Type.Sliced);
-        UiBuilder.Place(tabTrack.rectTransform, 32f, TabTop, 1016f, TabHeight);
-
-        _normalTabButton = CreateTab("NormalTab", "일반 뽑기", 32f, () => SelectType(GachaType.Normal),
-            out _normalTabLabel);
-        _signatureTabButton = CreateTab("SignatureTab", "시그니쳐 뽑기", 540f, () => SelectType(GachaType.Signature),
-            out _signatureTabLabel);
-
-        _rollOnceButton = CreateTicket("RollOnce", "1회", TicketOnceBlueSprite, 32f, RollOnce, out _rollOnceLabel);
-        _rollTenButton = CreateTicket("RollTen", "10회", TicketTenBlueSprite, 548f, RollTen, out _rollTenLabel);
-
-        _historyButton = UiBuilder.CreateButton(Root, "HistoryButton", "기록\n보기", 30f, false, OpenHistory);
-        UiBuilder.Place(_historyButton.GetComponent<RectTransform>(), 1048f - HistoryButtonSize, HistoryRowTop,
-            HistoryButtonSize, HistoryButtonSize);
-
-        _resultArea = UiBuilder.CreateRect(Root, "Result");
-        UiBuilder.Stretch(_resultArea, 32f, ResultAreaTop, 32f, ResultAreaBottom);
-
-        _emptyText = UiBuilder.CreateText(_resultArea, "Empty", 34f, UiPalette.Text3, TextAlignmentOptions.Center);
-        UiBuilder.Stretch(_emptyText.rectTransform, 0f, 0f, 0f, 0f);
-        _emptyText.text = "아직 뽑지 않았습니다";
-
-        Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
-        RectTransform backRect = backButton.GetComponent<RectTransform>();
-
-        backRect.anchorMin = new Vector2(0f, 0f);
-        backRect.anchorMax = new Vector2(1f, 0f);
-        backRect.pivot = new Vector2(0.5f, 0f);
-        backRect.offsetMin = new Vector2(32f, 40f);
-        backRect.offsetMax = new Vector2(-32f, 160f);
-    }
-
-    protected override void OnShown()
-    {
-        Refresh();
     }
 
     /// <summary>
-    /// 기록 창이 열려 있으면 그것부터 닫는다
+    /// 연출 중엔 뒤로 가기를 막고(다 뒤집은 뒤엔 확인과 같다), 아니면 기록 창부터 닫는다
     /// </summary>
     public override bool HandleBack()
     {
+        if (_stage != null && _stage.IsOpen)
+        {
+            if (_stage.IsAllRevealed)
+                CloseStage();
+
+            return true;
+        }
+
         if (_historyPanel == null || !_historyPanel.gameObject.activeSelf)
             return false;
 
@@ -171,28 +113,71 @@ public class GachaScreen : UiScreenBehaviour
         return true;
     }
 
-    //다시 들어오면 일반 뽑기 · 빈 결과 · 기록 창 닫힘 (뽑은 카드는 이미 인벤토리에 있다)
-    protected override void OnHidden()
+    protected override void BindEvents()
     {
-        _gachaType = GachaType.Normal;
-        _historyPanel?.Close();
-        _reveal?.Hide();
-        _emptyText.gameObject.SetActive(true);
+        Bind(_banner.PreviousButton, ShowPreviousBanner);
+        Bind(_banner.NextButton, ShowNextBanner);
+        Bind(_banner.HistoryButton, OpenHistory);
+        _banner.SetSwipeHandlers(ShowPreviousBanner, ShowNextBanner);
+        Bind(_rollOnceButton, RollOnce);
+        Bind(_rollTenButton, RollTen);
+        BindButton("BackButton", OnBackClicked);
     }
 
-    //알약 탭 하나. 바탕(흰 알약)은 고른 탭에서만 보인다
-    private Button CreateTab(string name, string label, float x, UnityAction onClick,
-        out TextMeshProUGUI labelText)
+    protected override void Build()
     {
-        Button tab = UiBuilder.CreateButton(Root, name, label, 36f, false, onClick, out labelText);
-        Image pill = (Image)tab.targetGraphic;
+        TextMeshProUGUI title = UiBuilder.CreateText(Root, "Title", 48f, UiPalette.Text1);
+        UiBuilder.Place(title.rectTransform, 32f, 32f, 500f, 60f);
+        title.text = "뽑기";
 
-        pill.sprite = UiSprites.Get(TabPillSprite);
-        pill.type = Image.Type.Sliced;
-        UiBuilder.Place(tab.GetComponent<RectTransform>(), x + TabInset, TabTop + TabInset,
-            508f - TabInset * 2f, TabHeight - TabInset * 2f);
+        _currencyBar = CurrencyBarView.Bake(Root, CurrencyBarView.AllTypes);
+        UiBuilder.Place(_currencyBar.Root, 24f, 100f, 1032f, CurrencyBarView.BarHeight);
 
-        return tab;
+        _banner = GachaBannerView.Bake(Root);
+        UiBuilder.Stretch(_banner.Root, 32f, BannerTop, 32f, BannerBottom);
+
+        BuildDots();
+
+        _pityText = UiBuilder.CreateText(Root, "Pity", 28f, UiPalette.Text2, TextAlignmentOptions.Center);
+        PlaceFromBottom(_pityText.rectTransform, 32f, PityBottom, 1016f, PityHeight);
+
+        _rollOnceButton = CreateTicket("RollOnce", "1회", TicketOnceBlueSprite, 32f, RollOnce, out _rollOnceLabel);
+        _rollTenButton = CreateTicket("RollTen", "10회", TicketTenBlueSprite, 548f, RollTen, out _rollTenLabel);
+
+        Button backButton = UiBuilder.CreateButton(Root, "BackButton", "로비로", 34f, true, OnBackClicked);
+        RectTransform backRect = backButton.GetComponent<RectTransform>();
+
+        backRect.anchorMin = new Vector2(0f, 0f);
+        backRect.anchorMax = new Vector2(1f, 0f);
+        backRect.pivot = new Vector2(0.5f, 0f);
+        backRect.offsetMin = new Vector2(32f, BackBottom);
+        backRect.offsetMax = new Vector2(-32f, BackBottom + BackHeight);
+    }
+
+    protected override void OnShown()
+    {
+        Refresh();
+    }
+
+    //다시 들어오면 일반 배너 · 무대 · 기록 창 닫힘 (뽑은 카드는 이미 인벤토리에 있다)
+    protected override void OnHidden()
+    {
+        _bannerIndex = 0;
+        _historyPanel?.Close();
+        _stage?.Close();
+    }
+
+    //배너 수만큼 넘김 표시. 지금 배너만 길게 · 밝게
+    private void BuildDots()
+    {
+        float total = DotActiveWidth + (_dots.Length - 1) * (DotWidth + DotGap);
+        float left = (1080f - total) * 0.5f;
+
+        for (int i = 0; i < _dots.Length; i++)
+        {
+            _dots[i] = UiBuilder.CreateImage(Root, "Dot", UiPalette.Text1, UiSprites.ScrollHandle, Image.Type.Sliced);
+            PlaceFromBottom(_dots[i].rectTransform, left + i * (DotWidth + DotGap), DotsBottom, DotWidth, DotHeight);
+        }
     }
 
     //뽑기권 모양 버튼. 글자는 절취선 오른쪽 칸 가운데
@@ -207,15 +192,107 @@ public class GachaScreen : UiScreenBehaviour
         background.color = Color.white;
         labelText.color = UiPalette.Text1;
         labelText.rectTransform.offsetMin = new Vector2(TicketStubWidth, 0f);
-        UiBuilder.Place(ticket.GetComponent<RectTransform>(), x, RollTop, 500f, RollHeight);
+        PlaceFromBottom(ticket.GetComponent<RectTransform>(), x, TicketBottom, TicketWidth, TicketHeight);
 
         return ticket;
     }
 
-    private static void SetTabSelected(Button tab, TextMeshProUGUI label, bool selected)
+    //화면 아래 기준 배치 (세로가 긴 기기에서도 버튼은 아래에 붙는다)
+    private static void PlaceFromBottom(RectTransform rect, float x, float bottom, float width, float height)
     {
-        tab.targetGraphic.color = selected ? Color.white : UiPalette.WithAlpha(Color.white, 0f);
-        label.color = selected ? UiPalette.ButtonPrimaryText : UiPalette.Text2;
+        rect.anchorMin = rect.anchorMax = Vector2.zero;
+        rect.pivot = Vector2.zero;
+        rect.anchoredPosition = new Vector2(x, bottom);
+        rect.sizeDelta = new Vector2(width, height);
+    }
+
+    //배너 이름 · 설명 · 확정 띠 · 대표 카드
+    private void RefreshBanner(GachaType gachaType)
+    {
+        bool signature = gachaType == GachaType.Signature;
+
+        CollectFeatured(gachaType);
+        _banner.SetBanner(signature ? "시그니쳐 선수 뽑기" : "일반 선수 뽑기",
+            signature ? "4성 · 5성 카드와 시그니쳐 카드" : "3성 · 4성 · 5성 일반 카드",
+            GuaranteeBadge, signature ? UiPalette.CardSignature : UiPalette.CardStar3, _featured);
+    }
+
+    private void RefreshDots()
+    {
+        float total = DotActiveWidth + (_dots.Length - 1) * (DotWidth + DotGap);
+        float x = (1080f - total) * 0.5f;
+
+        for (int i = 0; i < _dots.Length; i++)
+        {
+            bool active = i == _bannerIndex;
+            float width = active ? DotActiveWidth : DotWidth;
+            RectTransform rect = _dots[i].rectTransform;
+
+            rect.anchoredPosition = new Vector2(x, DotsBottom);
+            rect.sizeDelta = new Vector2(width, DotHeight);
+            _dots[i].color = active ? UiPalette.Text1 : UiPalette.WithAlpha(UiPalette.Text1, 0.3f);
+            x += width + DotGap;
+        }
+    }
+
+    //대표 카드: 내 팀에서 OVR 높은 순, 모자라면 전체에서 채운다. 일반은 5성 노말, 시그니쳐는 시그니쳐 카드
+    private void CollectFeatured(GachaType gachaType)
+    {
+        _featured.Clear();
+
+        if (CardDataManager.Instance == null)
+            return;
+
+        CardType wantedType = gachaType == GachaType.Signature ? CardType.Signature : CardType.Normal;
+        string team = PlayerDataManager.Instance == null ? null : PlayerDataManager.Instance.PlayerTeamName;
+        List<CardMasterData> candidates = new List<CardMasterData>(64);
+
+        foreach (CardMasterData card in CardDataManager.Instance.GetAllHitters())
+            AddCandidate(candidates, card, wantedType);
+
+        foreach (CardMasterData card in CardDataManager.Instance.GetAllPitchers())
+            AddCandidate(candidates, card, wantedType);
+
+        candidates.Sort((a, b) =>
+        {
+            int byTeam = (b.TeamName == team).CompareTo(a.TeamName == team);
+
+            return byTeam != 0 ? byTeam : b.OVR.CompareTo(a.OVR);
+        });
+
+        foreach (CardMasterData card in candidates)
+        {
+            if (_featured.Count >= GachaBannerView.FeaturedCount)
+                break;
+
+            if (CardDisplayInfo.TryCreateFromMaster(card.CardId, out CardDisplayInfo info))
+                _featured.Add(info);
+        }
+    }
+
+    //일반 배너는 5성만 대표로 세운다
+    private static void AddCandidate(List<CardMasterData> candidates, CardMasterData card, CardType wantedType)
+    {
+        if (card.CardType != wantedType)
+            return;
+
+        if (wantedType == CardType.Normal && card.CardGrade != CardGrade.Star5)
+            return;
+
+        candidates.Add(card);
+    }
+
+    private static string BuildPityText(GachaType gachaType)
+    {
+        if (GachaManager.Instance == null || GachaManager.Instance.PityLimit <= 0)
+            return string.Empty;
+
+        int count = gachaType == GachaType.Signature
+            ? GachaManager.Instance.SignaturePityCount
+            : GachaManager.Instance.NormalPityCount;
+        int remaining = Mathf.Max(1, GachaManager.Instance.PityLimit - count);
+
+        return $"천장까지 {remaining}회  ·  내 팀 5성 확정";
     }
 
     //고른 뽑기 종류의 색으로 바꾼다
@@ -234,10 +311,18 @@ public class GachaScreen : UiScreenBehaviour
         label.alpha = alpha;
     }
 
-    private void SelectType(GachaType gachaType)
+    private void ShowPreviousBanner()
     {
-        _gachaType = gachaType;
+        _bannerIndex = (_bannerIndex + BannerOrder.Length - 1) % BannerOrder.Length;
         Refresh();
+        UiEffects.Pop(_banner.Root, 0.96f, 0.2f);
+    }
+
+    private void ShowNextBanner()
+    {
+        _bannerIndex = (_bannerIndex + 1) % BannerOrder.Length;
+        Refresh();
+        UiEffects.Pop(_banner.Root, 0.96f, 0.2f);
     }
 
     private void RollOnce()
@@ -245,18 +330,18 @@ public class GachaScreen : UiScreenBehaviour
         if (GachaManager.Instance == null)
             return;
 
-        GachaResult result = GachaManager.Instance.Roll1(_gachaType);
+        GachaResult result = GachaManager.Instance.Roll1(BannerOrder[_bannerIndex]);
 
         if (result == null)
         {
-            _onNotify?.Invoke("뽑기에 실패했습니다 (뽑기권 또는 카드 풀 확인)", false);
+            _onNotify?.Invoke("뽑기에 실패했습니다 (뽑기권 또는 보관함 공간 확인)", false);
             Refresh();
             return;
         }
 
         _resultInstanceIds.Clear();
         AddResult(result);
-        ShowResults(1);
+        OpenStage(1);
     }
 
     private void RollTen()
@@ -264,11 +349,11 @@ public class GachaScreen : UiScreenBehaviour
         if (GachaManager.Instance == null)
             return;
 
-        List<GachaResult> results = GachaManager.Instance.Roll10(_gachaType);
+        List<GachaResult> results = GachaManager.Instance.Roll10(BannerOrder[_bannerIndex]);
 
         if (results.Count == 0)
         {
-            _onNotify?.Invoke("뽑기에 실패했습니다 (뽑기권 또는 카드 풀 확인)", false);
+            _onNotify?.Invoke("뽑기에 실패했습니다 (뽑기권 또는 보관함 공간 확인)", false);
             Refresh();
             return;
         }
@@ -278,7 +363,7 @@ public class GachaScreen : UiScreenBehaviour
         foreach (GachaResult result in results)
             AddResult(result);
 
-        ShowResults(results.Count);
+        OpenStage(results.Count);
     }
 
     private void AddResult(GachaResult result)
@@ -287,8 +372,8 @@ public class GachaScreen : UiScreenBehaviour
             _resultInstanceIds.Add(result.InstanceId);
     }
 
-    //결과를 뒷면으로 나눠 깐다. 1장은 가운데 크게, 10장은 4 · 4 · 2 줄
-    private void ShowResults(int rolledCount)
+    //결과를 연출 무대에 넘긴다. 무대는 처음 뽑을 때 만든다
+    private void OpenStage(int rolledCount)
     {
         _resultCards.Clear();
 
@@ -298,15 +383,52 @@ public class GachaScreen : UiScreenBehaviour
                 _resultCards.Add(info);
         }
 
-        if (_reveal == null)
-            _reveal = new GachaRevealView(_resultArea);
+        if (_stage == null)
+            _stage = new GachaRevealStage(Root);
 
-        _emptyText.gameObject.SetActive(_resultCards.Count == 0);
-        _reveal.Show(_resultCards, OnResultClicked);
+        string kind = BannerOrder[_bannerIndex] == GachaType.Signature ? "시그니쳐 뽑기" : "일반 뽑기";
+
+        _historyPanel?.Close();
+        _stage.Open($"{kind}  ·  {rolledCount}회", _resultCards, GetLightColor(_resultCards), OnResultClicked, CloseStage);
+
         if (_resultInstanceIds.Count < rolledCount)
-            _onNotify?.Invoke("인벤토리가 꽉 차 일부 카드를 받지 못했습니다", false);
+            _onNotify?.Invoke("보관함이 꽉 차 일부 카드를 받지 못했습니다", false);
+    }
 
+    private void CloseStage()
+    {
+        _stage?.Close();
         Refresh();
+    }
+
+    //가장 좋은 카드의 색 — 골든글러브 > 시그니쳐 > 등급 별 색
+    private static Color GetLightColor(List<CardDisplayInfo> cards)
+    {
+        bool golden = false;
+        bool signature = false;
+        CardGrade best = CardGrade.Star3;
+
+        foreach (CardDisplayInfo card in cards)
+        {
+            golden |= card.CardType == CardType.GoldenGlove;
+            signature |= card.CardType == CardType.Signature;
+
+            if (card.CardGrade > best)
+                best = card.CardGrade;
+        }
+
+        if (golden)
+            return UiPalette.CardGoldenGlove;
+
+        if (signature)
+            return UiPalette.CardSignature;
+
+        return best switch
+        {
+            CardGrade.Star5 => UiPalette.CardStar5,
+            CardGrade.Star4 => UiPalette.CardStar4,
+            _ => UiPalette.CardStar3
+        };
     }
 
     //처음 열 때 만들어 화면 맨 위에 덮는다
@@ -321,11 +443,6 @@ public class GachaScreen : UiScreenBehaviour
     private void OnResultClicked(int instanceId)
     {
         _onCardSelected?.Invoke(instanceId);
-    }
-
-    private CurrencyType GetTicketType()
-    {
-        return _gachaType == GachaType.Signature ? CurrencyType.SignatureTicket : CurrencyType.NormalTicket;
     }
 
     private void OnBackClicked()

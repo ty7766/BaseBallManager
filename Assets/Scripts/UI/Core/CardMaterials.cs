@@ -18,10 +18,10 @@ public static class CardMaterials
     private static readonly int HoloAmountId = Shader.PropertyToID("_HoloAmount");
     private static readonly int PhotoRectId = Shader.PropertyToID("_PhotoRect");
 
-    //사진 뒤 레이어는 카드 전체 칸이다. 그 안에서 사진이 차지하는 uv (아래에서부터)
-    private static readonly Vector4 PhotoRectUv = new Vector4(0f,
+    //카드 전체 칸 안에서 사진 칸이 차지하는 uv (아래에서부터). 사진이 카드보다 커서 0 ~ 1 을 넘는다
+    private static readonly Vector4 PhotoRectUv = new Vector4(CardView.PhotoLeft / CardView.BaseWidth,
         (CardView.BaseHeight - CardView.PhotoTop - CardView.PhotoHeight) / CardView.BaseHeight,
-        1f, CardView.PhotoHeight / CardView.BaseHeight);
+        CardView.PhotoWidth / CardView.BaseWidth, CardView.PhotoHeight / CardView.BaseHeight);
 
     private static readonly Material[] Photos = new Material[CardStyle.Count];
     private static readonly Material[] PhotoBacks = new Material[CardStyle.Count];
@@ -58,6 +58,7 @@ public static class CardMaterials
         {
             material.SetColor(RimColorId, style.AccentColor);
             material.SetColor(GradeColorId, style.GradeColor);
+            material.SetVector(PhotoRectId, PhotoRectUv);
         }
 
         Photos[style.Index] = material;

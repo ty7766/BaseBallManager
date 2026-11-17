@@ -5,19 +5,19 @@
 /// </summary>
 public static class UiPalette
 {
-    public static readonly Color BgApp = Hex("#121314");           //화면 바탕 (짙은 회색)
-    public static readonly Color BgPanel = Hex("#191A1C");         //패널
-    public static readonly Color BgRow = Hex("#212325");           //행 · 칩
-    public static readonly Color BgSelected = Hex("#2D3033");      //선택된 행 바탕
+    public static readonly Color BgApp = Hex("#1E2738");           //화면 바탕 · 덮개 (짙은 남회색, 검정은 쓰지 않는다)
+    public static readonly Color BgPanel = Hex("#263147");         //패널
+    public static readonly Color BgRow = Hex("#2F3B54");           //행 · 칩
+    public static readonly Color BgSelected = Hex("#3C4A68");      //선택된 행 바탕
     public static readonly Color BgLight = Hex("#ECEEF1");         //밝은 바탕 (재화 줄 · 글자는 ButtonPrimaryText)
 
-    public static readonly Color LineHair = Hex("#2A2C2F");        //구분선
-    public static readonly Color LineBorder = Hex("#3C4044");      //테두리
+    public static readonly Color LineHair = Hex("#36435E");        //구분선
+    public static readonly Color LineBorder = Hex("#4B5A78");      //테두리
 
     public static readonly Color Text1 = Hex("#F3F6FA");           //주 글자
     public static readonly Color Text2 = Hex("#A9B4C5");           //보조 글자
-    public static readonly Color Text3 = Hex("#6E7C92");           //약한 글자
-    public static readonly Color TextOff = Hex("#465267");         //비활성 글자
+    public static readonly Color Text3 = Hex("#8693A9");           //약한 글자
+    public static readonly Color TextOff = Hex("#5D6A83");         //비활성 글자
 
     public static readonly Color ButtonPrimary = Hex("#F3F6FA");   //주 버튼 채움 · 선택 테두리
     public static readonly Color ButtonPrimaryText = Hex("#0A111D");
@@ -45,7 +45,7 @@ public static class UiPalette
     public static readonly Color LogHomeRun = Hex("#F7D57A");      //중계 홈런
 
     public static readonly Color AccentGold = Hex("#F2C14E");      //+N점 · R · MY TEAM
-    public static readonly Color BrushDefault = Hex("#D41021");    //배경 붓질 (팀을 고르기 전 · 붉은색)
+    public static readonly Color BrushDefault = Hex("#0E6B32");    //배경 붓질 (팀을 고르기 전 · 타이틀과 같은 짙은 초록)
 
     private static readonly Color[] TeamColors =
     {
@@ -61,10 +61,38 @@ public static class UiPalette
         Hex("#041E42")  //롯데
     };
 
-    //어두운 바탕 위 팀 색의 최소 밝기 (HSV 의 V)
-    private const float TeamColorOnDarkMinValue = 0.6f;
-    //배경 붓질은 가는 결이라 칸 바탕보다 더 밝아야 묻히지 않는다
-    private const float TeamBrushMinValue = 0.8f;
+    //어두운 바탕에 깔 팀 색. 남색 · 검정처럼 바탕에 묻히는 색만 밝게 올렸다 (두산 · NC 는 짙게 따로 맞춤)
+    private static readonly Color[] TeamColorsOnDark =
+    {
+        Hex("#C8102E"), //기아
+        Hex("#1D5499"), //삼성
+        Hex("#C30452"), //LG
+        Hex("#FF6600"), //한화
+        Hex("#213078"), //두산 (짙은 군청)
+        Hex("#CE0E2D"), //SSG
+        Hex("#999999"), //KT
+        Hex("#00546F"), //NC
+        Hex("#990923"), //키움
+        Hex("#094699")  //롯데
+    };
+
+    //배경 붓질에 곱할 팀 색. 가는 결이라 칸 바탕보다 밝아야 묻히지 않는다
+    private static readonly Color[] TeamBrushColors =
+    {
+        Hex("#CC102F"), //기아
+        Hex("#2670CC"), //삼성
+        Hex("#CC0456"), //LG
+        Hex("#FF6600"), //한화
+        Hex("#2C3C9C"), //두산 (짙은 군청)
+        Hex("#CE0E2D"), //SSG
+        Hex("#CCCCCC"), //KT
+        Hex("#0098CC"), //NC
+        Hex("#CC0C2F"), //키움
+        Hex("#0C5DCC")  //롯데
+    };
+
+    //불투명 칸 바탕에 깔 아주 짙은 팀 색의 밝기 (HSV 의 V)
+    private const float TeamDeepValue = 0.16f;
 
     private static readonly string[] TeamOrder =
     {
@@ -90,19 +118,33 @@ public static class UiPalette
     }
 
     /// <summary>
-    /// 어두운 바탕에 깔 팀 색. 남색 · 검정처럼 바탕에 묻히는 색은 색상은 두고 밝기만 올린다
+    /// 어두운 바탕에 깔 팀 색. 모르는 팀명이면 패널색을 돌려준다
     /// </summary>
     public static Color GetTeamColorOnDark(string teamName)
     {
-        return RaiseValue(GetTeamColor(teamName), TeamColorOnDarkMinValue);
+        int index = IndexOfTeam(teamName);
+
+        return index >= 0 ? TeamColorsOnDark[index] : BgPanel;
     }
 
     /// <summary>
-    /// 배경 붓질에 곱할 팀 색. 칸 바탕용보다 밝기를 더 올린다
+    /// 배경 붓질에 곱할 팀 색. 모르는 팀명이면 기본 붓질 색을 돌려준다
     /// </summary>
     public static Color GetTeamBrushColor(string teamName)
     {
-        return RaiseValue(GetTeamColor(teamName), TeamBrushMinValue);
+        int index = IndexOfTeam(teamName);
+
+        return index >= 0 ? TeamBrushColors[index] : BrushDefault;
+    }
+
+    /// <summary>
+    /// 팀 색 칸을 불투명하게 받칠 아주 짙은 팀 색. 색상 · 채도는 두고 밝기만 낮춘다
+    /// </summary>
+    public static Color GetTeamColorDeep(string teamName)
+    {
+        Color.RGBToHSV(GetTeamColorOnDark(teamName), out float hue, out float saturation, out float value);
+
+        return Color.HSVToRGB(hue, saturation, TeamDeepValue);
     }
 
     /// <summary>
@@ -135,14 +177,6 @@ public static class UiPalette
         }
 
         return -1;
-    }
-
-    //색상 · 채도는 두고 밝기(HSV 의 V)만 최소값까지 올린다
-    private static Color RaiseValue(Color color, float minValue)
-    {
-        Color.RGBToHSV(color, out float hue, out float saturation, out float value);
-
-        return Color.HSVToRGB(hue, saturation, Mathf.Max(value, minValue));
     }
 
     private static Color Hex(string html)

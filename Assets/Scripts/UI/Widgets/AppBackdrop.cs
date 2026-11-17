@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 모든 화면 뒤에 한 장만 깔리는 공용 배경. 화면은 바탕 없이 그 위에 올라가므로 화면이 바뀌어도 배경은 그대로 있다.
-/// 바탕 위 붓질 층은 흰 결로 구워 두고 색을 곱해 칠한다 — 팀을 고르기 전엔 붉은색, 고른 뒤엔 팀 색
+/// 바탕 위 붓질 층은 흰 결로 구워 두고 색을 곱해 칠한다 — 팀을 고르기 전엔 짙은 초록, 고른 뒤엔 팀 색
 /// </summary>
 public class AppBackdrop
 {
@@ -42,15 +42,15 @@ public class AppBackdrop
     }
 
     /// <summary>
-    /// 붓질을 팀 색으로 칠한다. 모르는 팀이면 기본 붉은색으로 둔다
+    /// 붓질을 팀 색으로 칠한다. 모르는 팀이면 기본 초록으로 둔다
     /// </summary>
     public void SetTeam(string teamName)
     {
-        _brush.color = UiPalette.IsKnownTeam(teamName) ? UiPalette.GetTeamBrushColor(teamName) : UiPalette.BrushDefault;
+        _brush.color = UiPalette.GetTeamBrushColor(teamName);
     }
 
     /// <summary>
-    /// 팀을 고르기 전 기본 붉은 붓질로 되돌린다
+    /// 팀을 고르기 전 기본 초록 붓질로 되돌린다
     /// </summary>
     public void ResetBrushColor()
     {

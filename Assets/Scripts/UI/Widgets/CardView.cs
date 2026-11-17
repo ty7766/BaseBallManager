@@ -17,19 +17,21 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     public const float BaseHeight = 1957f;
 
     /// <summary>
-    /// 사진 칸 (카드 좌표, 위에서부터). 카드 폭에 꽉 채우고 머리가 별 아래에 오게 내린다.
-    /// 좌우 잘림이 카드 테두리와 겹쳐 사진이 일부러 자른 것처럼 보인다
+    /// 사진 칸 (카드 좌표, 위에서부터). 카드보다 조금 크게 깔고 카드 모양 밖은 셰이더가 지운다.
+    /// 머리 높이는 별 아래에 두고 나머지를 키워 몸이 아래 · 좌우 테두리에서 잘린다
     /// </summary>
-    public const float PhotoTop = 202f;
-    public const float PhotoHeight = 1748f;
+    public const float PhotoLeft = -28f;
+    public const float PhotoTop = 185f;
+    public const float PhotoWidth = 1454f;
+    public const float PhotoHeight = 1818f;
 
     private const int MaxStars = 5;
     private const int StatCount = 4;
     //별 그림 한 칸(그림자 자리 포함) · 보이는 별 · 별 사이 간격 · 칸 윗변
-    private const float StarCell = 132f;
-    private const float StarSize = 106f;
-    private const float StarGap = 6f;
-    private const float StarTop = 45f;
+    private const float StarCell = 148f;
+    private const float StarSize = 119f;
+    private const float StarGap = 12f;
+    private const float StarTop = 37f;
     private const float StatBarMaxStat = 150f;
     //강화 숫자 크기. 두 자리(+10)는 메달 안에 들도록 줄인다
     private const float EnhanceFontSize = 108f;
@@ -172,10 +174,10 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _overlay = CreateHiddenLayer(_front, "Overlay", 0f, 0f, BaseWidth, BaseHeight);
 
         _photoBack = CreateHiddenLayer(_front, "PhotoBack", 0f, 0f, BaseWidth, BaseHeight);
-        _photo = CreateHiddenLayer(_front, "Photo", 0f, PhotoTop, BaseWidth, PhotoHeight);
+        _photo = CreateHiddenLayer(_front, "Photo", PhotoLeft, PhotoTop, PhotoWidth, PhotoHeight);
         _foreground = CreateHiddenLayer(_front, "Foreground", 0f, 0f, BaseWidth, BaseHeight);
 
-        _ovrText = CreateCardText(_front, "Ovr", 230f, OvrLeft, OvrTop, OvrWidth, 230f, TextAlignmentOptions.Center);
+        _ovrText = CreateCardText(_front, "Ovr", 218f, OvrLeft, OvrTop, OvrWidth, 230f, TextAlignmentOptions.Center);
         CenterPivotX(_ovrText.rectTransform);
         _positionText = CreateCardText(_front, "Position", 104f, OvrLeft, PositionTop, OvrWidth, 104f, TextAlignmentOptions.Center);
         _teamLogo = CreateLayer(_front, "TeamLogo", null, 1046f, 60f, 300f, 300f);
@@ -400,7 +402,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
         _frontBase.sprite = UiSprites.Get(UiSprites.PanelLarge);
         _frontBase.type = Image.Type.Sliced;
-        _frontBase.color = Color.white;
+        _frontBase.color = UiPalette.BgPanel;
 
         _emptyText.fontSize = UnknownMarkSize * _scale;
         _emptyText.color = UiPalette.Text2;

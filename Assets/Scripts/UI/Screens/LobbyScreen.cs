@@ -19,9 +19,9 @@ public class LobbyScreen : UiScreenBehaviour
     private const float BottomMargin = 40f;
     private const float ContentWidth = 1080f - SideMargin * 2f;
     //위쪽 머리: 재화 줄 · 라인업 상태
-    private const float CurrencyTop = 32f;
-    private const float LineupTop = 140f;
-    private const float HeaderBottom = 190f;
+    private const float CurrencyTop = 96f;
+    private const float LineupTop = 204f;
+    private const float HeaderBottom = 254f;
     //입체 엠블럼: 머리와 메뉴 사이 빈 칸 가운데에 놓는 정사각형 크기. 화면 폭을 살짝 넘겨 메뉴 뒤로 깔린다
     private const float TokenSize = 990f;
     private const float TokenMargin = 12f;

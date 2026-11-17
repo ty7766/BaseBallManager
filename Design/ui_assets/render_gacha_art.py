@@ -7,7 +7,6 @@
 출력
     Assets/Resources/UI/Card/card_back.png      카드 뒷면 1398×1957 (어두운 회색 + 은색 테두리 + 내야 다이아몬드 문장)
     Assets/Resources/UI/Gacha/swipe_arrow.png   두꺼운 화살표(몸통 76) + 끊어진 꼬리 막대 셋(왼쪽으로 갈수록 가늘다) 330×164 → 2배
-    Assets/Resources/UI/Gacha/gacha_bg.png      구장 조명 배경 1080×2340 (위 양쪽 모서리에서 카드 자리로 엇갈리는 빛줄기)
     Assets/Resources/UI/Fx/card_spill.png       들린 가장자리에서 카드 자리로 새는 빛 띠 256×512. 오른쪽 변 = 들린 가장자리, 카드 높이 전체에 고르게 퍼지고
                                                 위아래는 카드 모서리 너머로 살짝 번진 뒤 옅어진다 (높이 = 카드 × SPILL_HEIGHT_RATIO)
     Assets/Resources/UI/Fx/card_sheen.png       카드가 기울 때 표면에 비치는 반사광 280×392. 카드 모양 안에서 왼쪽(들린 쪽)이 밝다
@@ -18,7 +17,7 @@
     (빛 그림은 모두 가산 합성(BaseBallManager/UI/AdditiveLight)으로 그린다)
     Assets/Resources/UI/Gacha/tab_track.png     탭 바탕 48 → 2배 · 9-슬라이스 36 (공용 버튼 모양: 왼쪽 위 · 오른쪽 아래 직각)
     Assets/Resources/UI/Gacha/tab_pill.png      고른 탭 흰 바탕 48 → 2배 · 9-슬라이스 36
-    Assets/Resources/UI/Gacha/ticket_once_blue.png · ticket_ten_blue.png    일반 뽑기 1회(어두운 바탕 + 파란 테) · 10회(파란 채움 + 빛 띠) 500×130 → 2배
+    Assets/Resources/UI/Gacha/ticket_once_blue.png · ticket_ten_blue.png    일반 뽑기 1회(남회색 바탕 + 파란 테) · 10회(파란 채움 + 빛 띠) 500×130 → 2배
     Assets/Resources/UI/Gacha/ticket_once_pink.png · ticket_ten_pink.png    시그니쳐 뽑기 — 같은 모양에 분홍
 """
 import math
@@ -41,9 +40,6 @@ CW, CH = 1398, 1957
 DIAMOND_HALF = 400       # 가운데 다이아몬드 반대각선 (시안 330 에서 키움)
 PLATE_WIDTH = 190
 BASE_SIZE = 62
-BG_W, BG_H = 1080, 2340
-STAGE_Y = 1330           # 빛줄기가 엇갈리는 높이 = 결과 카드 가운데 (1080×2278 기준)
-LAMP_Y = 145             # 조명 높이. 제목(32~92)을 피해 재화 줄(100~190) 뒤에 숨긴다
 CARD_CHAMFER = CW * CHAMFER_RATIO   # 카드 모서리 사선 (card_shape.py 와 같다)
 SPILL_W, SPILL_H = 256, 512
 SPILL_HEIGHT_RATIO = 1.3 # 새는 빛 그림 높이 ÷ 카드 높이. Unity 의 SpillHeightRatio 와 같다
@@ -66,11 +62,11 @@ def f(v):
 
 
 def card_back():
-    """어두운 회색 바탕(배경 #1B1B1B 보다 한 단 밝다) + 가운데서 옅어지는 내야 격자 + 큰 다이아몬드 두 줄 ·
+    """남회색 바탕(앱 배경보다 한 단 밝다) + 가운데서 옅어지는 내야 격자 + 큰 다이아몬드 두 줄 ·
     은색 홈플레이트 · 1·2·3루 베이스 + 은색 테두리 두 줄"""
     cx, cy, k = CW / 2, CH / 2, DIAMOND_HALF
     out = [f'''<defs>
-<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A3E46"/><stop offset="0.55" stop-color="#2A2D33"/><stop offset="1" stop-color="#202227"/></linearGradient>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#46557A"/><stop offset="0.55" stop-color="#33405E"/><stop offset="1" stop-color="#28334C"/></linearGradient>
 <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9EEF4"/><stop offset="0.5" stop-color="#8E96A2"/><stop offset="1" stop-color="#D3D9E1"/></linearGradient>
 <radialGradient id="hl" cx="0.3" cy="0.18" r="0.9"><stop offset="0" stop-color="#fff" stop-opacity="0.10"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
 <pattern id="lat" width="120" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="120" height="120" fill="none" stroke="#fff" stroke-width="3"/></pattern>
@@ -246,7 +242,7 @@ def mini_card(x, y, w, stroke, rotate=0):
 def ticket(color, ten):
     """뽑기권 모양: 양옆 가운데 반원 홈 + 절취선. 모서리는 공용 버튼처럼 왼쪽 위 · 오른쪽 아래 직각.
     왼쪽 칸에 카드 뒷면 아이콘 (1회 1장 · 10회 3장 부채꼴).
-    1회는 어두운 바탕 + 색 테, 10회는 색 채움 + 비스듬한 빛 띠"""
+    1회는 남회색 바탕 + 색 테, 10회는 색 채움 + 비스듬한 빛 띠"""
     rim, top, bottom = TICKET_COLORS[color]
     w, h, n, r = TICKET_W - 3, TICKET_H - 3, TICKET_NOTCH, 18
     x0, y0 = 1.5, 1.5
@@ -267,46 +263,10 @@ def ticket(color, ten):
                'stroke-width="3" stroke-dasharray="8 8" opacity="0.55"/>',
                mini_card(34, 30, 44, "#FFFFFF", -12), mini_card(54, 26, 44, "#FFFFFF"), mini_card(74, 30, 44, "#FFFFFF", 12)]
     else:
-        out = [defs, f'<path d="{path}" fill="#191A1C" fill-opacity="0.94" stroke="{rim}" stroke-width="4"/>',
+        out = [defs, f'<path d="{path}" fill="#2F3B54" fill-opacity="0.96" stroke="{rim}" stroke-width="4"/>',
                f'<line x1="{TICKET_STUB}" y1="14" x2="{TICKET_STUB}" y2="{TICKET_H - 14}" stroke="{rim}" '
                'stroke-width="3" stroke-dasharray="8 8" opacity="0.6"/>',
                mini_card(50, 30, 50, rim)]
-    return "".join(out)
-
-
-def beam(corner_x, direction, target_y, length, spread, opacity):
-    """모서리 조명(corner_x, LAMP_Y)에서 화면 가운데(target_y)를 지나 퍼지는 쐐기 모양 빛줄기"""
-    ax, ay = corner_x, LAMP_Y
-    vx, vy = BG_W / 2 - ax, target_y - ay
-    norm = math.hypot(vx, vy)
-    px, py = -vy / norm * direction, vx / norm * direction
-    ex, ey = ax + vx * length, ay + vy * length
-    return (f'<polygon points="{f(ax)},{f(ay)} {f(ex + px * spread)},{f(ey + py * spread)} {f(ex - px * spread)},{f(ey - py * spread)}" '
-            f'fill="url(#ray)" filter="url(#b)" opacity="{opacity}"/>')
-
-
-def gacha_bg():
-    """구장 조명 — 화면 위 양쪽 모서리 조명에서 카드 자리로 엇갈리는 빛줄기, 교차점의 옅은 빛, 아래쪽 잔디 결"""
-    out = [f'''<defs>
-<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#151925"/><stop offset="0.72" stop-color="#121418"/><stop offset="1" stop-color="#132219"/></linearGradient>
-<linearGradient id="ray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.17"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-<radialGradient id="lamp" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-<radialGradient id="cross" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#DDE6FF" stop-opacity="0.10"/><stop offset="1" stop-color="#DDE6FF" stop-opacity="0"/></radialGradient>
-<filter id="b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="28"/></filter>
-</defs>
-<rect width="{BG_W}" height="{BG_H}" fill="url(#g)"/>''']
-    for i in range(14):
-        y = BG_H - 560 + i * 40
-        out.append(f'<rect y="{y}" width="{BG_W}" height="20" fill="#3E7A4F" fill-opacity="{0.012 + i * 0.003:.3f}"/>')
-    for x, d in ((0, 1), (BG_W, -1)):
-        for target_y, length, spread, opacity in ((STAGE_Y, 1.4, 260, 1.0), (STAGE_Y + 170, 1.25, 170, 0.6)):
-            out.append(beam(x, d, target_y, length, spread, opacity))
-        out.append(f'<circle cx="{x}" cy="{LAMP_Y}" r="170" fill="url(#lamp)"/>')
-        for row in range(2):
-            for col in range(3):
-                lx = x + d * (34 + col * 34)
-                out.append(f'<circle cx="{lx}" cy="{LAMP_Y - 17 + row * 34}" r="10" fill="#fff" fill-opacity="0.5"/>')
-    out.append(f'<ellipse cx="{BG_W / 2}" cy="{STAGE_Y}" rx="520" ry="380" fill="url(#cross)"/>')
     return "".join(out)
 
 
@@ -337,7 +297,6 @@ def render(path, body, width, height, scale=1):
 if __name__ == "__main__":
     render(UI / "Card" / "card_back.png", card_back(), CW, CH)
     render(UI / "Gacha" / "swipe_arrow.png", swipe_arrow(), 330, 164, 2)
-    render(UI / "Gacha" / "gacha_bg.png", gacha_bg(), BG_W, BG_H)
     render(UI / "Gacha" / "tab_track.png", tab_track(), 48, 48, 2)
     render(UI / "Gacha" / "tab_pill.png", tab_pill(), 48, 48, 2)
     for color in TICKET_COLORS:

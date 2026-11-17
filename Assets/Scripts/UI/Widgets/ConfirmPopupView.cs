@@ -163,7 +163,7 @@ public class ConfirmPopupView : UiWidgetBehaviour
         _backdrop.color = new Color(BackdropShade, BackdropShade, BackdropShade, 1f);
         _backdrop.raycastTarget = false;
 
-        Image dim = UiBuilder.CreateImage(Root, "Dim", UiPalette.WithAlpha(Color.black, DimAlpha));
+        Image dim = UiBuilder.CreateImage(Root, "Dim", UiPalette.WithAlpha(UiPalette.BgApp, DimAlpha));
         UiBuilder.Stretch(dim.rectTransform, 0f, 0f, 0f, 0f);
         dim.raycastTarget = true;
 

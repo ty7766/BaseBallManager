@@ -4,7 +4,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
-/// 팀 선택 칸 하나. 왼쪽에서 오른쪽으로 옅어지는 팀 색을 깔고, 엠블럼을 왼쪽 끝에 반쯤 걸쳐 흐리게 둔다
+/// 팀 선택 칸 하나. 아주 짙은 팀 색 위에 왼쪽에서 오른쪽으로 옅어지는 팀 색을 깔아 뒤 배경이 비치지 않게 하고, 엠블럼을 왼쪽 끝에 반쯤 걸쳐 흐리게 둔다
 /// </summary>
 public class TeamSelectButtonView : UiWidgetBehaviour
 {
@@ -25,6 +25,7 @@ public class TeamSelectButtonView : UiWidgetBehaviour
 
     [SerializeField] private float _height;
     [SerializeField] private Button _button;
+    [SerializeField] private Image _base;
     [SerializeField] private Image _tint;
     [SerializeField] private Image _emblem;
     [SerializeField] private Image _frame;
@@ -39,6 +40,8 @@ public class TeamSelectButtonView : UiWidgetBehaviour
         Image shape = CreateButtonShapeMask(view.Root);
 
         view._height = height;
+        view._base = UiBuilder.CreateImage(shape.rectTransform, "TeamBase", UiPalette.BgRow);
+        UiBuilder.Stretch(view._base.rectTransform, 0f, 0f, 0f, 0f);
         view._tint = CreateGradientTint(shape.rectTransform);
         view._emblem = UiBuilder.CreateImage(shape.rectTransform, "TeamEmblem", EmblemTint);
 
@@ -66,6 +69,7 @@ public class TeamSelectButtonView : UiWidgetBehaviour
     public void SetTeam(string teamName)
     {
         _label.text = teamName;
+        _base.color = UiPalette.GetTeamColorDeep(teamName);
         _tint.color = UiPalette.WithAlpha(UiPalette.GetTeamColorOnDark(teamName), TintAlpha);
 
         Sprite emblem = UiSprites.Get(EmblemResourcePrefix + teamName);

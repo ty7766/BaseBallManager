@@ -38,8 +38,7 @@ public class GoldenGloveCraftScreen : UiScreenBehaviour
     private const float TeamTileWidth = 188f;
     private const float TeamTileHeight = 136f;
     private const float TeamTileGap = 14f;
-    private const float TeamPlateSize = 66f;
-    private const float TeamLogoSize = 46f;
+    private const float TeamLogoSize = 66f;
     private const float CostChipWidth = 320f;
     private const float CostChipGap = 18f;
     private const float CostIconSize = 52f;
@@ -49,7 +48,9 @@ public class GoldenGloveCraftScreen : UiScreenBehaviour
     private const string BloomSprite = "Fx/card_bloom";
     private const string CardMaskSprite = "Fx/card_mask";
     private const string AdditiveMaterialPath = "UI/Materials/AdditiveLight";
-    private const string TeamPlateSprite = "Common/press_disc";
+    //팀 로고는 공개 저장소에 없는 로컬 파일이라 프리팹이 참조하지 않게 실행 중에 넣는다
+    private const string TeamLogoPrefix = "Team/logo_";
+    private const string StickerMaterialPath = "UI/Materials/StickerOutline";
 
     [SerializeField] private Image _bloom;
     [SerializeField] private RectTransform _slot;
@@ -66,6 +67,7 @@ public class GoldenGloveCraftScreen : UiScreenBehaviour
     [SerializeField] private Button[] _teamTiles = new Button[TeamNames.Length];
     [SerializeField] private Image[] _teamFrames = new Image[TeamNames.Length];
     [SerializeField] private TextMeshProUGUI[] _teamLabels = new TextMeshProUGUI[TeamNames.Length];
+    [SerializeField] private Image[] _teamLogos = new Image[TeamNames.Length];
     [SerializeField] private Image[] _costIcons = new Image[CostCount];
     [SerializeField] private TextMeshProUGUI[] _costAmounts = new TextMeshProUGUI[CostCount];
     [SerializeField] private TextMeshProUGUI[] _costOwned = new TextMeshProUGUI[CostCount];
@@ -82,6 +84,7 @@ public class GoldenGloveCraftScreen : UiScreenBehaviour
     private string _selectedTeam;
     private int _resultInstanceId = InventoryManager.InvalidInstanceId;
     private Coroutine _craftRoutine;
+    private bool _teamLogosLoaded;
 
     /// <summary>
     /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
@@ -171,6 +174,7 @@ public class GoldenGloveCraftScreen : UiScreenBehaviour
 
     protected override void OnShown()
     {
+        LoadTeamLogos();
         Refresh();
     }
 
@@ -260,7 +264,7 @@ public class GoldenGloveCraftScreen : UiScreenBehaviour
         sub.text = "팀을 정하려면 팀 지정 (비용이 더 듭니다)";
     }
 
-    //흰 원판 위 로고 + 이름 타일 5 × 2. 고른 팀은 금색 테두리
+    //흰 테두리 로고 + 이름 타일 5 × 2. 고른 팀은 금색 테두리
     private void BuildTeamContent()
     {
         _teamContent = CreateBottomRow("TeamContent", ContentBottom, ContentHeight);
@@ -280,18 +284,33 @@ public class GoldenGloveCraftScreen : UiScreenBehaviour
             UiBuilder.Place(tile.GetComponent<RectTransform>(), left, top, TeamTileWidth, TeamTileHeight);
             UiBuilder.Place(label.rectTransform, 0f, TeamTileHeight - 44f, TeamTileWidth, 36f);
 
-            Image plate = UiBuilder.CreateImage(tile.transform, "LogoPlate", UiPalette.Text1, TeamPlateSprite);
-            UiBuilder.Place(plate.rectTransform, (TeamTileWidth - TeamPlateSize) * 0.5f, 14f, TeamPlateSize, TeamPlateSize);
-
-            Image logo = UiBuilder.CreateImage(plate.transform, "Logo", Color.white, "Team/logo_" + TeamNames[i]);
-            UiBuilder.Place(logo.rectTransform, (TeamPlateSize - TeamLogoSize) * 0.5f, (TeamPlateSize - TeamLogoSize) * 0.5f,
-                TeamLogoSize, TeamLogoSize);
+            Image logo = UiBuilder.CreateImage(tile.transform, "Logo", Color.white);
+            UiBuilder.Place(logo.rectTransform, (TeamTileWidth - TeamLogoSize) * 0.5f, 14f, TeamLogoSize, TeamLogoSize);
             logo.preserveAspect = true;
-            logo.gameObject.SetActive(logo.sprite != null);
+            logo.material = Resources.Load<Material>(StickerMaterialPath);
+            logo.gameObject.SetActive(false);
+            _teamLogos[i] = logo;
 
             _teamTiles[i] = tile;
             _teamFrames[i] = (Image)tile.targetGraphic;
             _teamLabels[i] = label;
+        }
+    }
+
+    //처음 보일 때 한 번만 로고를 불러 붙인다. 로고 파일이 없는 환경이면 이름만 보인다
+    private void LoadTeamLogos()
+    {
+        if (_teamLogosLoaded)
+            return;
+
+        _teamLogosLoaded = true;
+
+        for (int i = 0; i < _teamLogos.Length; i++)
+        {
+            Sprite logo = UiSprites.Get(TeamLogoPrefix + TeamNames[i]);
+
+            _teamLogos[i].sprite = logo;
+            _teamLogos[i].gameObject.SetActive(logo != null);
         }
     }
 

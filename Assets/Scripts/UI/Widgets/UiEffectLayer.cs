@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// 화면 맨 위의 연출 레이어. 파티클을 여기서 뿌려 어떤 패널·마스크에도 잘리지 않게 한다.
 /// 파티클은 Image 조각을 돌려쓰며 UiAnimator로 움직인다 (오버레이 캔버스에서는
 /// Unity ParticleSystem이 UI 위로 그려지지 않으므로 UI 네이티브로 만든다).
-/// 득점 · 홈런 · 도루는 조각 대신 미리 구운 빛 플립북(충격파 · 빛줄기 · 불똥)을 가산 합성으로 튼다
+/// 득점 · 홈런 · 도루 · 조합은 조각 대신 미리 구운 빛 플립북(충격파 · 빛줄기 · 번개 · 파편)을 가산 합성으로 튼다
 /// </summary>
 public class UiEffectLayer
 {
@@ -21,6 +21,8 @@ public class UiEffectLayer
     private static readonly Color ScoreTint = new Color(1f, 0.6f, 0.18f, 0.55f);
     private static readonly Color HomeRunTint = new Color(1f, 0.76f, 0.3f, 0.65f);
     private static readonly Color StealTint = new Color(0.45f, 0.8f, 1f, 0.6f);
+    private static readonly Color CombineTint = new Color(0.45f, 0.75f, 1f, 0.65f);
+    private static readonly Color CombineGradeUpTint = new Color(1f, 0.72f, 0.25f, 0.7f);
 
     public RectTransform Root => _root;
 
@@ -202,7 +204,7 @@ public class UiEffectLayer
         return texture;
     }
 
-    //득점 · 홈런 · 도루는 플립북, 나머지(강화 · 조합 · 우승 …)는 조각 파티클
+    //득점 · 홈런 · 도루 · 조합은 플립북, 나머지(강화 · 제작 · 우승 …)는 조각 파티클
     private static bool TryGetFlipbook(UiEffectKind kind, out FlipbookPreset preset)
     {
         preset = kind switch
@@ -210,6 +212,9 @@ public class UiEffectLayer
             UiEffectKind.Score => new FlipbookPreset("fx_score", 240f, 0.45f, ScoreTint),
             UiEffectKind.HomeRun => new FlipbookPreset("fx_homerun", 440f, 0.7f, HomeRunTint),
             UiEffectKind.Steal => new FlipbookPreset("fx_steal", 300f, 0.4f, StealTint),
+            UiEffectKind.CombineAbsorb => new FlipbookPreset("fx_combine_absorb", 320f, 0.5f, CombineTint),
+            UiEffectKind.CombineForge => new FlipbookPreset("fx_combine_forge", 460f, 0.6f, CombineTint),
+            UiEffectKind.CombineGradeUp => new FlipbookPreset("fx_combine_forge", 620f, 0.8f, CombineGradeUpTint),
             _ => default
         };
 

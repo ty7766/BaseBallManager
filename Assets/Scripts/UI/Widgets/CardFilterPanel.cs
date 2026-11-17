@@ -24,10 +24,9 @@ public class CardFilterPanel : UiWidgetBehaviour
     private const float CheckSize = 40f;
     private const float TeamTileHeight = 132f;
     private const int TeamColumns = 5;
-    //로고 중에는 검은 그림(KT 등)이 있어 어두운 타일에서 사라진다. 흰 원판 위에 얹는다
-    private const float TeamLogoSize = 50f;
-    private const float TeamPlateSize = 70f;
-    private const string TeamPlateSprite = "Common/press_disc";
+    //로고 중에는 검은 그림(KT 등)이 있어 어두운 타일에서 사라진다. 판 없이 흰 테두리(스티커)만 둘러 띄운다
+    private const float TeamLogoSize = 70f;
+    private const string StickerMaterialPath = "UI/Materials/StickerOutline";
     private const float FooterHeight = 100f;
     private const string CheckOffSprite = "Common/checkbox_off";
     private const string CheckOnSprite = "Common/checkbox_on";
@@ -213,13 +212,10 @@ public class CardFilterPanel : UiWidgetBehaviour
             UiBuilder.Place(option.Check.rectTransform, 10f, 10f, 32f, 32f);
             UiBuilder.Place(option.Label.rectTransform, 0f, TeamTileHeight - 46f, tileWidth, 38f);
 
-            Image plate = UiBuilder.CreateImage(tile.transform, "LogoPlate", UiPalette.Text1, TeamPlateSprite);
-            UiBuilder.Place(plate.rectTransform, (tileWidth - TeamPlateSize) * 0.5f, 14f, TeamPlateSize, TeamPlateSize);
-
-            Image logo = UiBuilder.CreateImage(plate.transform, "Logo", Color.white, "Team/logo_" + team);
-            UiBuilder.Place(logo.rectTransform, (TeamPlateSize - TeamLogoSize) * 0.5f, (TeamPlateSize - TeamLogoSize) * 0.5f,
-                TeamLogoSize, TeamLogoSize);
+            Image logo = UiBuilder.CreateImage(tile.transform, "Logo", Color.white, "Team/logo_" + team);
+            UiBuilder.Place(logo.rectTransform, (tileWidth - TeamLogoSize) * 0.5f, 14f, TeamLogoSize, TeamLogoSize);
             logo.preserveAspect = true;
+            logo.material = Resources.Load<Material>(StickerMaterialPath);
             logo.gameObject.SetActive(logo.sprite != null);
         }
 

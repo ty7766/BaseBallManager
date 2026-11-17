@@ -18,7 +18,7 @@ public class EnhanceCardTileView
     private const float MinusIconSize = 52f;
     private const string MinusSprite = "Common/icon_minus";
     private const string DiscSprite = "Common/press_disc";
-    private static readonly Color PlateColor = new Color(0.11f, 0.12f, 0.13f, 1f);
+    private static readonly Color PlateColor = UiPalette.BgPanel;
 
     /// <summary>
     /// 타일 루트. 카드 목록이 자기 칸으로 옮겨 놓는다

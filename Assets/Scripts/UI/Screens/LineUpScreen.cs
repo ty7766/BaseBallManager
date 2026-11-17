@@ -159,11 +159,11 @@ public class LineUpScreen : UiScreenBehaviour
         _stateText = UiBuilder.CreateText(Root, "State", 32f, UiPalette.Text2, TextAlignmentOptions.Right);
         UiBuilder.PlaceRight(_stateText.rectTransform, 32f, 42f, 520f, 48f);
 
-        _hitterTabButton = UiBuilder.CreateButton(Root, "HitterTab", "야수 9 · 벤치 5", 34f, true,
+        _hitterTabButton = UiBuilder.CreateButton(Root, "HitterTab", "타자", 34f, true,
             () => SelectTab(Tab.Hitter));
         UiBuilder.Place(_hitterTabButton.GetComponent<RectTransform>(), 32f, 110f, 500f, 88f);
 
-        _pitcherTabButton = UiBuilder.CreateButton(Root, "PitcherTab", "투수 11", 34f, false,
+        _pitcherTabButton = UiBuilder.CreateButton(Root, "PitcherTab", "투수", 34f, false,
             () => SelectTab(Tab.Pitcher));
         UiBuilder.Place(_pitcherTabButton.GetComponent<RectTransform>(), 548f, 110f, 500f, 88f);
 
@@ -606,7 +606,7 @@ public class LineUpScreen : UiScreenBehaviour
             if (filled)
                 _card.SetCard(info);
             else
-                _card.SetEmpty("비어 있음");
+                _card.SetEmpty(string.Empty);
 
             _card.SetClickHandler(onPick);
             _card.SetLongPressHandler(filled ? () => _onOpenDetail?.Invoke(instanceId) : null);

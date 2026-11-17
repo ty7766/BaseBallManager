@@ -46,7 +46,7 @@ public class CombineScreen : CardWorkScreen
     private const string PlusSprite = "Common/icon_plus";
     private const string LockedReason = "잠금";
     private const string LineUpReason = "라인업";
-    private const string OtherTypeReason = "다른 종류";
+    private const string OtherTypeReason = "선택 불가";
 
     private static readonly CardGrade[] OddsGrades = { CardGrade.Star3, CardGrade.Star4, CardGrade.Star5 };
     private static readonly Color PipeEmptyColor = UiPalette.LineBorder;
@@ -430,7 +430,7 @@ public class CombineScreen : CardWorkScreen
         _streamRoots[index].gameObject.SetActive(filled || _surging);
     }
 
-    //재료가 없으면 처음 안내(결과 카드가 떠 있으면 비움), 노말 재료면 확률 막대, 시그 · 골글이면 같은 종류 1장
+    //재료가 없으면 처음 안내(결과 카드가 떠 있으면 비움), 노말 재료는 다 채워야 확률 막대, 시그 · 골글이면 같은 종류 1장
     private void RefreshInfo()
     {
         bool showOdds = false;
@@ -442,6 +442,10 @@ public class CombineScreen : CardWorkScreen
         else if (CardDisplayInfo.TryCreate(_materialIds[0], out CardDisplayInfo first) && first.CardType != CardType.Normal)
         {
             _infoText.text = $"{GetTypeLabel(first.CardType)} 카드 중\n무작위 1장";
+        }
+        else if (_materialIds.Count < RequiredCount)
+        {
+            _infoText.text = $"{RequiredCount}장을 모두 넣으면\n확률이 보입니다";
         }
         else
         {
@@ -502,7 +506,7 @@ public class CombineScreen : CardWorkScreen
         for (int i = 0; i < MaterialSlotCount; i++)
         {
             _streamRoots[i].gameObject.SetActive(true);
-            UiEffects.Burst(_materialCards[i].Root, UiEffectKind.Enhance);
+            UiEffects.Burst(_materialCards[i].Root, UiEffectKind.CombineAbsorb);
             ShrinkAway(_materialCards[i].Root);
         }
 
@@ -519,7 +523,7 @@ public class CombineScreen : CardWorkScreen
         _unknownMark.gameObject.SetActive(false);
         _resultCard.Root.gameObject.SetActive(true);
         UiEffects.Pop(_resultCard.Root, 0.5f, 0.36f);
-        UiEffects.Burst(_resultCard.Root, result.IsUpgraded ? UiEffectKind.GradeUp : UiEffectKind.Enhance);
+        UiEffects.Burst(_resultCard.Root, result.IsUpgraded ? UiEffectKind.CombineGradeUp : UiEffectKind.CombineForge);
 
         Notify($"{GetGradeLabel(result.Grade)} 카드를 받았습니다", true);
 
