@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 로비 메뉴 칸 하나. 칸보다 큰 아이콘을 왼쪽 끝에 반쯤 걸쳐 흐리게 깔고, 이름은 왼쪽 아래에 둔다 (팀 선택 칸과 같은 짜임).
-/// 주 칸(리그 입장)은 흰 채움, 나머지는 어두운 반투명 채움. 리그 화면은 중계 그래픽 판과 같은 깎인 모양을 쓴다
+/// 주 칸(리그 입장)은 흰 채움, 나머지는 바탕보다 한 단계 밝은 남색 채움. 리그 화면은 중계 그래픽 판과 같은 깎인 모양을 쓴다
 /// </summary>
 public class LobbyMenuTileView : UiWidgetBehaviour
 {
@@ -13,13 +13,14 @@ public class LobbyMenuTileView : UiWidgetBehaviour
     //아이콘 크기 = 칸 높이 × 이 배수. 너비 중 칸 안으로 들어오는 비율
     private const float IconScale = 1.3f;
     private const float IconVisibleRatio = 0.6f;
-    private const float FillAlpha = 0.8f;
+    //바탕 붓질이 아주 살짝만 비치게 거의 불투명하게 깐다
+    private const float FillAlpha = 0.92f;
     private const float DisabledAlpha = 0.45f;
     private const float LabelLeft = 28f;
     private const float LabelBottom = 18f;
 
     //선형 색 공간에서 흰색 저알파는 어두운 바탕 위로 생각보다 밝게 뜬다. 흰 채움 위 어두운 아이콘은 반대로 묻힌다
-    private static readonly Color IconTint = new Color(1f, 1f, 1f, 0.035f);
+    private static readonly Color IconTint = new Color(1f, 1f, 1f, 0.05f);
     private static readonly Color PrimaryIconTint = new Color(0.04f, 0.07f, 0.11f, 0.3f);
 
     [SerializeField] private Button _button;
@@ -43,7 +44,7 @@ public class LobbyMenuTileView : UiWidgetBehaviour
 
         Image shape = CreateShapeMask(view.Root, cutShape ? UiSprites.CutFill : UiSprites.ButtonPrimary);
         Image fill = UiBuilder.CreateImage(shape.rectTransform, "Fill",
-            primary ? UiPalette.ButtonPrimary : UiPalette.WithAlpha(UiPalette.BgApp, FillAlpha));
+            primary ? UiPalette.ButtonPrimary : UiPalette.WithAlpha(UiPalette.BgRow, FillAlpha));
         UiBuilder.Stretch(fill.rectTransform, 0f, 0f, 0f, 0f);
 
         CreateIcon(shape.rectTransform, iconName, size.y, primary);

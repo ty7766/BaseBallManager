@@ -20,10 +20,10 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     /// 사진 칸 (카드 좌표, 위에서부터). 카드보다 조금 크게 깔고 카드 모양 밖은 셰이더가 지운다.
     /// 머리 높이는 별 아래에 두고 나머지를 키워 몸이 아래 · 좌우 테두리에서 잘린다
     /// </summary>
-    public const float PhotoLeft = -28f;
+    public const float PhotoLeft = -57f;
     public const float PhotoTop = 185f;
-    public const float PhotoWidth = 1454f;
-    public const float PhotoHeight = 1818f;
+    public const float PhotoWidth = 1512f;
+    public const float PhotoHeight = 1891f;
 
     private const int MaxStars = 5;
     private const int StatCount = 4;

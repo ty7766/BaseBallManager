@@ -7,12 +7,12 @@ public static class UiPalette
 {
     public static readonly Color BgApp = Hex("#1E2738");           //화면 바탕 · 덮개 (짙은 남회색, 검정은 쓰지 않는다)
     public static readonly Color BgPanel = Hex("#263147");         //패널
-    public static readonly Color BgRow = Hex("#2F3B54");           //행 · 칩
-    public static readonly Color BgSelected = Hex("#3C4A68");      //선택된 행 바탕
+    public static readonly Color BgRow = Hex("#3A4866");           //행 · 칩 · 버튼 (바탕보다 한 단계 밝게 떠 보이게)
+    public static readonly Color BgSelected = Hex("#4A5A7E");      //선택된 행 바탕
     public static readonly Color BgLight = Hex("#ECEEF1");         //밝은 바탕 (재화 줄 · 글자는 ButtonPrimaryText)
 
     public static readonly Color LineHair = Hex("#36435E");        //구분선
-    public static readonly Color LineBorder = Hex("#4B5A78");      //테두리
+    public static readonly Color LineBorder = Hex("#5A6B8E");      //테두리
 
     public static readonly Color Text1 = Hex("#F3F6FA");           //주 글자
     public static readonly Color Text2 = Hex("#A9B4C5");           //보조 글자

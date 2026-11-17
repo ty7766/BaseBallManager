@@ -235,7 +235,8 @@ public class GachaScreen : UiScreenBehaviour
         }
     }
 
-    //대표 카드: 내 팀에서 OVR 높은 순, 모자라면 전체에서 채운다. 일반은 5성 노말, 시그니쳐는 시그니쳐 카드
+    //대표 카드는 모두 내 팀 카드다. 등급 높은 순 → OVR 높은 순이라 5성이 모자라면 4성 · 3성으로 채운다 (일반은 노말, 시그니쳐는 시그니쳐).
+    //내 팀 카드가 3장도 안 될 때만 다른 팀에서 채운다
     private void CollectFeatured(GachaType gachaType)
     {
         _featured.Clear();
@@ -257,7 +258,12 @@ public class GachaScreen : UiScreenBehaviour
         {
             int byTeam = (b.TeamName == team).CompareTo(a.TeamName == team);
 
-            return byTeam != 0 ? byTeam : b.OVR.CompareTo(a.OVR);
+            if (byTeam != 0)
+                return byTeam;
+
+            int byGrade = ((int)b.CardGrade).CompareTo((int)a.CardGrade);
+
+            return byGrade != 0 ? byGrade : b.OVR.CompareTo(a.OVR);
         });
 
         foreach (CardMasterData card in candidates)
@@ -270,16 +276,11 @@ public class GachaScreen : UiScreenBehaviour
         }
     }
 
-    //일반 배너는 5성만 대표로 세운다
+    //배너 종류와 같은 카드만 후보로 모은다
     private static void AddCandidate(List<CardMasterData> candidates, CardMasterData card, CardType wantedType)
     {
-        if (card.CardType != wantedType)
-            return;
-
-        if (wantedType == CardType.Normal && card.CardGrade != CardGrade.Star5)
-            return;
-
-        candidates.Add(card);
+        if (card.CardType == wantedType)
+            candidates.Add(card);
     }
 
     private static string BuildPityText(GachaType gachaType)

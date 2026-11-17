@@ -16,6 +16,11 @@ public sealed class GachaRevealView
     /// </summary>
     public bool IsAllRevealed => _faceDownCount == 0;
 
+    /// <summary>
+    /// 결과 자리 가운데보다 카드 묶음 가운데가 이만큼 위에 있다 (아래 버튼 칸은 비우고, 안내 줄은 카드 아래에 붙는다)
+    /// </summary>
+    public const float CardsCenterRaise = (SkipHeight + SkipGap + HintGap + HintHeight) * 0.5f;
+
     private const int MaxCards = 10;
     private const float SingleWidth = 540f;
     //10장은 열 사이를 넓게 벌려 카드를 옆으로 밀어도 이웃 카드에 닿지 않게 한다
@@ -36,8 +41,8 @@ public sealed class GachaRevealView
     //화살표가 왼쪽에서 나타나 오른쪽으로 흐르며 사라지는 한 번의 길이와 이동 거리(카드 폭 비율)
     private const float HintCycleSeconds = 1.6f;
     private const float HintTravel = 0.22f;
-    //뽑자마자 잠깐 뜸을 들인 뒤 카드를 한 장씩 나눠 준다
-    private const float DealPause = 0.18f;
+    //무대의 소환 빛이 모였다 터지는 순간까지 기다렸다가 카드를 한 장씩 나눠 준다 (GachaRevealStage 의 소환 플립북 절반)
+    private const float DealPause = 0.42f;
     private const float DealSeconds = 0.36f;
     private const float DealStagger = 0.07f;
     private const float SingleDealSeconds = 0.5f;
@@ -53,14 +58,21 @@ public sealed class GachaRevealView
     private readonly List<GachaRevealCard> _multiCards = new List<GachaRevealCard>(MaxCards);
     private readonly List<GachaRevealCard> _shownCards = new List<GachaRevealCard>(MaxCards);
 
+    private readonly Action<GachaRevealCard> _onCardRevealed;
+
     private Action _onConfirm;
     private GachaRevealCard _singleCard;
     private int _faceDownCount;
     private UiTween _hintTween;
     private UiTween _dealTween;
 
-    public GachaRevealView(RectTransform area)
+    /// <summary>
+    /// 결과 자리를 만든다. 카드가 한 장 뒤집힐 때마다 onCardRevealed(무대가 같은 색으로 반응한다)
+    /// </summary>
+    public GachaRevealView(RectTransform area, Action<GachaRevealCard> onCardRevealed)
     {
+        _onCardRevealed = onCardRevealed;
+
         RectTransform cardsArea = UiBuilder.CreateRect(area, "RevealArea");
         UiBuilder.Stretch(cardsArea, 0f, 0f, 0f, SkipHeight + SkipGap);
 
@@ -246,6 +258,7 @@ public sealed class GachaRevealView
     private void OnCardRevealed(GachaRevealCard card)
     {
         _faceDownCount = Mathf.Max(0, _faceDownCount - 1);
+        _onCardRevealed?.Invoke(card);
 
         if (_faceDownCount > 0)
             return;

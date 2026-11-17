@@ -5,7 +5,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 뽑기 결과 카드 1장. 누르거나 오른쪽으로 밀면 가운데를 축으로 뒤집히며 왼쪽으로 쏠려 앞면이 왼쪽에서 나온다.
-/// 앞면이 빛난다고 보고 왼쪽 가장자리에서 등급색 빛(띠 · 윤곽 · UIParticle 알갱이, 가산 합성)이 카드 높이 전체로 샌다
+/// 앞면이 빛난다고 보고 왼쪽 가장자리에서 등급색 빛(띠 · 윤곽 · UIParticle 알갱이, 가산 합성)이 카드 높이 전체로 샌다.
+/// 뒤집히는 순간 카드 뒤에서 등급색 폭발이 터지고, 시그 · 골글은 눈부신 빛살이 돌며 카드 둘레가 반짝인다
 /// </summary>
 public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
@@ -17,6 +18,10 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     private const string LightMaterialPath = "UI/Materials/AdditiveLight";
     private const string MaskSprite = "Fx/card_mask";
     private const string ArrowSprite = "Gacha/swipe_arrow";
+    private const string GlintSprite = "Fx/glint";
+    private const string BurstTexturePath = "UI/Gacha/fx_reveal_burst";
+    private const string GlareTexturePath = "UI/Gacha/fx_reveal_glare";
+    private const string FlareMaterialPath = "UI/Materials/AdditiveFlare";
     //새는 빛 그림 높이(카드 높이 배수) · 번짐 · 윤곽 빛 그림의 카드 둘레 여백(카드 폭 비율). 그림과 짝이 맞아야 한다
     private const float SpillHeightRatio = 1.3f;
     private const float BloomMarginRatio = 0.5f;
@@ -57,11 +62,49 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     private const float BackShineStrength = 0.14f;
     //나눠 줄 때 처음 크기
     private const float DealStartScale = 0.82f;
+    //뒤집기 폭발 한 장 폭 = 카드 폭 × BurstScale (render_gacha_reveal_fx.py 의 BURST_SCALE 과 같아야 둘레 빛이 카드에 붙는다)
+    private const float BurstScale = 2.6f;
+    private const float BurstSeconds = 0.55f;
+    private const float BurstMinStrength = 0.35f;
+    private const int FlipbookGrid = 4;
+    private const int FlipbookLastFrame = FlipbookGrid * FlipbookGrid - 1;
+    //시그 · 골글 눈부심: 빛살 크기(카드 폭 배수, 1장 뽑기처럼 큰 카드는 상한까지) · 펼쳐지는 · 가득 머무는 · 잦아드는 시간 · 남는 세기 · 초당 도는 각도
+    private const float GlareScale = 3.4f;
+    private const float GlareMaxSize = 1300f;
+    private const float GlareOpenSeconds = 0.25f;
+    private const float GlareHoldSeconds = 0.75f;
+    private const float GlareSettleSeconds = 0.8f;
+    private const float GlareResidual = 0.3f;
+    private const float GlareSpinSpeed = 14f;
+    //반짝임: 개수 · 한 번 길이 · 크기(카드 폭 비율) · 공개 직후 잇따라 터지는 간격 · 그 뒤 가끔 반짝이는 간격 · 흰색 섞는 정도
+    private const int GlintCount = 7;
+    private const float GlintSeconds = 0.42f;
+    private const float GlintMinSize = 0.3f;
+    private const float GlintMaxSize = 0.55f;
+    private const float GlintStagger = 0.14f;
+    private const float IdleGlintMinGap = 0.9f;
+    private const float IdleGlintMaxGap = 1.7f;
+    private const float GlintWhiteness = 0.65f;
+    //반짝임이 나오는 범위(카드 크기 비율, 가운데 기준 반폭)
+    private const float GlintSpread = 0.58f;
+    //시그 · 골글 공개 번쩍임은 흰색에 더 가깝고 세다
+    private const float SpecialFlashWhiteness = 0.85f;
 
     /// <summary>
     /// 앞면이 드러났는가
     /// </summary>
     public bool IsFaceUp { get; private set; }
+
+    /// <summary>
+    /// 등급 빛 색과 세기(0~1). 무대가 공개에 맞춰 같은 색으로 물든다
+    /// </summary>
+    public Color LightColor => _tierColor;
+    public float LightStrength => _tierStrength;
+
+    /// <summary>
+    /// 시그 · 골글처럼 공개가 눈부신 카드인가
+    /// </summary>
+    public bool IsSpecial => _tierShakes;
 
     private CanvasGroup _fade;
     private RectTransform _body;
@@ -75,6 +118,10 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     private Image _bloom;
     private Image _flash;
     private Image _hintArrow;
+    private RawImage _burst;
+    private RawImage _glare;
+    private Image[] _glints;
+    private float[] _glintStart;
     private float _width;
     private float _height;
     private float _spillReach;
@@ -92,6 +139,10 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     private UiTween _flipTween;
     private UiTween _bloomTween;
     private UiTween _dealTween;
+    private UiTween _burstTween;
+    private bool _specialLit;
+    private float _revealTime;
+    private float _nextIdleGlint;
     private GachaLightParticles _particles;
     private float _emitRate;
     private Vector2 _gapStart;
@@ -99,12 +150,16 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     private Vector2 _outward;
 
     private static Material _lightMaterial;
+    private static Material _flareMaterial;
 
-    //틈이 열려 있는 동안 빛 알갱이를 내보낸다 (움직임은 ParticleSystem 이 계산한다)
+    //틈이 열려 있는 동안 빛 알갱이를 내보낸다 (움직임은 ParticleSystem 이 계산한다). 시그 · 골글은 앞면인 동안 빛살이 돌고 반짝인다
     private void Update()
     {
         if (_emitRate > 0f)
             _particles.Emit(Time.unscaledDeltaTime, _emitRate, _gapStart, _gapEnd, _outward);
+
+        if (_specialLit)
+            UpdateSpecialLight(Time.unscaledTime);
     }
 
     /// <summary>
@@ -126,9 +181,13 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
     {
         UiAnimator.Cancel(_flipTween);
         UiAnimator.Cancel(_bloomTween);
+        UiAnimator.Cancel(_burstTween);
         _flipTween = null;
         _bloomTween = null;
+        _burstTween = null;
         FinishDeal();
+        StopSpecialLight();
+        _burst.gameObject.SetActive(false);
 
         _info = info;
         _onOpen = onOpen;
@@ -361,14 +420,19 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         _onRevealed?.Invoke(this);
     }
 
-    //앞면이 등급색으로 빛나고 카드에서 빛이 번지며 둘레로 빛 알갱이가 퍼진다. 5성 이상은 번짐이 남고 카드가 튀어 오른다
+    //앞면이 등급색으로 빛나고 카드 뒤에서 폭발이 터지며 둘레로 빛 알갱이가 퍼진다. 5성 이상은 번짐이 남고 카드가 튀어 오른다.
+    //시그 · 골글은 눈부신 빛살과 반짝임이 더해진다
     private void PlayRevealEffect()
     {
         bool rare = _tierStrength >= RareStrength;
 
         PlayFlash();
         PlayBloom(rare);
+        PlayBurst();
         _particles.Burst(Mathf.RoundToInt(MoteBurstMax * _tierStrength), new Vector2(_width, _height) * 0.5f);
+
+        if (_tierShakes)
+            StartSpecialLight();
 
         if (rare)
             UiEffects.Pop(_pivot, 0.9f, 0.32f);
@@ -376,12 +440,143 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
 
     private void PlayFlash()
     {
-        Color flashColor = Color.Lerp(_tierColor, Color.white, FlashWhiteness);
+        float whiteness = _tierShakes ? SpecialFlashWhiteness : FlashWhiteness;
+        float peak = _tierShakes ? 1f : 0.85f;
+        Color flashColor = Color.Lerp(_tierColor, Color.white, whiteness);
 
         _flash.gameObject.SetActive(true);
 
-        UiAnimator.Play(FlashSeconds, t => _flash.color = UiPalette.WithAlpha(flashColor, 0.85f * (1f - t)),
+        UiAnimator.Play(FlashSeconds, t => _flash.color = UiPalette.WithAlpha(flashColor, peak * (1f - t)),
             () => _flash.gameObject.SetActive(false), UiEase.OutCubic);
+    }
+
+    //카드 뒤에서 둘레가 번쩍이고 가시 · 파편이 곧게 뻗는 플립북을 한 번 튼다. 등급이 높을수록 진하다
+    private void PlayBurst()
+    {
+        float strength = Mathf.Lerp(BurstMinStrength, 1f, _tierStrength);
+
+        UiAnimator.Cancel(_burstTween);
+        _burst.color = UiPalette.WithAlpha(_tierColor, strength);
+        UiFlipbook.SetFrame(_burst, FlipbookGrid, FlipbookGrid, 0);
+        _burst.gameObject.SetActive(true);
+
+        _burstTween = UiAnimator.Play(BurstSeconds,
+            t => UiFlipbook.SetFrame(_burst, FlipbookGrid, FlipbookGrid, Mathf.Min(FlipbookLastFrame, (int)(t * FlipbookLastFrame))),
+            () =>
+            {
+                _burstTween = null;
+                _burst.gameObject.SetActive(false);
+            }, UiEase.Linear);
+    }
+
+    //빛살이 펼쳐지고 반짝임이 잇따라 터진다. 빛살이 이웃 카드 위로도 번지도록 이 카드를 맨 앞으로 올린다
+    private void StartSpecialLight()
+    {
+        float now = Time.unscaledTime;
+
+        _specialLit = true;
+        _revealTime = now;
+        _glare.gameObject.SetActive(true);
+        Root.SetAsLastSibling();
+
+        for (int i = 0; i < GlintCount; i++)
+            SpawnGlint(now + i * GlintStagger + UnityEngine.Random.Range(0f, GlintStagger * 0.5f));
+
+        _nextIdleGlint = now + GlareOpenSeconds + GlareHoldSeconds + GlareSettleSeconds;
+        UpdateSpecialLight(now);
+    }
+
+    //빛살 · 반짝임을 걷는다 (카드를 새로 깔 때)
+    private void StopSpecialLight()
+    {
+        _specialLit = false;
+        _glare.gameObject.SetActive(false);
+
+        for (int i = 0; i < _glints.Length; i++)
+        {
+            _glintStart[i] = -1f;
+            _glints[i].gameObject.SetActive(false);
+        }
+    }
+
+    //빛살은 펼쳐져 잠깐 가득 머물다 은은하게 잦아들어 계속 돈다. 그 사이 반짝임이 가끔 하나씩 터진다
+    private void UpdateSpecialLight(float now)
+    {
+        float elapsed = now - _revealTime;
+        float open = 1f - Mathf.Pow(1f - Mathf.Clamp01(elapsed / GlareOpenSeconds), 3f);
+        float settle = Mathf.Clamp01((elapsed - GlareOpenSeconds - GlareHoldSeconds) / GlareSettleSeconds);
+        float twinkle = 0.88f + 0.12f * Mathf.Sin(elapsed * 5f);
+        float scale = Mathf.Lerp(0.3f, 1f, open) * Mathf.Lerp(1f, 0.85f, settle);
+        RectTransform glare = _glare.rectTransform;
+
+        glare.localScale = new Vector3(scale, scale, 1f);
+        glare.localEulerAngles = new Vector3(0f, 0f, -elapsed * GlareSpinSpeed);
+        _glare.color = UiPalette.WithAlpha(_tierColor, open * Mathf.Lerp(1f, GlareResidual * twinkle, settle));
+
+        UpdateGlints(now);
+
+        if (now < _nextIdleGlint)
+            return;
+
+        SpawnGlint(now);
+        _nextIdleGlint = now + UnityEngine.Random.Range(IdleGlintMinGap, IdleGlintMaxGap);
+    }
+
+    //반짝임 하나하나가 커졌다 작아지며 살짝 돈다. 시작 전이면 숨겨 두고, 끝나면 자리를 비운다
+    private void UpdateGlints(float now)
+    {
+        for (int i = 0; i < _glints.Length; i++)
+        {
+            float start = _glintStart[i];
+
+            if (start < 0f)
+                continue;
+
+            Image glint = _glints[i];
+            float u = (now - start) / GlintSeconds;
+
+            if (u >= 1f)
+            {
+                _glintStart[i] = -1f;
+                glint.gameObject.SetActive(false);
+                continue;
+            }
+
+            bool shown = u >= 0f;
+
+            if (glint.gameObject.activeSelf != shown)
+                glint.gameObject.SetActive(shown);
+
+            if (!shown)
+                continue;
+
+            float size = Mathf.Pow(Mathf.Sin(u * Mathf.PI), 1.5f);
+
+            glint.rectTransform.localScale = new Vector3(size, size, 1f);
+            glint.rectTransform.localEulerAngles = new Vector3(0f, 0f, u * 45f);
+        }
+    }
+
+    //빈 반짝임 자리에 카드 둘레 아무 데나 하나를 startTime 에 터지도록 걸어 둔다. 빈자리가 없으면 건너뛴다
+    private void SpawnGlint(float startTime)
+    {
+        for (int i = 0; i < _glints.Length; i++)
+        {
+            if (_glintStart[i] >= 0f)
+                continue;
+
+            Image glint = _glints[i];
+            float size = _width * UnityEngine.Random.Range(GlintMinSize, GlintMaxSize);
+
+            glint.rectTransform.anchoredPosition = new Vector2(UnityEngine.Random.Range(-GlintSpread, GlintSpread) * _width,
+                UnityEngine.Random.Range(-GlintSpread, GlintSpread) * _height);
+            glint.rectTransform.sizeDelta = new Vector2(size, size);
+            glint.color = Color.Lerp(_tierColor, Color.white, GlintWhiteness);
+            glint.gameObject.SetActive(false);
+            _glintStart[i] = startTime;
+
+            return;
+        }
     }
 
     //카드에서 빛이 번지며 바깥으로 퍼졌다가 잦아든다. 5성 이상은 은은하게 남는다
@@ -407,7 +602,8 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         }, UiEase.Linear);
     }
 
-    //Root(제자리) > [빛 알갱이, Body(나눠 주기) > Tilt(쏠림 · 기울기 · 떨림) > [새는 빛, Pivot(눌림) > [번짐, 윤곽 빛, 앞면, 뒷면, 반사광, 번쩍임]]]
+    //Root(제자리) > [빛 알갱이, 카드 뒤 빛(폭발 · 빛살), Body(나눠 주기) > Tilt(쏠림 · 기울기 · 떨림) > [새는 빛,
+    //Pivot(눌림) > [번짐, 윤곽 빛, 앞면, 뒷면, 반사광, 번쩍임]], 반짝임]
     private void BuildCard(float width, float spillReach)
     {
         _width = width;
@@ -420,6 +616,11 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         Material lightMaterial = GetLightMaterial();
 
         _particles = new GachaLightParticles(Root, width);
+
+        RectTransform behind = UiBuilder.CreateRect(Root, "BehindLight");
+        UiBuilder.Stretch(behind, 0f, 0f, 0f, 0f);
+        _glare = CreateCenteredFlare(behind, "Glare", GlareTexturePath, Mathf.Min(width * GlareScale, GlareMaxSize));
+        _burst = CreateCenteredFlare(behind, "Burst", BurstTexturePath, width * BurstScale);
 
         _body = UiBuilder.CreateRect(Root, "Body");
         UiBuilder.Stretch(_body, 0f, 0f, 0f, 0f);
@@ -477,6 +678,51 @@ public class GachaRevealCard : UiWidgetBehaviour, IPointerClickHandler, IBeginDr
         _flash = UiBuilder.CreateImage(_pivot, "Flash", UiPalette.WithAlpha(Color.white, 0f), MaskSprite);
         UiBuilder.Stretch(_flash.rectTransform, 0f, 0f, 0f, 0f);
         _flash.material = lightMaterial;
+
+        BuildGlints(lightMaterial);
+    }
+
+    //반짝임은 카드 앞(맨 위)에 두고 가운데 기준으로 흩뿌린다
+    private void BuildGlints(Material lightMaterial)
+    {
+        RectTransform layer = UiBuilder.CreateRect(Root, "Glints");
+        UiBuilder.Stretch(layer, 0f, 0f, 0f, 0f);
+
+        _glints = new Image[GlintCount];
+        _glintStart = new float[GlintCount];
+
+        for (int i = 0; i < GlintCount; i++)
+        {
+            Image glint = UiBuilder.CreateImage(layer, "Glint", Color.white, GlintSprite);
+
+            glint.rectTransform.anchorMin = glint.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            glint.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            glint.material = lightMaterial;
+            glint.gameObject.SetActive(false);
+            _glints[i] = glint;
+            _glintStart[i] = -1f;
+        }
+    }
+
+    //카드 가운데에 놓는 가산 합성 플립북 · 빛살 한 장 (R = 흰 심, A = 등급색 번짐)
+    private static RawImage CreateCenteredFlare(RectTransform parent, string name, string texturePath, float size)
+    {
+        RectTransform rect = UiBuilder.CreateRect(parent, name);
+        RawImage image = rect.gameObject.AddComponent<RawImage>();
+
+        if (_flareMaterial == null)
+            _flareMaterial = Resources.Load<Material>(FlareMaterialPath);
+
+        image.texture = Resources.Load<Texture2D>(texturePath);
+        image.material = _flareMaterial;
+        image.raycastTarget = false;
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = new Vector2(size, size);
+        rect.gameObject.SetActive(false);
+
+        return image;
     }
 
     //화면 좌표를 카드 기준 가로 위치로. 카드 자체(Root)는 움직이지 않아 기준이 흔들리지 않는다

@@ -72,14 +72,7 @@ def card_assets():
           scale=1, vb="0 0 24 24", tint="카드 종류색 (#93C1F5 · #FF6FA0 · #F2C14E)",
           usage="등급 수만큼 배치. 카드 88px · 목록 행 23px")
 
-    cx, cy = 349.5, 489.5
-    asset("Card", "card_slot_empty", 699, 979,
-          '<rect width="699" height="979" fill="rgba(63,74,98,0.94)"/>'
-          '<rect x="3" y="3" width="693" height="973" fill="none" stroke="rgba(200,212,232,0.6)" stroke-width="6" stroke-dasharray="28 18"/>'
-          f'<path d="M{cx} {cy - 60}V{cy + 60}M{cx - 60} {cy}H{cx + 60}" stroke="rgba(200,212,232,0.6)" stroke-width="12"/>',
-          scale=1, usage="빈 카드 슬롯 (라인업 · 조합 재료 칸). 거의 불투명해 뒤 선이 비치지 않는다")
-
-    # card_fx_glow_{signature,goldenglove} 는 카드 모양(사선 모서리)을 따라야 해서 card_shape.py 가 만든다
+    # card_slot_empty(빈 카드 자리) · card_fx_glow_{signature,goldenglove} 는 카드 모양(사선 모서리)을 따라야 해서 card_shape.py 가 만든다
 
     asset("Card", "icon_breakthrough", 128, 128, f'<path d="{BURST}" fill="{WHITE}"/>',
           scale=1, vb="0 0 24 24", tint="#7EE3D8", usage="카드 뒷면 '돌파 완료'")

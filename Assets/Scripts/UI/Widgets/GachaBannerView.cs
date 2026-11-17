@@ -6,8 +6,9 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 뽑기 로비의 큰 배너. 뽑기 종류 색으로 물든 빛살 무늬 위에 대표 카드 3장을 부채꼴로 세우고,
-/// 아래에 배너 이름 · 설명 · 확정 띠를 얹는다. 좌우 화살표 또는 옆으로 밀어 다른 뽑기로 넘긴다
+/// 뽑기 로비의 큰 배너. 뽑기 종류 색으로 물든 무대(위 조명 · 카드 뒤 빛무리 · 무대 끝선 · 바닥 빛줄)가 배너 전체를 덮고,
+/// 가운데 카드 뒤에서 빛살이 천천히 돈다. 그 위에 대표 카드 3장을 부채꼴로 세우고 아래에 배너 이름 · 설명 · 확정 띠를 얹는다.
+/// 좌우 화살표 또는 옆으로 밀어 다른 뽑기로 넘긴다
 /// </summary>
 public class GachaBannerView : UiWidgetBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
@@ -17,19 +18,27 @@ public class GachaBannerView : UiWidgetBehaviour, IBeginDragHandler, IDragHandle
     public const int FeaturedCount = 3;
 
     private const string ArtPath = "UI/Gacha/gacha_banner_art";
+    private const string RaysPath = "UI/Gacha/gacha_banner_rays";
     private const string ShadePath = "UI/Gacha/gacha_banner_shade";
     private const string ArrowSprite = "Gacha/swipe_arrow";
+    //무대 그림은 배너 위에 붙인다. 배너가 그림보다 길면 아래는 그늘이 덮는다 (render_gacha_stage_art.py 와 짝)
     private const float ArtWidth = 1016f;
-    private const float ArtHeight = 1320f;
-    private const float ArtAlpha = 0.6f;
+    private const float ArtHeight = 1800f;
+    private const float ArtAlpha = 0.7f;
+    //빛살은 가운데 카드 중심에서 돈다. 가장자리로 갈수록 0 이라 배너 어디서도 끊겨 보이지 않는다
+    private const float RaysSize = 2800f;
+    private const float RaysAlpha = 0.3f;
+    private const float RaysSpinSpeed = 4f;
     private const float FrameAlpha = 0.75f;
     //대표 카드: 가운데 큰 카드 + 양옆 조금 작게 기울여 뒤에 둔다 (배너 위쪽 기준)
-    private const float CenterCardWidth = 430f;
-    private const float SideCardWidth = 300f;
-    private const float SideCardOffsetX = 270f;
-    private const float SideCardDrop = 70f;
-    private const float SideCardTilt = 10f;
-    private const float CardsTop = 120f;
+    private const float CenterCardWidth = 580f;
+    private const float SideCardWidth = 400f;
+    private const float SideCardOffsetX = 290f;
+    private const float SideCardDrop = 100f;
+    private const float SideCardTilt = 9f;
+    private const float CardsTop = 130f;
+    //무대 끝선은 가운데 카드 아래 이만큼에 그려져 있다 (render_gacha_stage_art.py). 넘김 화살표를 그 높이 양끝에 둔다
+    private const float StageEdgeGap = 40f;
     //아래 글자 받침
     private const float ShadeHeight = 560f;
     private const float TitleBottom = 156f;
@@ -46,7 +55,15 @@ public class GachaBannerView : UiWidgetBehaviour, IBeginDragHandler, IDragHandle
     //이만큼 옆으로 밀어야 다음 배너로 넘긴다
     private const float SwipeThreshold = 90f;
 
+    /// <summary>
+    /// 이전 · 다음 배너 · 기록 버튼 (화면이 핸들러를 건다)
+    /// </summary>
+    public Button PreviousButton => _previousButton;
+    public Button NextButton => _nextButton;
+    public Button HistoryButton => _historyButton;
+
     [SerializeField] private RawImage _art;
+    [SerializeField] private RawImage _rays;
     [SerializeField] private Image _frame;
     [SerializeField] private Image _badge;
     [SerializeField] private TextMeshProUGUI _title;
@@ -61,12 +78,11 @@ public class GachaBannerView : UiWidgetBehaviour, IBeginDragHandler, IDragHandle
     private Action _onNext;
     private float _dragDistance;
 
-    /// <summary>
-    /// 이전 · 다음 배너 · 기록 버튼 (화면이 핸들러를 건다)
-    /// </summary>
-    public Button PreviousButton => _previousButton;
-    public Button NextButton => _nextButton;
-    public Button HistoryButton => _historyButton;
+    //카드 뒤 빛살을 천천히 돌린다 (배너가 보이는 동안만 돈다)
+    private void Update()
+    {
+        _rays.rectTransform.localEulerAngles = new Vector3(0f, 0f, -Time.unscaledTime * RaysSpinSpeed);
+    }
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점). 크기는 부모가 Stretch 로 정한다
@@ -98,6 +114,7 @@ public class GachaBannerView : UiWidgetBehaviour, IBeginDragHandler, IDragHandle
         _subtitle.text = subtitle;
         _badgeText.text = badge;
         _art.color = UiPalette.WithAlpha(accent, ArtAlpha);
+        _rays.color = UiPalette.WithAlpha(accent, RaysAlpha);
         _frame.color = UiPalette.WithAlpha(accent, FrameAlpha);
         _badge.color = accent;
 
@@ -139,7 +156,7 @@ public class GachaBannerView : UiWidgetBehaviour, IBeginDragHandler, IDragHandle
             _onPrevious?.Invoke();
     }
 
-    //모양 마스크 안: 바탕 · 무늬 · 대표 카드 · 그늘 · 글자. 마스크 밖: 테두리 · 화살표 · 기록
+    //모양 마스크 안: 바탕 · 빛살 · 무늬 · 대표 카드 · 그늘 · 글자. 마스크 밖: 테두리 · 화살표 · 기록
     private void BuildWidget()
     {
         Image shape = UiBuilder.CreateImage(Root, "Shape", UiPalette.BgPanel, UiSprites.ButtonPrimary, Image.Type.Sliced);
@@ -148,6 +165,12 @@ public class GachaBannerView : UiWidgetBehaviour, IBeginDragHandler, IDragHandle
         shape.gameObject.AddComponent<Mask>().showMaskGraphic = true;
 
         RectTransform content = shape.rectTransform;
+
+        _rays = CreateRawImage(content, "Rays", RaysPath);
+        _rays.rectTransform.anchorMin = _rays.rectTransform.anchorMax = new Vector2(0.5f, 1f);
+        _rays.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        _rays.rectTransform.anchoredPosition = new Vector2(0f, -(CardsTop + CardHeight(CenterCardWidth) * 0.5f));
+        _rays.rectTransform.sizeDelta = new Vector2(RaysSize, RaysSize);
 
         _art = CreateRawImage(content, "Art", ArtPath);
         _art.rectTransform.anchorMin = _art.rectTransform.anchorMax = new Vector2(0.5f, 1f);
@@ -217,7 +240,7 @@ public class GachaBannerView : UiWidgetBehaviour, IBeginDragHandler, IDragHandle
         return card;
     }
 
-    //배너 양옆 가운데쯤의 넘김 화살표. 왼쪽은 오른쪽 화살표를 뒤집어 쓴다
+    //무대 끝선 양끝의 넘김 화살표 (카드 그림을 가리지 않는다). 왼쪽은 오른쪽 화살표를 뒤집어 쓴다
     private Button CreateArrow(string name, bool left)
     {
         Image arrow = UiBuilder.CreateImage(Root, name, UiPalette.Text1, ArrowSprite);
@@ -225,9 +248,10 @@ public class GachaBannerView : UiWidgetBehaviour, IBeginDragHandler, IDragHandle
 
         arrow.preserveAspect = true;
         arrow.raycastTarget = true;
-        rect.anchorMin = rect.anchorMax = new Vector2(left ? 0f : 1f, 0.55f);
+        rect.anchorMin = rect.anchorMax = new Vector2(left ? 0f : 1f, 1f);
         rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = new Vector2(left ? ArrowInset + ArrowWidth * 0.5f : -ArrowInset - ArrowWidth * 0.5f, 0f);
+        rect.anchoredPosition = new Vector2(left ? ArrowInset + ArrowWidth * 0.5f : -ArrowInset - ArrowWidth * 0.5f,
+            -(CardsTop + CardHeight(CenterCardWidth) + StageEdgeGap));
         rect.sizeDelta = new Vector2(ArrowWidth, ArrowHeight);
         rect.localEulerAngles = new Vector3(0f, 0f, left ? 180f : 0f);
 
