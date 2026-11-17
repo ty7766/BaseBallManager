@@ -4,14 +4,22 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// ② 경기 중 화면. 타석 결과가 한 줄씩 흐르고 조작은 일시정지뿐이다 (명세 ② · 6-5)
+/// ② 경기 중 화면. 타석 결과가 한 줄씩 흐르고 조작은 일시정지뿐이다 (명세 ② · 6-5 · 중계 그래픽 B안)
 /// </summary>
 public class LiveGameScreen : UiScreenBehaviour
 {
-    private const float MatchupHeight = 196f;
+    private const float SideMargin = 24f;
+    private const float PanelGap = 16f;
+    private const float MatchupHeight = 236f;
+    private const float MatchupGap = 12f;
+    private const float DiamondPanelWidth = 196f;
     private const float FooterHeight = 120f;
-    private const float ChipWidth = 420f;
-    private const float DiamondSize = 160f;
+    private const float ChipInset = 18f;
+    private const float ChipTop = 16f;
+    private const float DiamondSize = 150f;
+    private const float StaminaHeight = 40f;
+    private const float BottomLineTop = ChipTop + PlayerChipView.ChipHeight + 14f;
+    private const float NextLabelWidth = 116f;
 
     private Action _onPauseRequested;
 
@@ -20,6 +28,7 @@ public class LiveGameScreen : UiScreenBehaviour
     [SerializeField] private PlayerChipView _batterChip;
     [SerializeField] private PlayerChipView _pitcherChip;
     [SerializeField] private StaminaBarView _staminaBar;
+    [SerializeField] private TextMeshProUGUI _nextBatterText;
     [SerializeField] private PlayLogView _playLog;
     [SerializeField] private Button _pauseButton;
     [SerializeField] private Image _pauseIcon;
@@ -81,7 +90,12 @@ public class LiveGameScreen : UiScreenBehaviour
         int battingIndex = isAwayAttacking ? state.AwayBattingIndex : state.HomeBattingIndex;
 
         if (battingIndex >= 0 && battingIndex < battingLineup.Length)
+        {
+            HitterSnapshot nextBatter = battingLineup[(battingIndex + 1) % battingLineup.Length];
+
             _batterChip.SetHitter(battingLineup[battingIndex], battingIndex + 1, batterIsPlayerCard);
+            _nextBatterText.text = PlayerLabelFormat.NameWithYear(nextBatter.Name, nextBatter.Year);
+        }
 
         PitcherState pitcherState = isAwayAttacking ? state.HomePitcherState : state.AwayPitcherState;
 
@@ -155,47 +169,75 @@ public class LiveGameScreen : UiScreenBehaviour
 
     protected override void Build()
     {
+        float matchupTop = SideMargin + ScoreboardView.BoardHeight + PanelGap;
+        float logTop = matchupTop + MatchupHeight + PanelGap;
+
         _scoreboard = ScoreboardView.Bake(Root);
+        UiBuilder.Place(_scoreboard.Root, SideMargin, SideMargin, ScoreboardView.BoardWidth, ScoreboardView.BoardHeight);
 
-        RectTransform matchup = UiBuilder.CreateRect(Root, "Matchup");
-        UiBuilder.Place(matchup, 0f, ScoreboardView.BoardHeight, UiBuilder.DesignSize.x, MatchupHeight);
-
-        _batterChip = PlayerChipView.Bake(matchup, "타자", ChipWidth, false);
-        UiBuilder.Place(_batterChip.Root, 24f, 8f, ChipWidth, PlayerChipView.ChipHeight);
-
-        _pitcherChip = PlayerChipView.Bake(matchup, "투수", ChipWidth, true);
-        UiBuilder.Place(_pitcherChip.Root, 636f, 8f, ChipWidth, PlayerChipView.ChipHeight);
-
-        _diamond = BaseDiamondView.Bake(matchup, DiamondSize);
-        UiBuilder.Place(_diamond.Root, 460f, 14f, DiamondSize, DiamondSize);
-
-        _staminaBar = StaminaBarView.Bake(matchup, ChipWidth, 22f);
-        UiBuilder.Place(_staminaBar.Root, 636f, 142f, ChipWidth, 22f);
+        BuildMatchup(matchupTop);
 
         _playLog = PlayLogView.Bake(Root);
-        UiBuilder.Stretch(_playLog.Root, 24f, ScoreboardView.BoardHeight + MatchupHeight + 12f, 24f, FooterHeight + 24f);
+        UiBuilder.Stretch(_playLog.Root, SideMargin, logTop, SideMargin, FooterHeight + SideMargin + PanelGap);
 
         RectTransform footer = UiBuilder.CreateRect(Root, "Footer");
         footer.anchorMin = new Vector2(0f, 0f);
         footer.anchorMax = new Vector2(1f, 0f);
         footer.pivot = new Vector2(0.5f, 0f);
-        footer.offsetMin = new Vector2(24f, 16f);
-        footer.offsetMax = new Vector2(-24f, 16f + FooterHeight);
+        footer.offsetMin = new Vector2(SideMargin, 16f);
+        footer.offsetMax = new Vector2(-SideMargin, 16f + FooterHeight);
 
         _modeText = UiBuilder.CreateText(footer, "Mode", 30f, UiPalette.Text2);
         UiBuilder.Place(_modeText.rectTransform, 8f, 10f, 300f, 40f);
+        _modeText.fontStyle = FontStyles.Bold;
 
         _pauseHintText = UiBuilder.CreateText(footer, "PauseHint", 26f, UiPalette.StateReserved);
         UiBuilder.Place(_pauseHintText.rectTransform, 8f, 54f, 640f, 36f);
 
         _pauseButton = UiBuilder.CreateButton(footer, "PauseButton", "일시정지", 38f, false,
             OnPauseClicked, out _pauseLabel);
+        BroadcastPanel.ApplyButtonStyle(_pauseButton, false);
         UiBuilder.PlaceRight(_pauseButton.GetComponent<RectTransform>(), 0f, 8f, 320f, 104f);
 
         _pauseIcon = UiBuilder.CreateImage(_pauseButton.transform, "PauseIcon",
             UiPalette.StateReserved, UiSprites.Spinner);
         UiBuilder.Place(_pauseIcon.rectTransform, 16f, 30f, 44f, 44f);
         _pauseIcon.gameObject.SetActive(false);
+    }
+
+    //타자 판 · 루 판 · 투수 판을 떼어 둔다. 타자 판 아래엔 다음 타자, 투수 판 아래엔 체력 바
+    private void BuildMatchup(float top)
+    {
+        float sideWidth = (ScoreboardView.BoardWidth - DiamondPanelWidth - MatchupGap * 2f) * 0.5f;
+        float chipWidth = sideWidth - ChipInset * 2f;
+
+        RectTransform batterPanel = BroadcastPanel.Create(Root, "BatterPanel").rectTransform;
+        UiBuilder.Place(batterPanel, SideMargin, top, sideWidth, MatchupHeight);
+
+        RectTransform diamondPanel = BroadcastPanel.Create(Root, "DiamondPanel").rectTransform;
+        UiBuilder.Place(diamondPanel, SideMargin + sideWidth + MatchupGap, top, DiamondPanelWidth, MatchupHeight);
+
+        RectTransform pitcherPanel = BroadcastPanel.Create(Root, "PitcherPanel").rectTransform;
+        UiBuilder.PlaceRight(pitcherPanel, SideMargin, top, sideWidth, MatchupHeight);
+
+        _batterChip = PlayerChipView.Bake(batterPanel, "타자", chipWidth, false);
+        UiBuilder.Place(_batterChip.Root, ChipInset, ChipTop, chipWidth, PlayerChipView.ChipHeight);
+
+        TextMeshProUGUI nextLabel = UiBuilder.CreateLabel(batterPanel, "NextLabel", "다음 타자", 22f, UiPalette.Text3);
+        UiBuilder.Place(nextLabel.rectTransform, ChipInset, BottomLineTop, NextLabelWidth, StaminaHeight);
+
+        _nextBatterText = UiBuilder.CreateText(batterPanel, "NextBatter", 28f, UiPalette.Text2);
+        UiBuilder.Place(_nextBatterText.rectTransform, ChipInset + NextLabelWidth, BottomLineTop, chipWidth - NextLabelWidth, StaminaHeight);
+        _nextBatterText.overflowMode = TextOverflowModes.Ellipsis;
+
+        _diamond = BaseDiamondView.Bake(diamondPanel, DiamondSize);
+        UiBuilder.Place(_diamond.Root, (DiamondPanelWidth - DiamondSize) * 0.5f, (MatchupHeight - DiamondSize) * 0.5f, DiamondSize, DiamondSize);
+
+        _pitcherChip = PlayerChipView.Bake(pitcherPanel, "투수", chipWidth, true);
+        UiBuilder.PlaceRight(_pitcherChip.Root, ChipInset, ChipTop, chipWidth, PlayerChipView.ChipHeight);
+
+        _staminaBar = StaminaBarView.Bake(pitcherPanel, chipWidth, StaminaHeight);
+        UiBuilder.PlaceRight(_staminaBar.Root, ChipInset, BottomLineTop, chipWidth, StaminaHeight);
     }
 
     private void OnPauseClicked()

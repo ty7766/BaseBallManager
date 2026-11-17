@@ -72,8 +72,6 @@ public class LineUpManager : SingletonBehaviour<LineUpManager>
             return false;
         }
 
-        //타순 중복은 배치 단계에서 막지 않는다 (HasDuplicateBattingOrder 로 경기 직전에 검사)
-
         if (IsCardAssigned(instanceId))
         {
             Debug.LogWarning($"[LineUpManager]: 이미 다른 슬롯에 배치된 카드입니다 (instanceId {instanceId})");
@@ -250,8 +248,6 @@ public class LineUpManager : SingletonBehaviour<LineUpManager>
             return false;
         }
 
-        //중복을 막지 않는다. 바꾸는 도중에는 겹칠 수밖에 없고,
-        //최종 검사는 HasDuplicateBattingOrder 로 경기 입장 직전에 한다
         _hitterSlots[slot] = (_hitterSlots[slot].instanceId, order);
 
         return true;
@@ -480,5 +476,4 @@ public class LineUpManager : SingletonBehaviour<LineUpManager>
 
         return true;
     }
-
 }

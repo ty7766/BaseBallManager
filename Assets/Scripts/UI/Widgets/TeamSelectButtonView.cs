@@ -4,7 +4,8 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 /// <summary>
-/// 팀 선택 칸 하나. 왼쪽에서 오른쪽으로 옅어지는 팀 색을 깔고, 엠블럼을 왼쪽 끝에 반쯤 걸쳐 흐리게 둔다
+/// 팀 선택 칸 하나. 팀 색이 살짝 밴 불투명 버튼 바탕 위에 왼쪽에서 칸 80% 까지 옅어지는 팀 색을 깔고, 엠블럼을 왼쪽 끝에 반쯤 걸쳐 흐리게 둔다.
+/// 고르면 엠블럼이 제 색으로 또렷해진다
 /// </summary>
 public class TeamSelectButtonView : UiWidgetBehaviour
 {
@@ -16,15 +17,20 @@ public class TeamSelectButtonView : UiWidgetBehaviour
     private const float EmblemHeightRatio = 0.94f;
     //가로로 긴 엠블럼은 이 가로세로비까지만 넓히고 높이를 줄인다
     private const float EmblemMaxAspect = 1.45f;
-    private const float TintAlpha = 0.55f;
+    private const float TintAlpha = 0.7f;
+    //팀 색 그라데이션이 차지하는 칸 너비 비율 · 버튼 바탕에 섞는 아주 짙은 팀 색 비율
+    private const float TintWidthRatio = 0.8f;
+    private const float BaseTeamMix = 0.35f;
     private const float LabelRightPadding = 34f;
 
     //흰색 저알파는 Linear 블렌딩에서 진한 팀 색에 묻힌다. 어둡게 눌러 얹어야 어디서나 위로 떠 보인다
     private static readonly Color EmblemTint = new Color(0.35f, 0.35f, 0.35f, 0.35f);
-    private static readonly Color EmblemSelectedTint = new Color(0.55f, 0.55f, 0.55f, 0.45f);
+    //고르면 엠블럼 제 색을 그대로 띄운다. 흰 부분이 없는 엠블럼(LG)도 회색으로 누르지 않아야 또렷해진다
+    private static readonly Color EmblemSelectedTint = new Color(1f, 1f, 1f, 0.75f);
 
     [SerializeField] private float _height;
     [SerializeField] private Button _button;
+    [SerializeField] private Image _base;
     [SerializeField] private Image _tint;
     [SerializeField] private Image _emblem;
     [SerializeField] private Image _frame;
@@ -39,6 +45,8 @@ public class TeamSelectButtonView : UiWidgetBehaviour
         Image shape = CreateButtonShapeMask(view.Root);
 
         view._height = height;
+        view._base = UiBuilder.CreateImage(shape.rectTransform, "TeamBase", UiPalette.BgRow);
+        UiBuilder.Stretch(view._base.rectTransform, 0f, 0f, 0f, 0f);
         view._tint = CreateGradientTint(shape.rectTransform);
         view._emblem = UiBuilder.CreateImage(shape.rectTransform, "TeamEmblem", EmblemTint);
 
@@ -66,6 +74,7 @@ public class TeamSelectButtonView : UiWidgetBehaviour
     public void SetTeam(string teamName)
     {
         _label.text = teamName;
+        _base.color = Color.Lerp(UiPalette.BgRow, UiPalette.GetTeamColorDeep(teamName), BaseTeamMix);
         _tint.color = UiPalette.WithAlpha(UiPalette.GetTeamColorOnDark(teamName), TintAlpha);
 
         Sprite emblem = UiSprites.Get(EmblemResourcePrefix + teamName);
@@ -78,7 +87,7 @@ public class TeamSelectButtonView : UiWidgetBehaviour
     }
 
     /// <summary>
-    /// 선택 표시. 흰 테두리를 두르고 엠블럼을 진하게 한다
+    /// 선택 표시. 흰 테두리를 두르고 엠블럼을 제 색으로 띄운다
     /// </summary>
     public void SetSelected(bool selected)
     {
@@ -98,13 +107,17 @@ public class TeamSelectButtonView : UiWidgetBehaviour
         return shape;
     }
 
-    //왼쪽 끝 진하게 → 오른쪽 끝 투명. 색은 SetTeam 이 칠한다 (스프라이트 없이 칸 전체 uv 0~1)
+    //왼쪽 끝 진하게 → 칸 너비 TintWidthRatio 지점에서 투명. 색은 SetTeam 이 칠한다 (스프라이트 없이 판 전체 uv 0~1)
     private static Image CreateGradientTint(RectTransform shape)
     {
         Image tint = UiBuilder.CreateImage(shape, "TeamTint", Color.white);
+        RectTransform rect = tint.rectTransform;
 
         tint.material = Resources.Load<Material>(GradientMaterialPath);
-        UiBuilder.Stretch(tint.rectTransform, 0f, 0f, 0f, 0f);
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = new Vector2(TintWidthRatio, 1f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
 
         return tint;
     }

@@ -64,14 +64,6 @@ public readonly struct UiParticleSettings
     {
         return kind switch
         {
-            UiEffectKind.Score => new UiParticleSettings(14, SpriteRoot + "spark",
-                UiPalette.AccentGold, UiPalette.Text1,
-                260f, 520f, 1400f, 0.7f, 10f, 20f, 120f, 1f, false),
-
-            UiEffectKind.HomeRun => new UiParticleSettings(40, SpriteRoot + "confetti",
-                UiPalette.AccentGold, UiPalette.LogHomeRun,
-                420f, 980f, 1700f, 1.25f, 14f, 30f, 180f, 1f, true),
-
             UiEffectKind.GradeUp => new UiParticleSettings(32, SpriteRoot + "star",
                 UiPalette.CardSignature, UiPalette.AccentGold,
                 340f, 760f, 900f, 1.1f, 18f, 36f, 360f, 0.2f, true),

@@ -25,6 +25,9 @@ W, H = 1080, 1920
 Y, X = np.mgrid[0:H, 0:W].astype(np.float32)
 U, V = X / W, Y / H
 BASE_DARKEN = 0.72
+#바탕은 검정 대신 짙은 남색 — 밝기 결은 그대로 두고 색만 남색 쪽으로 물들인다
+NAVY_LIFT = np.array([0.02, 0.026, 0.04], np.float32)
+NAVY_GAIN = np.array([1.15, 1.4, 1.95], np.float32)
 
 
 def blur(a, s):
@@ -85,10 +88,12 @@ def scratches(count, seed, angle=-62, spread=20):
 
 COLOR_STROKES = [((1260, -60), (700, 330), 190, 51, 0.5, 1.0), ((1180, 160), (840, 420), 80, 52, 0.6, 0.9),
                  ((-120, 1790), (330, 1520), 150, 53, 0.55, 0.85), ((-60, 1610), (240, 1430), 60, 58, 0.6, 0.8),
-                 ((1210, 870), (930, 1090), 120, 59, 0.55, 0.8), ((-90, 760), (170, 600), 80, 60, 0.6, 0.75)]
+                 ((1210, 870), (930, 1090), 120, 59, 0.55, 0.8), ((-90, 760), (170, 600), 80, 60, 0.6, 0.75),
+                 ((-110, 330), (290, 70), 120, 62, 0.55, 0.8), ((1220, 560), (880, 760), 95, 63, 0.6, 0.75),
+                 ((1230, 1660), (800, 1990), 170, 64, 0.5, 0.9), ((-100, 1230), (210, 1040), 75, 65, 0.6, 0.7)]
 BLACK_STROKES = [((1200, 60), (860, 300), 50, 54, 0.6), ((-80, 1700), (220, 1540), 40, 55, 0.6),
                  ((1190, 950), (990, 1100), 36, 61, 0.6)]
-COLOR_ALPHA = 0.85
+COLOR_ALPHA = 0.9
 BLACK_ALPHA = 0.8
 BLACK_LEVEL = 0.02
 #붓 결의 밝기 폭. 타이틀 붉은 붓과 같은 0.72 ~ 1.07 을 1 로 나눠 담고, 팀 색을 곱한다
@@ -102,7 +107,8 @@ def vignette_factor(strength=0.4):
 def render_base():
     bg = np.asarray(Image.open(SOURCE).convert("RGB")).astype(np.float32) / 255 * BASE_DARKEN
     out = screen(bg, (blur(scratches(160, 57), 0.4) * 0.08)[..., None])
-    return grain(out * vignette_factor()[..., None])
+    out = out * vignette_factor()[..., None]
+    return grain(NAVY_LIFT + out.mean(axis=2, keepdims=True) * NAVY_GAIN)
 
 
 def render_brush():

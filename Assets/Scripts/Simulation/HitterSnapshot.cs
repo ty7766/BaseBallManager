@@ -6,6 +6,7 @@ public readonly struct HitterSnapshot
     public int InstanceId { get; }
     public string Name { get; }
     public int Year { get; }            //카드 년도. 화면 표기용
+    public string DisplayName { get; }  //중계 · 기록 표기 (`이름 '연도`)
     public string Position { get; }     //CSV 표기 그대로 ("LF", "1B" ...)
 
     public int Power { get; }
@@ -26,6 +27,7 @@ public readonly struct HitterSnapshot
         InstanceId = instanceId;
         Name = name;
         Year = year;
+        DisplayName = PlayerLabelFormat.NameWithYear(name, year);
         Position = position;
         Power = power;
         Contact = contact;

@@ -5,10 +5,13 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 카드 타일을 3열로 깔고 스크롤한다. 인벤토리·뽑기 결과·카드 선택 모달이 공유한다
+/// 카드 타일을 여러 열로 깔고 스크롤한다. 인벤토리·뽑기 결과·카드 선택 모달이 공유한다.
+/// 보이는 줄(+위아래 한 줄)만큼의 칸만 만들어 스크롤할 때 돌려 쓴다. 카드 수만큼 칸을 켜 두면 RectMask2D 가 매 프레임 전부를 훑는다
 /// </summary>
 public class CardGridView : UiWidgetBehaviour
 {
+    //보이는 줄 위아래로 미리 채워 둘 줄 수. 빠르게 넘겨도 빈 칸이 비치지 않게 한다
+    private const int BufferRows = 1;
     private const int DefaultColumns = 4;
     //4열일 때의 칸 폭. 카드 그림은 CellWidth 기준으로 조립하고 스케일로 줄인다
     private const float DefaultCellWidth = 242f;
@@ -47,6 +50,30 @@ public class CardGridView : UiWidgetBehaviour
     private readonly List<RectTransform> _leadingTiles = new List<RectTransform>(2);
     private bool _checkSelection;
     private bool _edgeLinesBuilt;
+    //깔 카드 전체. 칸은 이 중 보이는 몇 장에만 붙는다
+    private readonly List<CardDisplayInfo> _items = new List<CardDisplayInfo>(64);
+    //칸마다 지금 맡은 자리 번호(앞 타일 포함). -1 이면 비어 있다
+    private readonly List<int> _cellSlots = new List<int>(32);
+    private readonly List<int> _wantedSlots = new List<int>(32);
+    private float _layoutCellWidth;
+    private float _rowPitch;
+    private float _offsetX;
+    private float _offsetY;
+
+    //화면 높이가 바뀌면(세로가 긴 기기) 보이는 줄 수도 바뀐다
+    private void OnRectTransformDimensionsChange()
+    {
+        if (_items.Count > 0)
+            RefreshVisibleCells();
+    }
+
+    protected override void BindEvents()
+    {
+        ScrollRect scroll = GetScroll();
+
+        if (scroll != null)
+            scroll.onValueChanged.AddListener(OnScrolled);
+    }
 
     /// <summary>
     /// 위젯을 조립한다 (프리팹 베이크 시점)
@@ -121,59 +148,52 @@ public class CardGridView : UiWidgetBehaviour
         EnsureScrollbar();
         EnsureEdgeLines();
 
-        int leading = _leadingTiles.Count;
-        int used = 0;
-        float cellWidth = _cellWidth > 0f ? _cellWidth : DefaultCellWidth;
-        float cellHeight = cellWidth * CardView.BaseHeight / CardView.BaseWidth;
-        float rowWidth = _columns * (cellWidth + ColumnGap) - ColumnGap;
-        float offsetX = Mathf.Max(0f, (GridWidth - rowWidth) * 0.5f);
-        float offsetY = 0f;
-
-        if (_centerInHeight > 0f && instanceIds != null && instanceIds.Count > 0)
-        {
-            int plannedRows = (instanceIds.Count + leading + _columns - 1) / _columns;
-            float blockHeight = plannedRows * (cellHeight + RowGap) - RowGap;
-
-            //가운데에서 살짝 위로 올린다
-            offsetY = Mathf.Max(0f, (_centerInHeight - blockHeight) * 0.5f - CenterNudgeUp);
-        }
-
-        for (int i = 0; i < leading; i++)
-        {
-            CardCellView.PlaceInGrid(_leadingTiles[i], i % _columns, i / _columns, ColumnGap, RowGap,
-                cellWidth, offsetX, offsetY);
-        }
+        _items.Clear();
 
         if (instanceIds != null)
         {
             for (int i = 0; i < instanceIds.Count; i++)
             {
-                if (!CardDisplayInfo.TryCreate(instanceIds[i], out CardDisplayInfo info))
-                    continue;
-
-                CardCellView cell = EnsureCell(used);
-                int slot = leading + used;
-
-                cell.SetVisible(true);
-                cell.SetCard(info);
-                cell.SetGridPosition(slot % _columns, slot / _columns, ColumnGap, RowGap,
-                    cellWidth, offsetX, offsetY);
-                cell.SetSelected(_selected.Contains(info.InstanceId));
-                cell.SetBlocked(_blockedReason == null ? null : _blockedReason(info));
-
-                used++;
+                if (CardDisplayInfo.TryCreate(instanceIds[i], out CardDisplayInfo info))
+                    _items.Add(info);
             }
         }
 
-        for (int i = used; i < _cells.Count; i++)
-            _cells[i].SetVisible(false);
+        int leading = _leadingTiles.Count;
+        float cellWidth = _cellWidth > 0f ? _cellWidth : DefaultCellWidth;
+        float cellHeight = cellWidth * CardView.BaseHeight / CardView.BaseWidth;
+        float rowWidth = _columns * (cellWidth + ColumnGap) - ColumnGap;
 
-        Count = used;
+        _layoutCellWidth = cellWidth;
+        _rowPitch = cellHeight + RowGap;
+        _offsetX = Mathf.Max(0f, (GridWidth - rowWidth) * 0.5f);
+        _offsetY = 0f;
 
-        int rows = (leading + used + _columns - 1) / _columns;
+        if (_centerInHeight > 0f && _items.Count > 0)
+        {
+            int plannedRows = (_items.Count + leading + _columns - 1) / _columns;
+            float blockHeight = plannedRows * _rowPitch - RowGap;
 
-        _content.sizeDelta = new Vector2(0f, offsetY + rows * (cellHeight + RowGap));
-        _emptyText.gameObject.SetActive(leading + used == 0);
+            _offsetY = Mathf.Max(0f, (_centerInHeight - blockHeight) * 0.5f - CenterNudgeUp);
+        }
+
+        for (int i = 0; i < leading; i++)
+        {
+            CardCellView.PlaceInGrid(_leadingTiles[i], i % _columns, i / _columns, ColumnGap, RowGap,
+                cellWidth, _offsetX, _offsetY);
+        }
+
+        Count = _items.Count;
+
+        int rows = (leading + Count + _columns - 1) / _columns;
+
+        _content.sizeDelta = new Vector2(0f, _offsetY + rows * _rowPitch);
+        _emptyText.gameObject.SetActive(leading + Count == 0);
+
+        for (int i = 0; i < _cellSlots.Count; i++)
+            _cellSlots[i] = -1;
+
+        RefreshVisibleCells();
     }
 
     /// <summary>
@@ -220,8 +240,11 @@ public class CardGridView : UiWidgetBehaviour
     /// </summary>
     public void RefreshBlocked()
     {
-        for (int i = 0; i < Count; i++)
+        for (int i = 0; i < _cells.Count; i++)
         {
+            if (_cellSlots[i] < 0)
+                continue;
+
             string reason = _blockedReason != null && CardDisplayInfo.TryCreate(_cells[i].InstanceId, out CardDisplayInfo info)
                 ? _blockedReason(info)
                 : null;
@@ -243,8 +266,11 @@ public class CardGridView : UiWidgetBehaviour
                 _selected.Add(instanceId);
         }
 
-        for (int i = 0; i < Count; i++)
-            _cells[i].SetSelected(_selected.Contains(_cells[i].InstanceId), true);
+        for (int i = 0; i < _cells.Count; i++)
+        {
+            if (_cellSlots[i] >= 0)
+                _cells[i].SetSelected(_selected.Contains(_cells[i].InstanceId), true);
+        }
     }
 
     /// <summary>
@@ -252,18 +278,18 @@ public class CardGridView : UiWidgetBehaviour
     /// </summary>
     public void RefreshCard(int instanceId)
     {
-        for (int i = 0; i < Count; i++)
-        {
-            CardCellView cell = _cells[i];
+        int itemIndex = IndexOfItem(instanceId);
 
-            if (cell.InstanceId != instanceId || !CardDisplayInfo.TryCreate(instanceId, out CardDisplayInfo info))
-                continue;
-
-            cell.SetCard(info);
-            cell.SetSelected(_selected.Contains(instanceId));
-            cell.SetBlocked(_blockedReason == null ? null : _blockedReason(info));
+        if (itemIndex < 0 || !CardDisplayInfo.TryCreate(instanceId, out CardDisplayInfo info))
             return;
-        }
+
+        _items[itemIndex] = info;
+
+        int slot = _leadingTiles.Count + itemIndex;
+        int cellIndex = _cellSlots.IndexOf(slot);
+
+        if (cellIndex >= 0)
+            BindCell(cellIndex, slot);
     }
 
     /// <summary>
@@ -332,20 +358,113 @@ public class CardGridView : UiWidgetBehaviour
         return _scroll;
     }
 
-    //타일은 필요한 만큼만 만들고 다음 갱신에서 재사용한다
-    private CardCellView EnsureCell(int index)
+    //보이는 자리[first, end)만 칸에 붙인다. 자리 번호를 칸 수로 나눈 나머지로 칸을 정해 한 줄 넘길 때 그 줄 칸만 다시 채운다
+    private void RefreshVisibleCells()
     {
-        while (_cells.Count <= index)
+        int leading = _leadingTiles.Count;
+        int totalSlots = leading + _items.Count;
+
+        GetVisibleSlotRange(totalSlots, out int firstSlot, out int endSlot);
+        EnsureCellCount(endSlot - firstSlot);
+
+        int pool = _cells.Count;
+
+        _wantedSlots.Clear();
+
+        for (int i = 0; i < pool; i++)
+            _wantedSlots.Add(-1);
+
+        for (int slot = Mathf.Max(firstSlot, leading); slot < endSlot; slot++)
+            _wantedSlots[slot % pool] = slot;
+
+        for (int i = 0; i < pool; i++)
+        {
+            int wanted = _wantedSlots[i];
+
+            if (wanted < 0)
+            {
+                _cells[i].SetVisible(false);
+                _cellSlots[i] = -1;
+                continue;
+            }
+
+            if (_cellSlots[i] != wanted)
+                BindCell(i, wanted);
+        }
+    }
+
+    //뷰포트 위아래로 BufferRows 줄씩 더 잡는다. 크기를 아직 모르면 전부 잡는다
+    private void GetVisibleSlotRange(int totalSlots, out int firstSlot, out int endSlot)
+    {
+        ScrollRect scroll = GetScroll();
+        float viewHeight = scroll != null && scroll.viewport != null ? scroll.viewport.rect.height : 0f;
+
+        if (viewHeight <= 0f || _rowPitch <= 0f)
+        {
+            firstSlot = 0;
+            endSlot = totalSlots;
+            return;
+        }
+
+        float top = Mathf.Max(0f, _content.anchoredPosition.y) - _offsetY;
+        int firstRow = Mathf.Max(0, Mathf.FloorToInt(top / _rowPitch) - BufferRows);
+        int lastRow = Mathf.FloorToInt((top + viewHeight) / _rowPitch) + BufferRows;
+
+        firstSlot = Mathf.Min(totalSlots, firstRow * _columns);
+        endSlot = Mathf.Min(totalSlots, (lastRow + 1) * _columns);
+    }
+
+    //칸 하나에 자리 하나의 카드를 붙인다
+    private void BindCell(int cellIndex, int slot)
+    {
+        CardCellView cell = _cells[cellIndex];
+        CardDisplayInfo info = _items[slot - _leadingTiles.Count];
+
+        cell.SetVisible(true);
+        cell.SetCard(info);
+        cell.SetGridPosition(slot % _columns, slot / _columns, ColumnGap, RowGap,
+            _layoutCellWidth, _offsetX, _offsetY);
+        cell.SetSelected(_selected.Contains(info.InstanceId));
+        cell.SetBlocked(_blockedReason == null ? null : _blockedReason(info));
+        _cellSlots[cellIndex] = slot;
+    }
+
+    //칸은 보이는 자리 수만큼만 만든다. 칸 수가 늘면 나머지 짝이 바뀌므로 전부 다시 붙인다
+    private void EnsureCellCount(int count)
+    {
+        if (_cells.Count >= count)
+            return;
+
+        while (_cells.Count < count)
         {
             CardCellView created = new CardCellView(_content);
 
             created.SetClickHandler(_onCardClicked == null ? null : OnCellClicked);
             created.SetLongPressHandler(_onCardLongPressed);
             created.SetCheckStyle(_checkSelection);
+            created.SetVisible(false);
             _cells.Add(created);
+            _cellSlots.Add(-1);
         }
 
-        return _cells[index];
+        for (int i = 0; i < _cells.Count; i++)
+            _cellSlots[i] = -1;
+    }
+
+    private int IndexOfItem(int instanceId)
+    {
+        for (int i = 0; i < _items.Count; i++)
+        {
+            if (_items[i].InstanceId == instanceId)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private void OnScrolled(Vector2 position)
+    {
+        RefreshVisibleCells();
     }
 
     private void OnCellClicked(int instanceId)

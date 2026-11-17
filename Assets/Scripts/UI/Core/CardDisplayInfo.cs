@@ -89,20 +89,42 @@ public readonly struct CardDisplayInfo
     {
         info = default;
 
-        //아직 아무것도 고르지 않은 상태다. 조회 자체를 하지 않아 오류 로그를 남기지 않는다
         if (instanceId == InventoryManager.InvalidInstanceId)
             return false;
 
-        if (InventoryManager.Instance == null || CardDataManager.Instance == null)
-        {
-            Debug.LogError("[CardDisplayInfo]: InventoryManager 또는 CardDataManager가 씬에 없습니다");
+        if (!HasManagers())
             return false;
-        }
 
         CardInstance card = InventoryManager.Instance.GetCard(instanceId);
 
-        if (card == null)
+        return card != null && TryCreate(card, out info);
+    }
+
+    /// <summary>
+    /// 보유하지 않은 카드(AI 팀 선수)를 강화 · 훈련 없는 기본 상태로 보여 줄 표시 정보. 마스터에 없으면 false
+    /// </summary>
+    public static bool TryCreateFromMaster(int cardId, out CardDisplayInfo info)
+    {
+        info = default;
+
+        if (!HasManagers())
             return false;
+
+        return TryCreate(new CardInstance(InventoryManager.InvalidInstanceId, cardId), out info);
+    }
+
+    /// <summary>
+    /// 경기 스냅샷 선수의 표시 정보. 내 카드는 보유 번호, AI 카드는 카드 번호가 스냅샷 번호다
+    /// </summary>
+    public static bool TryCreateForSnapshot(int snapshotId, bool isPlayerCard, out CardDisplayInfo info)
+    {
+        return isPlayerCard ? TryCreate(snapshotId, out info) : TryCreateFromMaster(snapshotId, out info);
+    }
+
+    //카드 1장 + 마스터로 표시 정보를 만든다
+    private static bool TryCreate(CardInstance card, out CardDisplayInfo info)
+    {
+        info = default;
 
         CardMasterData master = CardDataManager.Instance.GetCardMasterData(card.CardId);
 
@@ -124,6 +146,16 @@ public readonly struct CardDisplayInfo
         }
 
         Debug.LogError($"[CardDisplayInfo]: 타자도 투수도 아닌 카드입니다 (cardId {card.CardId})");
+
+        return false;
+    }
+
+    private static bool HasManagers()
+    {
+        if (InventoryManager.Instance != null && CardDataManager.Instance != null)
+            return true;
+
+        Debug.LogError("[CardDisplayInfo]: InventoryManager 또는 CardDataManager가 씬에 없습니다");
 
         return false;
     }

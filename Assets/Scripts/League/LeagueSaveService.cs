@@ -86,7 +86,6 @@ public class LeagueSaveService
             return null;
         }
 
-        //일정은 TeamNames로 재생성하고 순위표는 Records로 만든다. 둘이 어긋나면 매 경기 반영이 실패한다
         if (saveData.Records.Length != saveData.TeamNames.Length)
         {
             Debug.LogError($"[LeagueSaveService]: 팀 수({saveData.TeamNames.Length})와 성적 수({saveData.Records.Length})가 어긋납니다");

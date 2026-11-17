@@ -6,6 +6,7 @@
                                                (알파를 모양과 겹치는 만큼만 남긴다 — 여러 번 돌려도 결과가 같다)
                                                + 목록 칸 덮개용 9-슬라이스 card_fill · card_frame 을 만든다
                                                + 시그 · 골글 카드 바깥 빛 테 card_fx_glow_{signature,goldenglove} 를 만든다
+                                               + 빈 카드 자리 card_slot_empty 를 만든다 (라인업 · 조합 재료 칸)
 
 다른 스크립트가 가져다 쓴다
     chamfer_alpha(...)   numpy 알파 (뽑기 빛 · 마스크)
@@ -37,6 +38,15 @@ GLOW_BORDER = 280                  # 사선(72)이 늘어나는 가운데 칸에
 GLOW_RING = 4
 GLOW_BLUR = 45
 GLOW_COLORS = {"signature": ("#FF5C93", "#FF6FA0"), "goldenglove": ("#F2C14E", "#F7D57A")}
+
+#빈 카드 자리 (카드 반 크기 699×979). 완전 불투명 판 + 카드 모양을 따라가는 점선 + 가운데 +
+SLOT_W, SLOT_H = 699, 979
+SLOT_FILL = (63, 74, 98)
+SLOT_LINE = (200, 212, 232, 153)
+SLOT_STROKE = 6
+SLOT_DASH, SLOT_GAP = 28, 18
+SLOT_PLUS, SLOT_PLUS_STROKE = 60, 12
+SLOT_SS = 4
 
 ROOT = Path(__file__).resolve().parents[2]
 CARD_DIR = ROOT / "Assets" / "Resources" / "UI" / "Card"
@@ -127,6 +137,51 @@ def glow_sprite(key):
     print(f"  {path.name} {GLOW_SIZE}x{GLOW_SIZE} (9-슬라이스 {GLOW_BORDER})")
 
 
+def slot_empty_sprite():
+    """빈 카드 자리 — 카드와 같은 모양(오른쪽 위 · 왼쪽 아래만 사선)의 불투명 판에 점선 테와 + 를 얹는다"""
+    from PIL import ImageDraw
+
+    w, h, k = SLOT_W * SLOT_SS, SLOT_H * SLOT_SS, SLOT_SS
+    chamfer = SLOT_W * CHAMFER_RATIO
+    inset = SLOT_STROKE / 2
+    c = chamfer + inset * (2 - math.sqrt(2))
+    x0, y0, x1, y1 = inset, inset, SLOT_W - inset, SLOT_H - inset
+    outline = [(x0, y0), (x1 - c, y0), (x1, y0 + c), (x1, y1), (x0 + c, y1), (x0, y1 - c), (x0, y0)]
+
+    lines = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(lines)
+    walked = 0.0
+    for (ax, ay), (bx, by) in zip(outline[:-1], outline[1:]):
+        length = math.hypot(bx - ax, by - ay)
+        ux, uy = (bx - ax) / length, (by - ay) / length
+        s0 = 0.0
+        while s0 < length:
+            phase = (walked + s0) % (SLOT_DASH + SLOT_GAP)
+            if phase < SLOT_DASH:
+                s1 = min(length, s0 + SLOT_DASH - phase)
+                draw.line([((ax + ux * s0) * k, (ay + uy * s0) * k), ((ax + ux * s1) * k, (ay + uy * s1) * k)],
+                          fill=SLOT_LINE, width=SLOT_STROKE * k)
+                s0 = s1
+            else:
+                s0 += SLOT_DASH + SLOT_GAP - phase
+        walked += length
+
+    cx, cy = SLOT_W / 2 * k, SLOT_H / 2 * k
+    arm, half = SLOT_PLUS * k, SLOT_PLUS_STROKE * k / 2
+    draw.rectangle([cx - half, cy - arm, cx + half, cy + arm], fill=SLOT_LINE)
+    draw.rectangle([cx - arm, cy - half, cx - half, cy + half], fill=SLOT_LINE)
+    draw.rectangle([cx + half, cy - half, cx + arm, cy + half], fill=SLOT_LINE)
+
+    lines = lines.resize((SLOT_W, SLOT_H), Image.LANCZOS)
+    plate = Image.new("RGBA", (SLOT_W, SLOT_H), SLOT_FILL + (255,))
+    plate.alpha_composite(lines)
+    rgba = np.array(plate)
+    rgba[..., 3] = np.round(chamfer_alpha(SLOT_W, SLOT_H) * 255).astype(np.uint8)
+    path = CARD_DIR / "card_slot_empty.png"
+    Image.fromarray(rgba, "RGBA").save(path, optimize=True)
+    print(f"  {path.name} {SLOT_W}x{SLOT_H}")
+
+
 if __name__ == "__main__":
     names = sys.argv[1:] or FULL_CARD_ART
     for name in names:
@@ -135,3 +190,4 @@ if __name__ == "__main__":
         slice_sprites()
         for glow_key in GLOW_COLORS:
             glow_sprite(glow_key)
+        slot_empty_sprite()

@@ -3,11 +3,15 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 팀 심볼. 로고 애셋이 있으면 그것을, 없으면 팀 컬러 + 이니셜로 그린다 (명세 3-3)
+/// 팀 심볼. 로고 애셋이 있으면 그것을, 없으면 팀 컬러 + 이니셜로 그린다 (명세 3-3).
+/// 로고는 흰 테두리를 둘러 스티커처럼 띄운다 — 검정 · 남색 로고도 어두운 판 위에서 읽힌다
 /// </summary>
 public class TeamEmblemView : UiWidgetBehaviour
 {
     private const string LogoResourcePrefix = "Team/logo_";
+    private const string StickerMaterialPath = "UI/Materials/StickerOutline";
+    //테두리 자리는 셰이더가 그림 안쪽 여백으로 잡으므로 칸을 거의 꽉 채운다
+    private const float LogoInsetRatio = 0.02f;
 
     [SerializeField] private Image _plate;
     [SerializeField] private Image _logo;
@@ -27,8 +31,11 @@ public class TeamEmblemView : UiWidgetBehaviour
         UiBuilder.Stretch(view._plate.rectTransform, 0f, 0f, 0f, 0f);
 
         view._logo = UiBuilder.CreateImage(view.Root, "Logo", Color.white);
-        UiBuilder.Stretch(view._logo.rectTransform, size * 0.12f, size * 0.12f, size * 0.12f, size * 0.12f);
+        float inset = size * LogoInsetRatio;
+
+        UiBuilder.Stretch(view._logo.rectTransform, inset, inset, inset, inset);
         view._logo.preserveAspect = true;
+        view._logo.material = Resources.Load<Material>(StickerMaterialPath);
         view._logo.gameObject.SetActive(false);
 
         view._initialText = UiBuilder.CreateText(view.Root, "Initial", size * 0.44f, UiPalette.Text1,
@@ -47,7 +54,6 @@ public class TeamEmblemView : UiWidgetBehaviour
 
         if (logo != null)
         {
-            //로고 PNG 가 투명 배경이므로 판을 비워 로고만 보이게 한다
             _plate.sprite = null;
             _plate.color = UiPalette.WithAlpha(UiPalette.BgApp, 0f);
             _logo.sprite = logo;

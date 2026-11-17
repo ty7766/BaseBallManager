@@ -34,6 +34,11 @@ public static class UiSprites
     public const string BadgeScore = "Match/badge_score";
     public const string TagOutline = "Match/tag_outline";
     public const string TabOn = "Match/tab_on";
+    //중계 그래픽 판 (리그 화면 공용). 카드처럼 오른쪽 위 · 왼쪽 아래를 사선으로 깎았다
+    public const string CutPanel = "Match/cut_panel";
+    public const string CutFill = "Match/cut_fill";
+    public const string CutOutline = "Match/cut_outline";
+    public const string CutFillSmall = "Match/cut_fill_small";
     public const string IconPause = "Match/icon_pause";
     public const string IconResume = "Match/icon_resume";
     public const string IconSwap = "Match/icon_swap";

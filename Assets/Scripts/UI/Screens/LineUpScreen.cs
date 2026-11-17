@@ -159,11 +159,11 @@ public class LineUpScreen : UiScreenBehaviour
         _stateText = UiBuilder.CreateText(Root, "State", 32f, UiPalette.Text2, TextAlignmentOptions.Right);
         UiBuilder.PlaceRight(_stateText.rectTransform, 32f, 42f, 520f, 48f);
 
-        _hitterTabButton = UiBuilder.CreateButton(Root, "HitterTab", "야수 9 · 벤치 5", 34f, true,
+        _hitterTabButton = UiBuilder.CreateButton(Root, "HitterTab", "타자", 34f, true,
             () => SelectTab(Tab.Hitter));
         UiBuilder.Place(_hitterTabButton.GetComponent<RectTransform>(), 32f, 110f, 500f, 88f);
 
-        _pitcherTabButton = UiBuilder.CreateButton(Root, "PitcherTab", "투수 11", 34f, false,
+        _pitcherTabButton = UiBuilder.CreateButton(Root, "PitcherTab", "투수", 34f, false,
             () => SelectTab(Tab.Pitcher));
         UiBuilder.Place(_pitcherTabButton.GetComponent<RectTransform>(), 548f, 110f, 500f, 88f);
 
@@ -220,21 +220,18 @@ public class LineUpScreen : UiScreenBehaviour
         _tab = Tab.Hitter;
     }
 
-
     //야수 칸도 프리팹에 굽지 않고 런타임에 한 번만 만든다
     private void EnsureFieldSlots()
     {
         if (_fieldSlots.Count > 0)
             return;
 
-        //DH 까지 포함해 9자리를 야구장 좌표대로 깐다
         for (int i = 0; i <= DhSlotIndex; i++)
         {
             _fieldSlots.Add(new FieldSlot(_formation, HitterSlotLabels[i],
                 HitterSlotPoints[i].x, HitterSlotPoints[i].y, SlotCardWidth, OpenDetail));
         }
 
-        //벤치 5장은 야구장 아래에 간격을 두고 가로 한 줄로
         float step = SmallCardWidth + BenchCardGap;
         float left = (FieldWidth - (BenchSlotCount * step - BenchCardGap)) * 0.5f;
 
@@ -355,9 +352,6 @@ public class LineUpScreen : UiScreenBehaviour
 
         return index;
     }
-
-
-
 
     private void PickHitter(HitterPosition slot)
     {
@@ -612,7 +606,7 @@ public class LineUpScreen : UiScreenBehaviour
             if (filled)
                 _card.SetCard(info);
             else
-                _card.SetEmpty("비어 있음");
+                _card.SetEmpty(string.Empty);
 
             _card.SetClickHandler(onPick);
             _card.SetLongPressHandler(filled ? () => _onOpenDetail?.Invoke(instanceId) : null);
@@ -650,5 +644,4 @@ public class LineUpScreen : UiScreenBehaviour
             _onOrderChanged?.Invoke(_battingOrder + 1);
         }
     }
-
 }

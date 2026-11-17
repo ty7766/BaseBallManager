@@ -25,7 +25,7 @@ public class SimulationBatterLog
     public BatterOutcome Outcome {  get; }
     public int PitchCount { get; }              // 이번 타석 투구 수
     public int RunsScored {  get; }             //이번 타석에서 난 득점
-    public string BatterName { get; }           //로그 출력용 타자 이름
+    public string BatterName { get; }           //로그 출력용 타자 이름 (`이름 '연도`)
 
     public int Inning { get; }                  //타석이 벌어진 이닝
     public bool IsTopInning { get; }            //true = 초(원정 공격)
@@ -33,7 +33,7 @@ public class SimulationBatterLog
 
     public int BatterInstanceId { get; }        //선수별 기록 집계 키
     public int PitcherInstanceId { get; }       //상대한 투수 (기록 집계 키)
-    public string PitcherName { get; }          //로그 출력용 투수 이름
+    public string PitcherName { get; }          //로그 출력용 투수 이름 (`이름 '연도`)
 
     public IReadOnlyList<int> ScoredRunnerIds { get; }   //홈을 밟은 주자들 (선수별 득점 집계용)
 

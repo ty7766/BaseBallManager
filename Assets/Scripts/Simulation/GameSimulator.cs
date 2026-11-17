@@ -89,9 +89,9 @@ public class GameSimulator
 
         int effectiveInningRuns = inningRunsBefore + runsScored;
 
-        logs.Add(new SimulationBatterLog(outcome, pitchCount, runsScored, hitter.Name,
+        logs.Add(new SimulationBatterLog(outcome, pitchCount, runsScored, hitter.DisplayName,
             inning, isTopInning, outCountBefore,
-            hitter.InstanceId, pitcher.InstanceId, pitcher.Name,
+            hitter.InstanceId, pitcher.InstanceId, pitcher.DisplayName,
             _scoredRunnerBuffer.Count == 0 ? Array.Empty<int>() : _scoredRunnerBuffer.ToArray()));
 
         TryChangePitcher(gameState, context, defPitcherState, isTopInning, effectiveInningRuns);
@@ -158,7 +158,7 @@ public class GameSimulator
         }
 
         stealLogs.Add(new SimulationStealLog(inning, isTopInning, outCountBefore,
-            attempt.RunnerInstanceId, attempt.RunnerName, pitcher.InstanceId, pitcher.Name,
+            attempt.RunnerInstanceId, attempt.RunnerName, pitcher.InstanceId, pitcher.DisplayName,
             attempt.FromBase, isSuccess));
 
         return !gameState.IsGameOver && isTopInning == gameState.IsTopInning;

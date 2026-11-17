@@ -4,29 +4,54 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// ① 경기 전 화면. 대진 · 상대전적 · 선발 · 양 팀 타순을 보여주고 경기를 시작한다 (명세 ①)
+/// ① 경기 전 화면. 대진 · 상대전적 · 선발 투수 · 양 팀 타순을 보여주고 경기를 시작한다 (명세 ① · 중계 그래픽 B안).
+/// 대진 판은 양 끝에 팀 색 면과 반쯤 걸친 엠블럼, 가운데 VS 양옆에 로고를 둔다. 팀 이름은 판 아래 귀퉁이에 선다
 /// </summary>
 public class PreGameScreen : UiScreenBehaviour
 {
-    private const float LineupColumnWidth = 520f;
-    private const float LineupTop = 540f;
-    private const float RowGap = 6f;
+    private const float SideMargin = 24f;
+    private const float PanelWidth = 1032f;
+    private const float VersusTop = 120f;
+    private const float VersusHeight = 250f;
+    private const float LogoSize = 124f;
+    private const float StarterTop = 404f;
+    private const float StarterHeight = 196f;
+    private const float StarterCardWidth = 124f;
+    private const float StarterCardLift = 22f;
+    private const float StarterTextInset = 184f;
+    private const float LineupTop = 628f;
+    private const float LineupGap = 16f;
+    private const float CtaHeight = 160f;
+    private const float CtaBottom = 36f;
+    private const float CtaFontSize = 50f;
+    private const string CtaIcon = "league";
 
     private Action _onStart;
 
     [SerializeField] private TextMeshProUGUI _tierText;
     [SerializeField] private TextMeshProUGUI _progressText;
+    [SerializeField] private Image _awayField;
+    [SerializeField] private Image _homeField;
+    [SerializeField] private Image _awayEdgeEmblem;
+    [SerializeField] private Image _homeEdgeEmblem;
+    [SerializeField] private TeamEmblemView _awayLogo;
+    [SerializeField] private TeamEmblemView _homeLogo;
     [SerializeField] private TextMeshProUGUI _awayNameText;
     [SerializeField] private TextMeshProUGUI _homeNameText;
-    [SerializeField] private TextMeshProUGUI _headToHeadText;
     [SerializeField] private TextMeshProUGUI _awayMyTeamTag;
     [SerializeField] private TextMeshProUGUI _homeMyTeamTag;
-    [SerializeField] private TeamEmblemView _awayEmblem;
-    [SerializeField] private TeamEmblemView _homeEmblem;
-    [SerializeField] private PlayerChipView _awayStarterChip;
-    [SerializeField] private PlayerChipView _homeStarterChip;
-    [SerializeField] private LineupRowView[] _awayRows;
-    [SerializeField] private LineupRowView[] _homeRows;
+    [SerializeField] private TextMeshProUGUI _headToHeadText;
+    [SerializeField] private CardView _awayStarterCard;
+    [SerializeField] private CardView _homeStarterCard;
+    [SerializeField] private TextMeshProUGUI _awayStarterName;
+    [SerializeField] private TextMeshProUGUI _homeStarterName;
+    [SerializeField] private TextMeshProUGUI _awayStarterRole;
+    [SerializeField] private TextMeshProUGUI _homeStarterRole;
+    [SerializeField] private TextMeshProUGUI _awayStarterOvr;
+    [SerializeField] private TextMeshProUGUI _homeStarterOvr;
+    [SerializeField] private MatchLineupColumnView _awayColumn;
+    [SerializeField] private MatchLineupColumnView _homeColumn;
+    [SerializeField] private LobbyMenuTileView _startTile;
 
     /// <summary>
     /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
@@ -50,147 +75,197 @@ public class PreGameScreen : UiScreenBehaviour
         _tierText.text = $"{LeagueTierNames.Get(season.Tier)} 리그";
         _progressText.text = $"{season.CurrentDayIndex + 1} / {season.TotalDayCount}";
 
-        _awayNameText.text = game.AwayTeamName;
-        _homeNameText.text = game.HomeTeamName;
-        _awayEmblem.SetTeam(game.AwayTeamName);
-        _homeEmblem.SetTeam(game.HomeTeamName);
-
         bool isPlayerHome = game.HomeTeamName == playerTeamName;
 
-        _awayMyTeamTag.gameObject.SetActive(!isPlayerHome);
-        _homeMyTeamTag.gameObject.SetActive(isPlayerHome);
-
+        SetTeams(game.AwayTeamName, game.HomeTeamName, isPlayerHome);
         _headToHeadText.text = BuildHeadToHeadText(season, game, playerTeamName);
 
-        _awayStarterChip.SetPitcher(context.AwayPitchers[SimulationContext.StartingPitcherSlot], !isPlayerHome);
-        _homeStarterChip.SetPitcher(context.HomePitchers[SimulationContext.StartingPitcherSlot], isPlayerHome);
+        SetStarter(_awayStarterCard, _awayStarterName, _awayStarterRole, _awayStarterOvr,
+            context.AwayPitchers[SimulationContext.StartingPitcherSlot], !isPlayerHome);
+        SetStarter(_homeStarterCard, _homeStarterName, _homeStarterRole, _homeStarterOvr,
+            context.HomePitchers[SimulationContext.StartingPitcherSlot], isPlayerHome);
 
-        FillLineup(_awayRows, context.AwayLineup, !isPlayerHome);
-        FillLineup(_homeRows, context.HomeLineup, isPlayerHome);
+        _awayColumn.Fill(game.AwayTeamName, context.AwayLineup, !isPlayerHome);
+        _homeColumn.Fill(game.HomeTeamName, context.HomeLineup, isPlayerHome);
 
         PlayEntranceEffect();
     }
 
-    //양 팀 심볼이 튀어오르고 라인업이 위에서부터 차례로 뜬다
-    private void PlayEntranceEffect()
-    {
-        UiEffects.Pop(_awayEmblem.Root, 0.6f, 0.34f);
-        UiEffects.Pop(_homeEmblem.Root, 0.6f, 0.34f, 0.08f);
-
-        for (int i = 0; i < _awayRows.Length; i++)
-        {
-            float delay = i * 0.035f;
-
-            UiEffects.Pop(_awayRows[i].Root, 0.94f, 0.22f, delay);
-            UiEffects.Pop(_homeRows[i].Root, 0.94f, 0.22f, delay);
-        }
-    }
-
     protected override void BindEvents()
     {
-        BindButton("StartButton", OnStartClicked);
+        Bind(_startTile.Button, OnStartClicked);
     }
 
     protected override void Build()
     {
         _tierText = UiBuilder.CreateText(Root, "Tier", 48f, UiPalette.Text1);
         UiBuilder.Place(_tierText.rectTransform, 32f, 36f, 600f, 56f);
+        _tierText.fontStyle = FontStyles.Bold;
 
-        _progressText = UiBuilder.CreateText(Root, "Progress", 36f, UiPalette.Text2, TextAlignmentOptions.Right);
+        _progressText = BroadcastPanel.CreateNumber(Root, "Progress", 34f, UiPalette.Text2, TextAlignmentOptions.Right);
         UiBuilder.PlaceRight(_progressText.rectTransform, 32f, 44f, 300f, 44f);
 
-        Image matchPanel = UiBuilder.CreateImage(Root, "MatchPanel", UiPalette.BgPanel,
-            UiSprites.PanelLarge, Image.Type.Sliced);
-        UiBuilder.Place(matchPanel.rectTransform, 24f, 116f, 1032f, 230f);
+        BuildVersusPanel();
+        BuildStarterPanel();
 
-        _awayEmblem = TeamEmblemView.Bake(matchPanel.transform, 120f);
-        UiBuilder.Place(_awayEmblem.Root, 40f, 28f, 120f, 120f);
+        float columnWidth = (PanelWidth - LineupGap) * 0.5f;
+        float lineupBottom = CtaBottom + CtaHeight + SideMargin;
 
-        _homeEmblem = TeamEmblemView.Bake(matchPanel.transform, 120f);
-        UiBuilder.Place(_homeEmblem.Root, 872f, 28f, 120f, 120f);
+        _awayColumn = MatchLineupColumnView.Bake(Root, "AwayLineup", "원정 타순", SideMargin, columnWidth, LineupTop, lineupBottom);
+        _homeColumn = MatchLineupColumnView.Bake(Root, "HomeLineup", "홈 타순", SideMargin + columnWidth + LineupGap, columnWidth, LineupTop, lineupBottom);
 
-        _awayNameText = UiBuilder.CreateText(matchPanel.transform, "AwayName", 44f, UiPalette.Text1,
-            TextAlignmentOptions.Center);
-        UiBuilder.Place(_awayNameText.rectTransform, 20f, 152f, 160f, 50f);
+        _startTile = LobbyMenuTileView.Create(Root, "StartButton", "경기 시작", CtaIcon,
+            new Vector2(PanelWidth, CtaHeight), CtaFontSize, true, OnStartClicked, true);
 
-        _homeNameText = UiBuilder.CreateText(matchPanel.transform, "HomeName", 44f, UiPalette.Text1,
-            TextAlignmentOptions.Center);
-        UiBuilder.Place(_homeNameText.rectTransform, 852f, 152f, 160f, 50f);
+        RectTransform startRect = _startTile.Root;
 
-        TextMeshProUGUI awayTag = UiBuilder.CreateLabel(matchPanel.transform, "AwayTag", "AWAY", 26f,
-            UiPalette.Text3, TextAlignmentOptions.Center);
-        UiBuilder.Place(awayTag.rectTransform, 20f, 2f, 160f, 30f);
-
-        TextMeshProUGUI homeTag = UiBuilder.CreateLabel(matchPanel.transform, "HomeTag", "HOME", 26f,
-            UiPalette.Text3, TextAlignmentOptions.Center);
-        UiBuilder.Place(homeTag.rectTransform, 852f, 2f, 160f, 30f);
-
-        _awayMyTeamTag = UiBuilder.CreateLabel(matchPanel.transform, "AwayMyTeam", "MY TEAM", 24f,
-            UiPalette.AccentGold, TextAlignmentOptions.Center);
-        UiBuilder.Place(_awayMyTeamTag.rectTransform, 20f, 206f, 160f, 26f);
-
-        _homeMyTeamTag = UiBuilder.CreateLabel(matchPanel.transform, "HomeMyTeam", "MY TEAM", 24f,
-            UiPalette.AccentGold, TextAlignmentOptions.Center);
-        UiBuilder.Place(_homeMyTeamTag.rectTransform, 852f, 206f, 160f, 26f);
-
-        TextMeshProUGUI versus = UiBuilder.CreateLabel(matchPanel.transform, "Versus", "VS", 60f,
-            UiPalette.Text3, TextAlignmentOptions.Center);
-        UiBuilder.Place(versus.rectTransform, 416f, 40f, 200f, 70f);
-
-        _headToHeadText = UiBuilder.CreateText(matchPanel.transform, "HeadToHead", 34f, UiPalette.Text2,
-            TextAlignmentOptions.Center);
-        UiBuilder.Place(_headToHeadText.rectTransform, 316f, 128f, 400f, 44f);
-
-        _awayStarterChip = PlayerChipView.Bake(Root, "선발", LineupColumnWidth, false);
-        UiBuilder.Place(_awayStarterChip.Root, 24f, 376f, LineupColumnWidth, PlayerChipView.ChipHeight);
-
-        _homeStarterChip = PlayerChipView.Bake(Root, "선발", LineupColumnWidth, true);
-        UiBuilder.Place(_homeStarterChip.Root, 536f, 376f, LineupColumnWidth, PlayerChipView.ChipHeight);
-
-        RectTransform awayColumn = UiBuilder.CreateRect(Root, "AwayLineup");
-        UiBuilder.Place(awayColumn, 24f, LineupTop, LineupColumnWidth, SimulationContext.LineupSize * (LineupRowView.RowHeight + RowGap));
-
-        RectTransform homeColumn = UiBuilder.CreateRect(Root, "HomeLineup");
-        UiBuilder.Place(homeColumn, 536f, LineupTop, LineupColumnWidth, SimulationContext.LineupSize * (LineupRowView.RowHeight + RowGap));
-
-        _awayRows = CreateLineupRows(awayColumn);
-        _homeRows = CreateLineupRows(homeColumn);
-
-        Button startButton = UiBuilder.CreateButton(Root, "StartButton", "경기 시작", 44f, true, OnStartClicked);
-        RectTransform startRect = startButton.GetComponent<RectTransform>();
-
-        startRect.anchorMin = new Vector2(0f, 0f);
-        startRect.anchorMax = new Vector2(1f, 0f);
+        startRect.anchorMin = startRect.anchorMax = new Vector2(0.5f, 0f);
         startRect.pivot = new Vector2(0.5f, 0f);
-        startRect.offsetMin = new Vector2(24f, 32f);
-        startRect.offsetMax = new Vector2(-24f, 152f);
+        startRect.anchoredPosition = new Vector2(0f, CtaBottom);
     }
 
-    private LineupRowView[] CreateLineupRows(RectTransform column)
+    //대진 판: 팀 색 면 · 걸친 엠블럼 · 로고 VS 로고 · 상대전적 · 아래 귀퉁이 팀 이름
+    private void BuildVersusPanel()
     {
-        LineupRowView[] rows = new LineupRowView[SimulationContext.LineupSize];
+        Image panel = BroadcastPanel.Create(Root, "VersusPanel", true);
+        RectTransform rect = panel.rectTransform;
 
-        for (int i = 0; i < rows.Length; i++)
-        {
-            rows[i] = LineupRowView.Bake(column, LineupColumnWidth);
-            rows[i].SetIndex(i, RowGap);
-        }
+        UiBuilder.Place(rect, SideMargin, VersusTop, PanelWidth, VersusHeight);
 
-        return rows;
+        _awayField = BroadcastPanel.CreateTeamField(rect, "AwayField", true, 0.5f);
+        _homeField = BroadcastPanel.CreateTeamField(rect, "HomeField", false, 0.5f);
+        _awayEdgeEmblem = BroadcastPanel.CreateEdgeEmblem(rect, "AwayEdgeEmblem");
+        _homeEdgeEmblem = BroadcastPanel.CreateEdgeEmblem(rect, "HomeEdgeEmblem");
+
+        float versusWidth = 120f;
+        float versusLeft = (PanelWidth - versusWidth) * 0.5f;
+
+        TextMeshProUGUI versus = BroadcastPanel.CreateNumber(rect, "Versus", 64f, UiPalette.Text3);
+        UiBuilder.Place(versus.rectTransform, versusLeft, 54f, versusWidth, 80f);
+        versus.text = "VS";
+
+        _awayLogo = TeamEmblemView.Bake(rect, LogoSize);
+        UiBuilder.Place(_awayLogo.Root, versusLeft - 28f - LogoSize, 32f, LogoSize, LogoSize);
+
+        _homeLogo = TeamEmblemView.Bake(rect, LogoSize);
+        UiBuilder.Place(_homeLogo.Root, versusLeft + versusWidth + 28f, 32f, LogoSize, LogoSize);
+
+        _headToHeadText = UiBuilder.CreateText(rect, "HeadToHead", 28f, UiPalette.Text2, TextAlignmentOptions.Center);
+        UiBuilder.Place(_headToHeadText.rectTransform, (PanelWidth - 400f) * 0.5f, 176f, 400f, 40f);
+
+        TextMeshProUGUI awayTag = UiBuilder.CreateLabel(rect, "AwayTag", "AWAY", 24f, UiPalette.Text2);
+        UiBuilder.Place(awayTag.rectTransform, 36f, 136f, 110f, 30f);
+
+        _awayMyTeamTag = UiBuilder.CreateLabel(rect, "AwayMyTeam", "MY TEAM", 24f, UiPalette.AccentGold);
+        UiBuilder.Place(_awayMyTeamTag.rectTransform, 140f, 136f, 170f, 30f);
+
+        _awayNameText = UiBuilder.CreateText(rect, "AwayName", 52f, UiPalette.Text1);
+        UiBuilder.Place(_awayNameText.rectTransform, 36f, 168f, 280f, 60f);
+        _awayNameText.fontStyle = FontStyles.Bold;
+
+        TextMeshProUGUI homeTag = UiBuilder.CreateLabel(rect, "HomeTag", "HOME", 24f, UiPalette.Text2, TextAlignmentOptions.Right);
+        UiBuilder.PlaceRight(homeTag.rectTransform, 36f, 136f, 110f, 30f);
+
+        _homeMyTeamTag = UiBuilder.CreateLabel(rect, "HomeMyTeam", "MY TEAM", 24f, UiPalette.AccentGold, TextAlignmentOptions.Right);
+        UiBuilder.PlaceRight(_homeMyTeamTag.rectTransform, 140f, 136f, 170f, 30f);
+
+        _homeNameText = UiBuilder.CreateText(rect, "HomeName", 52f, UiPalette.Text1, TextAlignmentOptions.Right);
+        UiBuilder.PlaceRight(_homeNameText.rectTransform, 36f, 168f, 280f, 60f);
+        _homeNameText.fontStyle = FontStyles.Bold;
     }
 
-    private static void FillLineup(LineupRowView[] rows, HitterSnapshot[] lineup, bool isPlayerSide)
+    //선발 판: 가운데 "선발 투수" 한 줄, 양쪽 끝에 판 위로 걸친 카드 + 이름 · 보직 · OVR
+    private void BuildStarterPanel()
     {
-        for (int i = 0; i < rows.Length; i++)
-        {
-            if (i >= lineup.Length)
-            {
-                rows[i].SetEmpty("—");
-                continue;
-            }
+        Image panel = BroadcastPanel.Create(Root, "StarterPanel");
+        RectTransform rect = panel.rectTransform;
 
-            rows[i].SetHitter(i + 1, lineup[i], isPlayerSide);
+        UiBuilder.Place(rect, SideMargin, StarterTop, PanelWidth, StarterHeight);
+
+        TextMeshProUGUI label = UiBuilder.CreateText(rect, "StarterLabel", 30f, UiPalette.Text2, TextAlignmentOptions.Center);
+        UiBuilder.Place(label.rectTransform, (PanelWidth - 300f) * 0.5f, 0f, 300f, StarterHeight);
+        label.text = "선발 투수";
+        label.characterSpacing = 4f;
+
+        _awayStarterCard = CreateStarterCard("AwayStarterCard", SideMargin + 32f);
+        _homeStarterCard = CreateStarterCard("HomeStarterCard", SideMargin + PanelWidth - 32f - StarterCardWidth);
+
+        _awayStarterName = UiBuilder.CreateText(rect, "AwayStarterName", 40f, UiPalette.Text1);
+        UiBuilder.Place(_awayStarterName.rectTransform, StarterTextInset, 30f, 300f, 50f);
+
+        _awayStarterRole = UiBuilder.CreateText(rect, "AwayStarterRole", 26f, UiPalette.Text2);
+        UiBuilder.Place(_awayStarterRole.rectTransform, StarterTextInset, 82f, 160f, 32f);
+
+        _awayStarterOvr = BroadcastPanel.CreateNumber(rect, "AwayStarterOvr", 66f, UiPalette.Text1, TextAlignmentOptions.MidlineLeft);
+        UiBuilder.Place(_awayStarterOvr.rectTransform, StarterTextInset, 112f, 160f, 72f);
+
+        _homeStarterName = UiBuilder.CreateText(rect, "HomeStarterName", 40f, UiPalette.Text1, TextAlignmentOptions.Right);
+        UiBuilder.PlaceRight(_homeStarterName.rectTransform, StarterTextInset, 30f, 300f, 50f);
+
+        _homeStarterRole = UiBuilder.CreateText(rect, "HomeStarterRole", 26f, UiPalette.Text2, TextAlignmentOptions.Right);
+        UiBuilder.PlaceRight(_homeStarterRole.rectTransform, StarterTextInset, 82f, 160f, 32f);
+
+        _homeStarterOvr = BroadcastPanel.CreateNumber(rect, "HomeStarterOvr", 66f, UiPalette.Text1, TextAlignmentOptions.MidlineRight);
+        UiBuilder.PlaceRight(_homeStarterOvr.rectTransform, StarterTextInset, 112f, 160f, 72f);
+    }
+
+    //판 위쪽으로 살짝 걸친 카드. 판 밖이라 판 모양에 잘리지 않는다
+    private CardView CreateStarterCard(string name, float x)
+    {
+        CardView card = CardView.Bake(Root, StarterCardWidth, false);
+        RectTransform rect = card.Root;
+
+        rect.name = name;
+        UiBuilder.Place(rect, x, StarterTop - StarterCardLift, StarterCardWidth, rect.sizeDelta.y);
+        UiBuilder.CenterPivot(rect);
+
+        return card;
+    }
+
+    private void SetTeams(string awayTeamName, string homeTeamName, bool isPlayerHome)
+    {
+        _awayNameText.text = awayTeamName;
+        _homeNameText.text = homeTeamName;
+        _awayLogo.SetTeam(awayTeamName);
+        _homeLogo.SetTeam(homeTeamName);
+        _awayMyTeamTag.gameObject.SetActive(!isPlayerHome);
+        _homeMyTeamTag.gameObject.SetActive(isPlayerHome);
+
+        BroadcastPanel.PaintTeamField(_awayField, awayTeamName);
+        BroadcastPanel.PaintTeamField(_homeField, homeTeamName);
+        BroadcastPanel.PlaceEdgeEmblem(_awayEdgeEmblem, awayTeamName, true);
+        BroadcastPanel.PlaceEdgeEmblem(_homeEdgeEmblem, homeTeamName, false);
+    }
+
+    private static void SetStarter(CardView card, TextMeshProUGUI nameText, TextMeshProUGUI roleText,
+        TextMeshProUGUI ovrText, PitcherSnapshot pitcher, bool isPlayerCard)
+    {
+        nameText.text = PlayerLabelFormat.NameWithSmallYear(pitcher.Name, pitcher.Year);
+        roleText.text = pitcher.Position;
+        ovrText.text = pitcher.OVR.ToString();
+        ovrText.color = UiPalette.Text1;
+
+        if (!CardDisplayInfo.TryCreateForSnapshot(pitcher.InstanceId, isPlayerCard, out CardDisplayInfo info))
+        {
+            card.SetEmpty(string.Empty);
+            return;
         }
+
+        card.SetCard(info);
+
+        if (isPlayerCard)
+            ovrText.color = CardVisualLookup.GetTypeColor(info.CardType);
+    }
+
+    //양 팀 로고가 튀어오르고 선발 카드 · 타순이 위에서부터 차례로 뜬다
+    private void PlayEntranceEffect()
+    {
+        UiEffects.Pop(_awayLogo.Root, 0.6f, 0.34f);
+        UiEffects.Pop(_homeLogo.Root, 0.6f, 0.34f, 0.08f);
+        UiEffects.Pop(_awayStarterCard.Root, 0.82f, 0.3f, 0.12f);
+        UiEffects.Pop(_homeStarterCard.Root, 0.82f, 0.3f, 0.16f);
+        _awayColumn.PlayEntrance(0.18f);
+        _homeColumn.PlayEntrance(0.18f);
     }
 
     //이번 리그에서 이 상대에게 거둔 전적

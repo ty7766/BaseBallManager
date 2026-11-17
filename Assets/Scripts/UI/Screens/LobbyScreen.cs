@@ -11,7 +11,7 @@ using UnityEngine.UI;
 /// </summary>
 public class LobbyScreen : UiScreenBehaviour
 {
-    private const int MenuCount = 11;
+    private const int MenuCount = 10;
     private const int LeagueIndex = 0;
     //칸 배치: 좌우 여백 · 칸 사이 · 바닥 여백
     private const float SideMargin = 32f;
@@ -19,11 +19,11 @@ public class LobbyScreen : UiScreenBehaviour
     private const float BottomMargin = 40f;
     private const float ContentWidth = 1080f - SideMargin * 2f;
     //위쪽 머리: 재화 줄 · 라인업 상태
-    private const float CurrencyTop = 32f;
-    private const float LineupTop = 140f;
-    private const float HeaderBottom = 190f;
+    private const float CurrencyTop = 96f;
+    private const float LineupTop = 204f;
+    private const float HeaderBottom = 254f;
     //입체 엠블럼: 머리와 메뉴 사이 빈 칸 가운데에 놓는 정사각형 크기. 화면 폭을 살짝 넘겨 메뉴 뒤로 깔린다
-    private const float TokenSize = 1320f;
+    private const float TokenSize = 990f;
     private const float TokenMargin = 12f;
 
     //줄마다 높이 · 글자 크기 (아래 줄부터)
@@ -42,8 +42,7 @@ public class LobbyScreen : UiScreenBehaviour
         new MenuSlot("카드 조합", "combine", 2, 0, 3),
         new MenuSlot("카드 분해", "dismantle", 2, 1, 3),
         new MenuSlot("골든글러브 제작", "goldenglove", 2, 2, 3),
-        new MenuSlot("저장", "save", 1, 0, 2),
-        new MenuSlot("빠른 시작", "quickstart", 1, 1, 2)
+        new MenuSlot("빠른 시작", "quickstart", 1, 0, 1)
     };
 
     [SerializeField] private TextMeshProUGUI _lineupText;

@@ -70,7 +70,6 @@ public class CardDetailScreen : UiScreenBehaviour
         UiBuilder.Place(_hintText.rectTransform, 40f, 110f, 1000f, 44f);
         _hintText.text = HintFront;
 
-        //왼쪽 위 뒤로가기 (기기 뒤로가기 키와 같은 동작)
         Button backButton = UiBuilder.CreateButton(Root, "BackButton", "←", 44f, false, OnCloseClicked);
         UiBuilder.Place(backButton.GetComponent<RectTransform>(), 24f, 24f, 96f, 96f);
 

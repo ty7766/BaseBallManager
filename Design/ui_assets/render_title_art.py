@@ -6,7 +6,7 @@
 
 출력 Assets/Resources/UI/Title/ (1080x1920 기준 · TitleKeyArtView 가 층별로 깔고 DOTween 으로 연출한다)
     title_bg.png           바탕 (불투명)
-    title_brush_red.png    붉은 붓질 · 잉크 튐 (WipeReveal 로 사선으로 쓸며 나타남)
+    title_brush_red.png    초록 붓질 · 잉크 튐 (WipeReveal 로 사선으로 쓸며 나타남 · 파일 이름은 GUID 유지를 위해 그대로)
     title_brush_black.png  검은 붓질
     title_bigtext.png      뒤 큰 윤곽 글자 MANAGER
 선수는 실행 중에 Resources/Photos 에서 불러 얹는다 — 실제 선수 사진은 커밋하지 않는다
@@ -27,7 +27,7 @@ W, H = 1080, 1920
 RNG = np.random.default_rng(26)
 Y, X = np.mgrid[0:H, 0:W].astype(np.float32)
 U, V = X / W, Y / H
-RED = np.array([0.80, 0.06, 0.12], np.float32)
+GREEN = np.array([0.03, 0.32, 0.14], np.float32)
 
 
 def blur(a, s):
@@ -118,19 +118,19 @@ bg = screen(bg, (smoke * 0.55)[..., None] * np.array([0.92, 0.92, 0.94]))
 bg = screen(bg, (np.exp(-(((U - 0.05) / 0.35) ** 2 + ((V - 0.02) / 0.22) ** 2)) * 0.35)[..., None])
 bg = screen(bg, (blur(scratches(260, 4, -62, 25), 0.4) * 0.16)[..., None])
 
-# ── 2. 붉은 · 검은 붓질 (오른쪽 위에서 왼쪽 아래로 쓸어내림) ────────────────
-red_alpha = np.zeros((H, W), np.float32)
+# ── 2. 초록 · 검은 붓질 (오른쪽 위에서 왼쪽 아래로 쓸어내림) ────────────────
+green_alpha = np.zeros((H, W), np.float32)
 strokes = [((1180, 120), (520, 980), 230, 10), ((1150, 420), (640, 1150), 150, 11), ((900, -40), (420, 620), 120, 12),
            ((1220, 760), (760, 1420), 190, 13), ((260, 1050), (-60, 1500), 160, 14)]
 for p0, p1, w, s in strokes:
-    red_alpha = np.maximum(red_alpha, dry_brush(p0, p1, w, s))
+    green_alpha = np.maximum(green_alpha, dry_brush(p0, p1, w, s))
 black_alpha = np.zeros((H, W), np.float32)
 for p0, p1, w, s in (((1120, 300), (700, 900), 70, 21), ((980, 60), (760, 400), 45, 22), ((1200, 980), (900, 1380), 60, 23)):
     black_alpha = np.maximum(black_alpha, dry_brush(p0, p1, w, s, 0.6))
-red_alpha = np.maximum(red_alpha, splatter((820, 520), -55, 210, 420, 30) * 0.95)
-red_alpha = np.maximum(red_alpha, splatter((300, 1250), -50, 160, 160, 31, 9) * 0.9)
-red_tex = RED * (0.75 + 0.35 * field((H, W), 30, 18, 40, 3))[..., None]
-art = over(bg, red_tex, red_alpha * 0.92)
+green_alpha = np.maximum(green_alpha, splatter((820, 520), -55, 210, 420, 30) * 0.95)
+green_alpha = np.maximum(green_alpha, splatter((300, 1250), -50, 160, 160, 31, 9) * 0.9)
+green_tex = GREEN * (0.75 + 0.35 * field((H, W), 30, 18, 40, 3))[..., None]
+art = over(bg, green_tex, green_alpha * 0.92)
 art = over(art, np.full(3, 0.03, np.float32), black_alpha * 0.85)
 art = screen(art, (blur(scratches(140, 5, -55, 20), 0.3) * 0.12)[..., None])
 
@@ -162,6 +162,6 @@ bg_final = bg * (0.94 + 0.08 * field((H, W), 60, 34, 90, 2))[..., None]
 bg_final *= (1 - 0.35 * np.clip(((U - 0.5) / 0.6) ** 2 + ((V - 0.45) / 0.75) ** 2, 0, 1))[..., None]
 save_rgb(bg_final, "title_bg.png")
 print("title_bg.png", (W, H))
-save_rgba(red_tex, red_alpha * 0.92, "title_brush_red.png")
+save_rgba(green_tex, green_alpha * 0.92, "title_brush_red.png")
 save_rgba(np.full(3, 0.03, np.float32), black_alpha * 0.85, "title_brush_black.png")
 save_rgba(np.ones(3, np.float32), np.asarray(big, np.float32) / 255 * 0.16, "title_bigtext.png")

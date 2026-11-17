@@ -17,19 +17,21 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     public const float BaseHeight = 1957f;
 
     /// <summary>
-    /// 사진 칸 (카드 좌표, 위에서부터). 카드 폭에 꽉 채우고 머리가 별 아래에 오게 내린다.
-    /// 좌우 잘림이 카드 테두리와 겹쳐 사진이 일부러 자른 것처럼 보인다
+    /// 사진 칸 (카드 좌표, 위에서부터). 카드보다 조금 크게 깔고 카드 모양 밖은 셰이더가 지운다.
+    /// 머리 높이는 별 아래에 두고 나머지를 키워 몸이 아래 · 좌우 테두리에서 잘린다
     /// </summary>
-    public const float PhotoTop = 202f;
-    public const float PhotoHeight = 1748f;
+    public const float PhotoLeft = -57f;
+    public const float PhotoTop = 185f;
+    public const float PhotoWidth = 1512f;
+    public const float PhotoHeight = 1891f;
 
     private const int MaxStars = 5;
     private const int StatCount = 4;
     //별 그림 한 칸(그림자 자리 포함) · 보이는 별 · 별 사이 간격 · 칸 윗변
-    private const float StarCell = 132f;
-    private const float StarSize = 106f;
-    private const float StarGap = 6f;
-    private const float StarTop = 45f;
+    private const float StarCell = 148f;
+    private const float StarSize = 119f;
+    private const float StarGap = 12f;
+    private const float StarTop = 37f;
     private const float StatBarMaxStat = 150f;
     //강화 숫자 크기. 두 자리(+10)는 메달 안에 들도록 줄인다
     private const float EnhanceFontSize = 108f;
@@ -101,14 +103,14 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
     private Action _onClick;
     private Action _onLongPress;
-    private float _pressSeconds;
-    private bool _pressing;
+    private UiTween _pressTween;
     private bool _longPressFired;
     private bool _showBack;
     private float _displayWidth;
     private string _photoKey;
     private bool _cardFontApplied;
-    private float _ovrMaxWidth;
+    //두 자리 중 가장 넓은 숫자 (예: "00"). 폭 자체가 아니라 문자열을 들고 있다가 매번 같이 잰다
+    private string _ovrWidestTwoDigits;
     [SerializeField] private bool _hasBack;
     //게이지 · 자물쇠는 처음 쓸 때 만든다. 이미 구운 화면 프리팹을 다시 굽지 않아도 된다
     private RectTransform _pressGauge;
@@ -131,12 +133,12 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         return view;
     }
 
-    //생성자 본문. 베이크에서 한 번만 돈다
     protected override void BindEvents()
     {
         Bind(_button, OnClicked);
     }
 
+    //생성자 본문. 베이크에서 한 번만 돈다
     private void BuildWidget(Transform parent, float width, bool withBack)
     {
         _hasBack = withBack;
@@ -154,8 +156,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _button.interactable = false;
         _button.onClick.AddListener(OnClicked);
 
-        //시그·골글 테두리 광은 카드 뒤에 깐다 (명세 6-6). 9-슬라이스 테두리도 카드 축소 비율을 따라야
-        //고리가 카드 가장자리에 붙는다. 그대로 두면 작은 카드에서 고리가 카드 안쪽으로 파고든다
         _glow = CreateLayer(Root, "Glow", "Card/card_fx_glow_signature", -180f, -180f, BaseWidth + 360f, BaseHeight + 360f);
         _glow.type = Image.Type.Sliced;
         _glow.pixelsPerUnitMultiplier = 1f / _scale;
@@ -170,17 +170,14 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
             _back.gameObject.SetActive(false);
         }
 
-        // --- 앞면: 배경 -> 사진 뒤 그림자 -> 선수 -> 하단 물감 띠 -> 글자 -> 광택 (명세 1-2 · 6-6) ---
-        //배경 그림은 완전 불투명이라 맨 아래다. 골글 월계수는 그 위, 사진 뒤에 깐다
         _frontBase = CreateLayer(_front, "Base", null, 0f, 0f, BaseWidth, BaseHeight);
         _overlay = CreateHiddenLayer(_front, "Overlay", 0f, 0f, BaseWidth, BaseHeight);
 
-        //그림자·빛 번짐은 사진 칸보다 넓게 퍼지므로 카드 전체 칸에 깔고 셰이더가 사진 위치를 안다
         _photoBack = CreateHiddenLayer(_front, "PhotoBack", 0f, 0f, BaseWidth, BaseHeight);
-        _photo = CreateHiddenLayer(_front, "Photo", 0f, PhotoTop, BaseWidth, PhotoHeight);
+        _photo = CreateHiddenLayer(_front, "Photo", PhotoLeft, PhotoTop, PhotoWidth, PhotoHeight);
         _foreground = CreateHiddenLayer(_front, "Foreground", 0f, 0f, BaseWidth, BaseHeight);
 
-        _ovrText = CreateCardText(_front, "Ovr", 230f, OvrLeft, OvrTop, OvrWidth, 230f, TextAlignmentOptions.Center);
+        _ovrText = CreateCardText(_front, "Ovr", 218f, OvrLeft, OvrTop, OvrWidth, 230f, TextAlignmentOptions.Center);
         CenterPivotX(_ovrText.rectTransform);
         _positionText = CreateCardText(_front, "Position", 104f, OvrLeft, PositionTop, OvrWidth, 104f, TextAlignmentOptions.Center);
         _teamLogo = CreateLayer(_front, "TeamLogo", null, 1046f, 60f, 300f, 300f);
@@ -209,7 +206,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _emptyText = CreateCardText(_front, "Empty", 120f, 60f, 880f, 1278f, 200f, TextAlignmentOptions.Center);
         _emptyText.gameObject.SetActive(false);
 
-        // --- 뒷면 ---
         if (!_hasBack)
             return;
 
@@ -275,7 +271,6 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _photoKey = info.PhotoKey;
         ApplyPhoto();
 
-        //노말은 어두운 배경이라 흰 숫자, 시그·골글은 밝은 배경이라 진한 새김색
         Material ovrMaterial = style.IsLightBase ? CardTextMaterials.LightShadow : CardTextMaterials.Shadow;
 
         _ovrText.text = info.FinalOvr.ToString();
@@ -377,38 +372,25 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
     void IPointerDownHandler.OnPointerDown(PointerEventData eventData)
     {
-        _pressing = true;
-        _pressSeconds = 0f;
         _longPressFired = false;
+        UiAnimator.Cancel(_pressTween);
+        _pressTween = _onLongPress == null ? null : UiAnimator.Play(LongPressSeconds, OnPressProgress, OnLongPressReached);
     }
 
     void IPointerUpHandler.OnPointerUp(PointerEventData eventData)
     {
-        _pressing = false;
-        HidePressGauge();
+        StopPress();
     }
 
     void IPointerExitHandler.OnPointerExit(PointerEventData eventData)
     {
-        _pressing = false;
-        HidePressGauge();
+        StopPress();
     }
 
-    //길게 누르는 동안만 세며 게이지를 채운다. 한 번 터지면 손을 뗄 때까지 다시 터지지 않는다
-    private void Update()
+    //누르던 중 화면이 꺼지면 숨은 카드에서 상세 보기가 열리지 않게 끊는다
+    private void OnDisable()
     {
-        if (!_pressing || _longPressFired || _onLongPress == null)
-            return;
-
-        _pressSeconds += Time.unscaledDeltaTime;
-        ShowPressGauge(Mathf.InverseLerp(PressGaugeDelay, LongPressSeconds, _pressSeconds));
-
-        if (_pressSeconds < LongPressSeconds)
-            return;
-
-        _longPressFired = true;
-        HidePressGauge();
-        _onLongPress();
+        StopPress();
     }
 
     /// <summary>
@@ -420,7 +402,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
 
         _frontBase.sprite = UiSprites.Get(UiSprites.PanelLarge);
         _frontBase.type = Image.Type.Sliced;
-        _frontBase.color = Color.white;
+        _frontBase.color = UiPalette.BgPanel;
 
         _emptyText.fontSize = UnknownMarkSize * _scale;
         _emptyText.color = UiPalette.Text2;
@@ -510,25 +492,36 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
         _nameText.fontSharedMaterial = CardTextMaterials.Shadow;
         _enhanceText.font = cardFont;
         _enhanceText.fontSharedMaterial = CardTextMaterials.Emboss;
-        _ovrMaxWidth = MeasureWidestTwoDigits();
+        _ovrWidestTwoDigits = FindWidestTwoDigits();
     }
 
-    //세 자리 OVR 은 두 자리 최대 폭에 맞춰 가로로만 누른다. 키는 그대로라 숫자 크기가 같아 보인다
+    //세 자리 OVR 은 두 자리 최대 폭에 맞춰 가로로만 누른다. Awake 전 TMP 는 폭을 1/10 로 재므로 기준도 매번 같은 순간에 잰다
     private void FitOvrWidth()
     {
+        float maxWidth = _ovrText.GetPreferredValues(_ovrWidestTwoDigits).x;
         float width = _ovrText.GetPreferredValues(_ovrText.text).x;
-        float squeeze = _ovrMaxWidth > 0f && width > _ovrMaxWidth ? _ovrMaxWidth / width : 1f;
+        float squeeze = maxWidth > 0f && width > maxWidth ? maxWidth / width : 1f;
 
         _ovrText.rectTransform.localScale = new Vector3(squeeze, 1f, 1f);
     }
 
     //숫자마다 폭이 다른 글꼴이라 00 ~ 99 중 가장 넓은 것을 기준으로 삼는다
-    private float MeasureWidestTwoDigits()
+    private string FindWidestTwoDigits()
     {
-        float widest = 0f;
+        string widest = "00";
+        float widestWidth = 0f;
 
         for (int digit = 0; digit <= 9; digit++)
-            widest = Mathf.Max(widest, _ovrText.GetPreferredValues(digit.ToString() + digit).x);
+        {
+            string twoDigits = digit.ToString() + digit;
+            float width = _ovrText.GetPreferredValues(twoDigits).x;
+
+            if (width <= widestWidth)
+                continue;
+
+            widestWidth = width;
+            widest = twoDigits;
+        }
 
         return widest;
     }
@@ -666,7 +659,7 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
     {
         _backNameText.text = PlayerLabelFormat.NameWithYear(info.Name, info.Year);
         _backDetailText.text = $"{info.Position} · {info.TeamName} · {GradeLabel(info.CardGrade)}";
-        _backOvrText.text = "OVR " + info.FinalOvr;
+        _backOvrText.text = $"<size=80%>OVR</size> {UiFontProvider.WrapCardFont(info.FinalOvr.ToString())}";
         _backOvrText.color = typeColor;
 
         string[] labels = info.StatLabels;
@@ -719,6 +712,29 @@ public class CardView : UiWidgetBehaviour, IPointerDownHandler, IPointerUpHandle
             return;
 
         _onClick?.Invoke();
+    }
+
+    //길게 누르는 동안 게이지를 채운다. 카드마다 Update 를 돌리지 않고 공용 트윈 시계에 맡긴다
+    private void OnPressProgress(float progress)
+    {
+        ShowPressGauge(Mathf.InverseLerp(PressGaugeDelay, LongPressSeconds, progress * LongPressSeconds));
+    }
+
+    //다 채우면 한 번만 터진다. 손을 뗄 때 딸려 오는 클릭은 OnClicked 가 버린다
+    private void OnLongPressReached()
+    {
+        _pressTween = null;
+        _longPressFired = true;
+        HidePressGauge();
+        _onLongPress?.Invoke();
+    }
+
+    //누르기를 멈추고 게이지를 숨긴다
+    private void StopPress()
+    {
+        UiAnimator.Cancel(_pressTween);
+        _pressTween = null;
+        HidePressGauge();
     }
 
     //카드 가운데 원형 게이지. 어두운 원판 위 흐린 고리를 흰색으로 시계 방향 채운다

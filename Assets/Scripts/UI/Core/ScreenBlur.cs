@@ -27,7 +27,6 @@ public static class ScreenBlur
 
             RenderTexture next = Create(width, height);
 
-            //찍은 화면은 그래픽 API 에 따라 위아래가 뒤집혀 있다. 첫 축소에서 바로잡는다
             if (i == 0 && SystemInfo.graphicsUVStartsAtTop)
                 Graphics.Blit(current, next, new Vector2(1f, -1f), new Vector2(0f, 1f));
             else

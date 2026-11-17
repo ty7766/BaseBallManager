@@ -17,6 +17,12 @@
     Assets/Resources/UI/Common/check_circle.png     선택 표시 — 채움 없이 굵은 흰 선 원 + 체크 (강화 재료) 96 → 2배
     Assets/Resources/UI/Common/icon_minus.png       빼기 막대 (Image 색으로 틴트) 48 → 2배
     Assets/Resources/UI/Common/icon_plus.png        더하기 (빈 카드 자리 가운데, Image 색으로 틴트) 48 → 2배
+
+    중계 그래픽 판 (리그 화면 공용) — 카드와 같이 오른쪽 위 · 왼쪽 아래를 사선으로 깎는다
+    Assets/Resources/UI/Match/cut_panel.png         어두운 판 + 윗변 빛줄 (96 → 2배 · 9-슬라이스 64px)
+    Assets/Resources/UI/Match/cut_fill.png          흰 채움 (Image 색으로 틴트 · 마스크 모양) 96 → 2배 · 9-슬라이스 64px
+    Assets/Resources/UI/Match/cut_outline.png       흰 테 3 (Image 색으로 틴트) 96 → 2배 · 9-슬라이스 64px
+    Assets/Resources/UI/Match/cut_fill_small.png    작은 흰 채움 (칩 · 사진 칸 · 배지) 48 → 2배 · 9-슬라이스 32px
 """
 import subprocess
 import tempfile
@@ -51,6 +57,19 @@ def ringed(fill, ring, color):
     out = filled(fill) if fill else ""
     return out + (f'<path d="{corner_path(ring / 2, RADIUS)}" fill="none" stroke="{color}" '
                   f'stroke-width="{ring}"/>')
+
+
+def chamfer_path(size, cut, inset=0.0):
+    """오른쪽 위 · 왼쪽 아래를 사선으로 깎은 사각형 (카드 모양과 같은 방향, inset 만큼 안쪽)"""
+    a, b = inset, size - inset
+    c = max(0.0, cut - inset * 0.414)
+    return f'M{a},{a} H{b - c} L{b},{a + c} V{b} H{a + c} L{a},{b - c} Z'
+
+
+def cut_panel():
+    clip = f'<defs><clipPath id="c"><path d="{chamfer_path(96, 22)}"/></clipPath></defs>'
+    return (clip + f'<path d="{chamfer_path(96, 22)}" fill="rgba(25,27,30,0.94)"/>'
+            '<rect width="96" height="2" fill="rgba(255,255,255,0.16)" clip-path="url(#c)"/>')
 
 
 def tab_on():
@@ -115,6 +134,13 @@ SPRITES = {
     "tab_on": tab_on(),
 }
 
+CUT_SPRITES = {
+    "cut_panel": (cut_panel(), 96),
+    "cut_fill": (f'<path d="{chamfer_path(96, 22)}" fill="#FFFFFF"/>', 96),
+    "cut_outline": (f'<path d="{chamfer_path(96, 22, 1.5)}" fill="none" stroke="#FFFFFF" stroke-width="3"/>', 96),
+    "cut_fill_small": (f'<path d="{chamfer_path(48, 12)}" fill="#FFFFFF"/>', 48),
+}
+
 
 def render(name, body, folder="Match", width=SIZE, height=SIZE):
     """SVG 한 장을 투명 PNG로 (Edge 헤드리스 스크린샷)"""
@@ -146,6 +172,9 @@ if __name__ == "__main__":
     for sprite, svg_body in SPRITES.items():
         if not only or sprite in only:
             render(sprite, svg_body)
+    for sprite, (svg_body, box) in CUT_SPRITES.items():
+        if not only or sprite in only:
+            render(sprite, svg_body, "Match", box, box)
     for icon, (svg_body, icon_width, icon_height) in ICONS.items():
         if not only or icon in only:
             render(icon, svg_body, "Common", icon_width, icon_height)

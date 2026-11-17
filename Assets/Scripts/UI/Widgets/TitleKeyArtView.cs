@@ -37,6 +37,8 @@ public class TitleKeyArtView : UiWidgetBehaviour
     private const float PlayerEntryStart = 0.75f;
     private const float WaveInterval = 0.17f;
     private const int HeroWave = 3;
+    //선수 전체를 Slots 의 위 y 보다 이만큼 아래로 내린다
+    private const float PlayerDrop = 40f;
 
     //10구단 대표 한 명씩. 뒤 넷 → 가운데 셋 → 앞 둘 → 주인공 순서로 깔고 같은 순서로 들어온다 (키 · 가운데 x · 위 y · 높이 · 밝기 · 들어오는 쪽)
     private static readonly PlayerSlot[] Slots =
@@ -59,7 +61,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
     private RectTransform _art;
     private RawImage _background;
     private RawImage _bigText;
-    private RawImage _redBrush;
+    private RawImage _accentBrush;
     private RawImage _blackBrush;
     private Material _photoFade;
     private TitleEmblemView _emblem;
@@ -124,7 +126,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
             _emblem.StopSweepLoop();
     }
 
-    //층 순서: 바탕 → 큰 글자 → 붉은 붓질 → 검은 붓질 → 선수(뒤 · 가운데 · 앞 · 주인공) → 아래 어둠 → 엠블럼
+    //층 순서: 바탕 → 큰 글자 → 초록 붓질 → 검은 붓질 → 선수(뒤 · 가운데 · 앞 · 주인공) → 아래 어둠 → 엠블럼
     //바탕만 화면을 꽉 채우고(넘치면 잘림), 나머지 1080x1920 무대는 위에 붙여 가로가 잘리지 않게 한다
     private void BuildLayers()
     {
@@ -149,7 +151,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
 
         _background = CreateFullLayer(backdrop, "Background", "title_bg", null);
         _bigText = CreateFullLayer(_art, "BigText", "title_bigtext", null);
-        _redBrush = CreateFullLayer(_art, "RedBrush", "title_brush_red", CreateOwnedMaterial(WipeMaterialPath));
+        _accentBrush = CreateFullLayer(_art, "AccentBrush", "title_brush_red", CreateOwnedMaterial(WipeMaterialPath));
         _blackBrush = CreateFullLayer(_art, "BlackBrush", "title_brush_black", CreateOwnedMaterial(WipeMaterialPath));
         _photoFade = CreatePhotoFadeMaterial();
 
@@ -225,7 +227,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
         float width = slot.Height * PhotoAspect;
         RectTransform root = UiBuilder.CreateRect(_art, "Player_" + slot.PhotoKey);
 
-        UiBuilder.Place(root, slot.CenterX - width * 0.5f, slot.Top, width, slot.Height);
+        UiBuilder.Place(root, slot.CenterX - width * 0.5f, slot.Top + PlayerDrop, width, slot.Height);
 
         CreatePhotoImage(root, "Photo", photo, new Color(slot.Tone, slot.Tone, slot.Tone, 1f), _photoFade);
         Image flash = CreatePhotoImage(root, "Flash", photo, new Color(1f, 1f, 1f, 0f), additive);
@@ -274,7 +276,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
         sequence.Insert(0f, _art.DOScale(1f, 2.4f).SetEase(Ease.OutCubic));
         sequence.Insert(0.25f, _bigText.DOFade(1f, 0.8f));
         sequence.Insert(0.25f, _bigText.rectTransform.DOAnchorPosY(0f, 0.9f).SetEase(Ease.OutCubic));
-        sequence.Insert(0.35f, WipeTween(_redBrush, 0.6f));
+        sequence.Insert(0.35f, WipeTween(_accentBrush, 0.6f));
         sequence.Insert(0.65f, WipeTween(_blackBrush, 0.4f));
 
         foreach (PlayerLayer player in _players)
@@ -299,7 +301,7 @@ public class TitleKeyArtView : UiWidgetBehaviour
         SetAlpha(_background, 0f);
         SetAlpha(_bigText, 0f);
         _bigText.rectTransform.anchoredPosition = new Vector2(0f, -40f);
-        SetWipe(_redBrush, 0f);
+        SetWipe(_accentBrush, 0f);
         SetWipe(_blackBrush, 0f);
 
         foreach (PlayerLayer player in _players)

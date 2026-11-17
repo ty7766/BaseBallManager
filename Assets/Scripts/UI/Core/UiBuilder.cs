@@ -99,6 +99,51 @@ public static class UiBuilder
     }
 
     /// <summary>
+    /// 세로 가운데 기준 배치. 부모 높이가 늘어도 가운데에 머문다 (x 는 왼쪽에서, offsetY 는 가운데에서 위로 +)
+    /// </summary>
+    public static RectTransform PlaceMiddle(RectTransform rect, float x, float offsetY, float width, float height)
+    {
+        rect.anchorMin = new Vector2(0f, 0.5f);
+        rect.anchorMax = new Vector2(0f, 0.5f);
+        rect.pivot = new Vector2(0f, 0.5f);
+        rect.anchoredPosition = new Vector2(x, offsetY);
+        rect.sizeDelta = new Vector2(width, height);
+
+        return rect;
+    }
+
+    /// <summary>
+    /// 오른쪽 끝 · 세로 가운데 기준 배치 (rightOffset 은 오른쪽 변에서 안쪽으로)
+    /// </summary>
+    public static RectTransform PlaceMiddleRight(RectTransform rect, float rightOffset, float offsetY, float width, float height)
+    {
+        rect.anchorMin = new Vector2(1f, 0.5f);
+        rect.anchorMax = new Vector2(1f, 0.5f);
+        rect.pivot = new Vector2(1f, 0.5f);
+        rect.anchoredPosition = new Vector2(-rightOffset, offsetY);
+        rect.sizeDelta = new Vector2(width, height);
+
+        return rect;
+    }
+
+    /// <summary>
+    /// 부모 높이를 count 줄로 나눈 index 번째 줄 (위에서부터). 세로가 긴 기기에서 줄도 함께 늘어난다
+    /// </summary>
+    public static RectTransform PlaceRowSlot(RectTransform rect, int index, int count)
+    {
+        float top = 1f - index / (float)count;
+        float bottom = 1f - (index + 1) / (float)count;
+
+        rect.anchorMin = new Vector2(0f, bottom);
+        rect.anchorMax = new Vector2(1f, top);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        return rect;
+    }
+
+    /// <summary>
     /// 단색 또는 스프라이트 이미지. 스프라이트가 없으면 단색 사각형이 된다
     /// </summary>
     public static Image CreateImage(Transform parent, string name, Color color,

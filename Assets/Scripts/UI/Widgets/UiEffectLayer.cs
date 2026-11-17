@@ -5,19 +5,37 @@ using UnityEngine.UI;
 /// <summary>
 /// 화면 맨 위의 연출 레이어. 파티클을 여기서 뿌려 어떤 패널·마스크에도 잘리지 않게 한다.
 /// 파티클은 Image 조각을 돌려쓰며 UiAnimator로 움직인다 (오버레이 캔버스에서는
-/// Unity ParticleSystem이 UI 위로 그려지지 않으므로 UI 네이티브로 만든다)
+/// Unity ParticleSystem이 UI 위로 그려지지 않으므로 UI 네이티브로 만든다).
+/// 득점 · 홈런 · 도루 · 조합은 조각 대신 미리 구운 빛 플립북(충격파 · 빛줄기 · 번개 · 파편)을 가산 합성으로 튼다
 /// </summary>
 public class UiEffectLayer
 {
     private const int PoolCapacity = 160;
+    private const int FlipbookPoolCapacity = 6;
+    private const int FlipbookGrid = 4;
+    private const int FlipbookLastFrame = FlipbookGrid * FlipbookGrid - 1;
+    private const string FlareMaterialPath = "UI/Materials/AdditiveFlare";
+    private const string FlipbookRoot = "UI/MatchFx/";
+
+    //가산 합성이라 색은 빛의 색이다. 심(흰빛)은 머티리얼이 더한다
+    private static readonly Color ScoreTint = new Color(1f, 0.6f, 0.18f, 0.55f);
+    private static readonly Color HomeRunTint = new Color(1f, 0.76f, 0.3f, 0.65f);
+    private static readonly Color StealTint = new Color(0.45f, 0.8f, 1f, 0.6f);
+    private static readonly Color CombineTint = new Color(0.45f, 0.75f, 1f, 0.65f);
+    private static readonly Color CombineGradeUpTint = new Color(1f, 0.72f, 0.25f, 0.7f);
 
     public RectTransform Root => _root;
 
     private readonly RectTransform _root;
     private readonly List<Image> _pool = new List<Image>(PoolCapacity);
     private readonly List<UiTween> _running = new List<UiTween>(PoolCapacity);
+    private readonly List<RawImage> _flipbooks = new List<RawImage>(FlipbookPoolCapacity);
+    private readonly UiTween[] _flipbookTweens = new UiTween[FlipbookPoolCapacity];
+    private readonly Dictionary<string, Texture2D> _flipbookTextures = new Dictionary<string, Texture2D>(3);
 
+    private Material _flareMaterial;
     private int _nextIndex;
+    private int _nextFlipbookIndex;
 
     public UiEffectLayer(Transform parent)
     {
@@ -42,9 +60,15 @@ public class UiEffectLayer
     /// </summary>
     public void Burst(Vector2 layerPosition, UiEffectKind kind)
     {
-        UiParticleSettings settings = UiParticleSettings.Get(kind);
-
         _root.SetAsLastSibling();
+
+        if (TryGetFlipbook(kind, out FlipbookPreset preset))
+        {
+            PlayFlipbook(layerPosition, preset);
+            return;
+        }
+
+        UiParticleSettings settings = UiParticleSettings.Get(kind);
 
         for (int i = 0; i < settings.Count; i++)
             EmitOne(layerPosition, settings, i / (float)Mathf.Max(1, settings.Count - 1));
@@ -62,6 +86,13 @@ public class UiEffectLayer
 
         foreach (Image particle in _pool)
             particle.gameObject.SetActive(false);
+
+        for (int i = 0; i < _flipbooks.Count; i++)
+        {
+            UiAnimator.Cancel(_flipbookTweens[i]);
+            _flipbookTweens[i] = null;
+            _flipbooks[i].gameObject.SetActive(false);
+        }
     }
 
     //파티클 1개를 던진다. 위로 솟았다 중력에 떨어지는 포물선
@@ -109,6 +140,87 @@ public class UiEffectLayer
             _running.RemoveRange(0, _running.Count - PoolCapacity);
     }
 
+    //플립북 한 번. 칸을 처음부터 끝까지 넘기고 마지막(빈) 칸에서 숨는다
+    private void PlayFlipbook(Vector2 origin, FlipbookPreset preset)
+    {
+        int slot = TakeFlipbookSlot();
+        RawImage image = _flipbooks[slot];
+        RectTransform rect = image.rectTransform;
+
+        UiAnimator.Cancel(_flipbookTweens[slot]);
+
+        image.texture = GetFlipbookTexture(preset.TextureName);
+        image.color = preset.Tint;
+        rect.sizeDelta = new Vector2(preset.Size, preset.Size);
+        rect.anchoredPosition = origin;
+        rect.SetAsLastSibling();
+        UiFlipbook.SetFrame(image, FlipbookGrid, FlipbookGrid, 0);
+        image.gameObject.SetActive(true);
+
+        _flipbookTweens[slot] = UiAnimator.Play(preset.Duration,
+            t => UiFlipbook.SetFrame(image, FlipbookGrid, FlipbookGrid, Mathf.Min(FlipbookLastFrame, (int)(t * FlipbookLastFrame))),
+            () => image.gameObject.SetActive(false), UiEase.Linear);
+    }
+
+    //플립북 판을 돌려쓴다. 다 차면 가장 오래된 판을 끊고 다시 쓴다
+    private int TakeFlipbookSlot()
+    {
+        if (_flipbooks.Count < FlipbookPoolCapacity)
+        {
+            if (_flareMaterial == null)
+                _flareMaterial = Resources.Load<Material>(FlareMaterialPath);
+
+            RectTransform rect = UiBuilder.CreateRect(_root, "Flipbook");
+            RawImage created = rect.gameObject.AddComponent<RawImage>();
+
+            created.material = _flareMaterial;
+            created.raycastTarget = false;
+            rect.anchorMin = rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            _flipbooks.Add(created);
+
+            return _flipbooks.Count - 1;
+        }
+
+        int slot = _nextFlipbookIndex;
+
+        _nextFlipbookIndex = (_nextFlipbookIndex + 1) % FlipbookPoolCapacity;
+
+        return slot;
+    }
+
+    private Texture2D GetFlipbookTexture(string textureName)
+    {
+        if (_flipbookTextures.TryGetValue(textureName, out Texture2D texture))
+            return texture;
+
+        texture = Resources.Load<Texture2D>(FlipbookRoot + textureName);
+
+        if (texture == null)
+            Debug.LogError($"[UiEffectLayer]: 이펙트 플립북 '{textureName}' 이 없습니다");
+
+        _flipbookTextures[textureName] = texture;
+
+        return texture;
+    }
+
+    //득점 · 홈런 · 도루 · 조합은 플립북, 나머지(강화 · 제작 · 우승 …)는 조각 파티클
+    private static bool TryGetFlipbook(UiEffectKind kind, out FlipbookPreset preset)
+    {
+        preset = kind switch
+        {
+            UiEffectKind.Score => new FlipbookPreset("fx_score", 240f, 0.45f, ScoreTint),
+            UiEffectKind.HomeRun => new FlipbookPreset("fx_homerun", 440f, 0.7f, HomeRunTint),
+            UiEffectKind.Steal => new FlipbookPreset("fx_steal", 300f, 0.4f, StealTint),
+            UiEffectKind.CombineAbsorb => new FlipbookPreset("fx_combine_absorb", 320f, 0.5f, CombineTint),
+            UiEffectKind.CombineForge => new FlipbookPreset("fx_combine_forge", 460f, 0.6f, CombineTint),
+            UiEffectKind.CombineGradeUp => new FlipbookPreset("fx_combine_forge", 620f, 0.8f, CombineGradeUpTint),
+            _ => default
+        };
+
+        return preset.TextureName != null;
+    }
+
     //조각을 돌려쓴다. 한 바퀴 돌면 가장 오래된 것을 다시 쓴다
     private Image TakeParticle(string spritePath)
     {
@@ -145,5 +257,22 @@ public class UiEffectLayer
 
         return new Vector2(local.x + _root.rect.width * _root.pivot.x,
             local.y + _root.rect.height * _root.pivot.y);
+    }
+
+    //플립북 한 종류: 텍스처 이름 · 화면 크기 · 재생 시간 · 빛 색
+    private readonly struct FlipbookPreset
+    {
+        public string TextureName { get; }
+        public float Size { get; }
+        public float Duration { get; }
+        public Color Tint { get; }
+
+        public FlipbookPreset(string textureName, float size, float duration, Color tint)
+        {
+            TextureName = textureName;
+            Size = size;
+            Duration = duration;
+            Tint = tint;
+        }
     }
 }

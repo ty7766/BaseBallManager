@@ -10,15 +10,19 @@ using UnityEngine.UI;
 /// </summary>
 public class EnhanceScreen : TargetWorkScreen
 {
-    private const float MedalWidth = 168f;
+    private const int StatCount = CardInstance.TrainStatCount;
+    private const int StatColumns = 2;
+    private const float StatRowHeight = 40f;
+    private const float StatCellWidth = PreviewWidth / StatColumns;
+    private const float MedalWidth = 150f;
     private const float MedalHeight = MedalWidth * 208f / 240f;
-    private const float MedalFontSize = 76f;
-    private const float MedalWideFontSize = 64f;
-    private const float ArrowWidth = 112f;
+    private const float MedalFontSize = 68f;
+    private const float MedalWideFontSize = 58f;
+    private const float ArrowWidth = 104f;
     private const float ArrowHeight = ArrowWidth * 164f / 330f;
     private const float MedalGap = 24f;
     //재료가 없으면 지금 메달 하나만 가운데, 고르면 왼쪽으로 비켜서며 화살표 · 오를 메달이 나온다
-    private const float MedalTop = PreviewTop + 72f;
+    private const float MedalTop = PreviewTop + 62f;
     private const float MedalRowWidth = MedalWidth * 2f + ArrowWidth + MedalGap * 2f;
     private const float MedalRowLeft = PreviewLeft + (PreviewWidth - MedalRowWidth) * 0.5f;
     private const float MedalSingleLeft = PreviewLeft + (PreviewWidth - MedalWidth) * 0.5f;
@@ -32,6 +36,7 @@ public class EnhanceScreen : TargetWorkScreen
     private const string ArrowSprite = "Gacha/swipe_arrow";
     private const string EnhancePlusTag = "<size=60%><voffset=0.12em>+</voffset></size>";
     private const string PreviewColorTag = "<color=#F2C14E>";
+    private const string StatValueColorTag = "<color=#F3F6FA>";
     private const string MaxReason = "최대 강화";
     private static readonly Color EmptyMedalColor = new Color(0.36f, 0.38f, 0.42f, 1f);
     private static readonly Color EmptyMedalInk = new Color(0.1f, 0.11f, 0.13f, 1f);
@@ -52,7 +57,7 @@ public class EnhanceScreen : TargetWorkScreen
     /// 재료가 없을 때 문구. 이미 최대면 따로 알린다
     /// </summary>
     protected override string MaterialEmptyMessage =>
-        IsTargetMaxed() ? "더 강화할 수 없는 카드입니다" : "카드가 없습니다";
+        IsTargetMaxed() ? "최대 강화 카드입니다" : "카드가 없습니다";
 
     /// <summary>
     /// 고른 같은 카드
@@ -67,7 +72,7 @@ public class EnhanceScreen : TargetWorkScreen
     [SerializeField] private TextMeshProUGUI _nextMedalText;
     [SerializeField] private RectTransform _pipRow;
     [SerializeField] private TextMeshProUGUI _ovrText;
-    [SerializeField] private TextMeshProUGUI _statText;
+    [SerializeField] private TextMeshProUGUI[] _statTexts = new TextMeshProUGUI[StatCount];
     [SerializeField] private TextMeshProUGUI _materialText;
 
     private readonly List<CardInstance> _materials = new List<CardInstance>(16);
@@ -102,17 +107,26 @@ public class EnhanceScreen : TargetWorkScreen
         _nextMedal = CreateMedal("NextMedal", MedalRowLeft + MedalWidth + MedalGap * 2f + ArrowWidth, MedalTop,
             out _nextMedalText);
 
-        float pipTop = MedalTop + MedalHeight + 26f;
+        float pipTop = MedalTop + MedalHeight + 18f;
 
         _pipRow = UiBuilder.CreateRect(WorkPanel, "LevelPips");
         UiBuilder.Place(_pipRow, PreviewLeft + (PreviewWidth - PipRowWidth) * 0.5f, pipTop, PipRowWidth, PipHeight);
 
-        float ovrTop = pipTop + PipHeight + 18f;
+        float ovrTop = pipTop + PipHeight + 12f;
 
-        _ovrText = CreatePreviewText("Ovr", 44f, UiPalette.Text1, ovrTop, 56f);
+        _ovrText = CreatePreviewText("Ovr", 42f, UiPalette.Text1, ovrTop, 52f);
         UiBuilder.CenterPivot(_ovrText.rectTransform);
-        _statText = CreatePreviewText("Stat", 28f, UiPalette.Text2, ovrTop + 60f, 38f);
-        _materialText = CreatePreviewText("Material", 26f, UiPalette.Text3, ovrTop + 102f, 38f);
+
+        float statTop = ovrTop + 56f;
+
+        for (int i = 0; i < StatCount; i++)
+        {
+            _statTexts[i] = UiBuilder.CreateText(WorkPanel, "Stat", 27f, UiPalette.Text2, TextAlignmentOptions.MidlineLeft);
+            UiBuilder.Place(_statTexts[i].rectTransform, PreviewLeft + 24f + i % StatColumns * StatCellWidth,
+                statTop + i / StatColumns * StatRowHeight, StatCellWidth - 24f, StatRowHeight);
+        }
+
+        _materialText = CreatePreviewText("Material", 25f, UiPalette.Text3, statTop + StatRowHeight * 2f + 6f, 34f);
     }
 
     //카드 앞면 글꼴은 런타임에 만들어지므로 처음 보일 때 입힌다
@@ -234,7 +248,7 @@ public class EnhanceScreen : TargetWorkScreen
         _ovrText.text = hasGain
             ? $"OVR  {target.FinalOvr}  →  {PreviewColorTag}{nextOvr}</color>"
             : $"OVR  {target.FinalOvr}";
-        _statText.text = hasGain ? $"세부 스탯 각 +{CardStatsCalculator.CalculateFinalStat(0, gain, 0)}" : string.Empty;
+        FillStats(target, hasGain ? CardStatsCalculator.CalculateFinalStat(0, gain, 0) : 0);
         _materialText.text = BuildMaterialSummary(current >= maxLevel);
 
         SetAction(hasGain, hasGain ? $"강화  +{gain}" : ActionLabel);
@@ -476,21 +490,38 @@ public class EnhanceScreen : TargetWorkScreen
             - CardStatsCalculator.CalculateFinalOVR(info.BaseOvr, info.EnhanceLevel, null);
     }
 
+    //강화 카드 장수는 목록 칸(+N · M장)이 이미 보여 주므로 같은 카드만 적는다. 최대 강화는 목록 쪽 안내로 대신한다
     private string BuildMaterialSummary(bool maxed)
     {
         if (maxed)
-            return "최대 강화 카드입니다";
+            return string.Empty;
 
         if (Gain == 0)
             return "아래에서 재료를 고르세요";
 
-        string identical = _selectedMaterialIds.Count > 0 ? $"같은 카드 {_selectedMaterialIds.Count}장" : null;
-        string enhanceCards = _selectedSets > 0 ? $"강화 카드 {_selectedSets * _cardsPerLevel}장" : null;
+        return _selectedMaterialIds.Count > 0 ? $"같은 카드 {_selectedMaterialIds.Count}장" : string.Empty;
+    }
 
-        if (identical != null && enhanceCards != null)
-            return $"{identical}  ·  {enhanceCards}";
+    //스탯 이름 · 지금 값, 오를 만큼이 있으면 → 오른 값(금색)
+    private void FillStats(CardDisplayInfo target, int statGain)
+    {
+        string[] labels = target.StatLabels;
 
-        return identical ?? enhanceCards;
+        for (int i = 0; i < StatCount; i++)
+        {
+            int value = target.GetFinalStat(i);
+
+            _statTexts[i].text = statGain > 0
+                ? $"{labels[i]}  {StatValueColorTag}{value}</color>  →  {PreviewColorTag}{value + statGain}</color>"
+                : $"{labels[i]}  {StatValueColorTag}{value}</color>";
+        }
+    }
+
+    //강화 연출 중에는 스탯 줄을 비운다
+    private void ClearStats()
+    {
+        foreach (TextMeshProUGUI stat in _statTexts)
+            stat.text = string.Empty;
     }
 
     //재료가 사라지고, 메달이 한 단계씩 오르며 카드가 번쩍인 뒤 마지막에 크게 터진다
@@ -499,7 +530,7 @@ public class EnhanceScreen : TargetWorkScreen
         RefreshList();
         TargetCard.SetCard(before);
         SetMedalPair(false, true);
-        _statText.text = string.Empty;
+        ClearStats();
         _materialText.text = string.Empty;
         SetAction(false, ActionLabel);
 

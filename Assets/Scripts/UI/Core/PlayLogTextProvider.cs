@@ -51,17 +51,6 @@ public static class PlayLogTextProvider
     }
 
     /// <summary>
-    /// 2루타·3루타·병살은 한 단계 굵게 그린다
-    /// </summary>
-    public static bool IsBoldOutcome(BatterOutcome outcome)
-    {
-        return outcome == BatterOutcome.Double
-            || outcome == BatterOutcome.Triple
-            || outcome == BatterOutcome.DoublePlay
-            || outcome == BatterOutcome.HomeRun;
-    }
-
-    /// <summary>
     /// 타석 중계 문장 (타자 이름 + 결과)
     /// </summary>
     public static string BuildBatterSentence(SimulationBatterLog log)

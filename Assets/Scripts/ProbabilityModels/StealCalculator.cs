@@ -33,7 +33,7 @@ public class StealCalculator
             HitterSnapshot runner = RunnerLookup.Find(state.SecondBase, context, isTopInning);
 
             if (Roll(GetAttemptChance(runner.Run) * ThirdBaseAttemptMultiplier))
-                return new StealAttempt(state.SecondBase, runner.Name, FromSecondBase);
+                return new StealAttempt(state.SecondBase, runner.DisplayName, FromSecondBase);
         }
 
         if (state.FirstBase != GameState.NoRunner && state.SecondBase == GameState.NoRunner)
@@ -41,7 +41,7 @@ public class StealCalculator
             HitterSnapshot runner = RunnerLookup.Find(state.FirstBase, context, isTopInning);
 
             if (Roll(GetAttemptChance(runner.Run)))
-                return new StealAttempt(state.FirstBase, runner.Name, FromFirstBase);
+                return new StealAttempt(state.FirstBase, runner.DisplayName, FromFirstBase);
         }
 
         return StealAttempt.None;

@@ -3,27 +3,22 @@ using UnityEngine;
 
 /// <summary>
 /// 카드 아트(Resources/UI/Card 의 배경·전경·장식·뒷면·메달·별)의 임포트 설정을 고정한다.
-/// 카드가 150~700폭으로 줄어 그려지므로 밉맵을 켜고, 모바일은 ASTC 로 누른다
+/// 카드가 150~700폭으로 줄어 그려지므로 밉맵을 켠다. 모바일 압축 형식은 MobileTextureFormatImporter 가 정한다
 /// </summary>
 public class CardArtImporter : AssetPostprocessor
 {
     private const string CardFolder = "Assets/Resources/UI/Card/";
     private const int MaxSize = 2048;
 
-    //카드 한 장을 덮는 큰 그림. 작은 메달·별은 가장자리가 뭉개지지 않게 더 촘촘한 블록을 쓴다
-    private static readonly string[] LargePrefixes = { "card_base_", "card_fg_", "card_ov_", "card_back" };
-    private static readonly string[] SmallPrefixes = { "badge_enhance_", "card_star_" };
-    private static readonly string[] MobilePlatforms = { "Android", "iPhone" };
+    //카드 한 장을 덮는 큰 그림과 작은 메달 · 별. 둘 다 줄여 그린다
+    private static readonly string[] ArtPrefixes = { "card_base_", "card_fg_", "card_ov_", "card_back", "badge_enhance_", "card_star_" };
 
     private void OnPreprocessTexture()
     {
         if (!assetPath.StartsWith(CardFolder))
             return;
 
-        string fileName = assetPath.Substring(CardFolder.Length);
-        bool large = StartsWithAny(fileName, LargePrefixes);
-
-        if (!large && !StartsWithAny(fileName, SmallPrefixes))
+        if (!StartsWithAny(assetPath.Substring(CardFolder.Length), ArtPrefixes))
             return;
 
         TextureImporter importer = (TextureImporter)assetImporter;
@@ -43,20 +38,6 @@ public class CardArtImporter : AssetPostprocessor
         settings.spriteAlignment = (int)SpriteAlignment.Center;
         settings.spriteGenerateFallbackPhysicsShape = false;
         importer.SetTextureSettings(settings);
-
-        TextureImporterFormat format = large ? TextureImporterFormat.ASTC_6x6 : TextureImporterFormat.ASTC_4x4;
-
-        foreach (string platform in MobilePlatforms)
-        {
-            importer.SetPlatformTextureSettings(new TextureImporterPlatformSettings
-            {
-                name = platform,
-                overridden = true,
-                maxTextureSize = MaxSize,
-                format = format,
-                compressionQuality = (int)TextureCompressionQuality.Best
-            });
-        }
     }
 
     private static bool StartsWithAny(string fileName, string[] prefixes)

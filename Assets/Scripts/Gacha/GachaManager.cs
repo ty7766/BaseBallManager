@@ -200,7 +200,6 @@ public class GachaManager : SingletonBehaviour<GachaManager>
             {
                 GachaResult confirmed = BuildResult(confirmedId, CardGrade.Star5);
 
-                //카드를 실제로 만들어낸 뒤에 천장을 소모한다
                 if (confirmed != null)
                 {
                     GetPityCounter(gachaType) = 0;
@@ -238,7 +237,6 @@ public class GachaManager : SingletonBehaviour<GachaManager>
 
         float gradeSum = star4 + star5;
 
-        //둘 다 0이면 나눗셈이 NaN이 되어 비교가 조용히 5성으로 굳는다
         CardGrade forcedGrade = gradeSum <= 0f || Random.value < star4 / gradeSum
             ? CardGrade.Star4
             : CardGrade.Star5;
@@ -261,7 +259,6 @@ public class GachaManager : SingletonBehaviour<GachaManager>
     {
         CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardId);
 
-        //풀은 마스터 데이터에서 만들었으므로 여기서 실패하면 카드 데이터가 도중에 바뀐 것이다
         if (masterData == null)
         {
             Debug.LogError($"[GachaManager] : 뽑은 카드의 마스터 데이터를 찾지 못했습니다 (cardId {cardId})");
@@ -390,8 +387,6 @@ public class GachaManager : SingletonBehaviour<GachaManager>
                 pool.Add(pitcher.CardId);
         }
 
-        //빈 풀도 캐시한다. 마스터 데이터는 앱 시작 시 1회만 로드되므로
-        //캐시하지 않으면 그 조합을 뽑을 때마다 카드 전체를 다시 훑는다
         _cardPools[(grade, cardType)] = pool;
 
         return pool;

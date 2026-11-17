@@ -55,7 +55,6 @@ public class LocalFileStorage : ISaveStorage
 
             File.WriteAllText(tempPath, json, Encoding.UTF8);
 
-            //Replace는 OS가 한 번에 교체한다. 지운 뒤 옮기면 그 사이에 죽었을 때 세이브가 통째로 사라진다
             if (File.Exists(filePath))
                 File.Replace(tempPath, filePath, null);
             else

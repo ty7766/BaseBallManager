@@ -6,10 +6,21 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 뽑기 결과 자리. 1장은 가운데 크게, 10장은 4 · 4 · 2 줄로 뒷면을 나눠 깔고 카드 한가운데에 밀기 화살표를 띄운다.
-/// 아래 건너뛰기를 누르면 남은 뒷면을 한꺼번에 뒤집는다. 카드는 처음 쓸 때 만들어 두고 돌려쓴다 (1장용 1 + 10장용 10)
+/// 아래 건너뛰기를 누르면 남은 뒷면을 한꺼번에 뒤집고, 다 뒤집히면 같은 자리 버튼이 확인으로 바뀐다.
+/// 카드는 처음 쓸 때 만들어 두고 돌려쓴다 (1장용 1 + 10장용 10)
 /// </summary>
 public sealed class GachaRevealView
 {
+    /// <summary>
+    /// 뒷면이 하나도 남지 않았는가
+    /// </summary>
+    public bool IsAllRevealed => _faceDownCount == 0;
+
+    /// <summary>
+    /// 결과 자리 가운데보다 카드 묶음 가운데가 이만큼 위에 있다 (아래 버튼 칸은 비우고, 안내 줄은 카드 아래에 붙는다)
+    /// </summary>
+    public const float CardsCenterRaise = (SkipHeight + SkipGap + HintGap + HintHeight) * 0.5f;
+
     private const int MaxCards = 10;
     private const float SingleWidth = 540f;
     //10장은 열 사이를 넓게 벌려 카드를 옆으로 밀어도 이웃 카드에 닿지 않게 한다
@@ -21,15 +32,17 @@ public sealed class GachaRevealView
     private const float MultiSpillReach = MultiColumnGap + MultiWidth * 0.35f;
     private const float HintGap = 30f;
     private const float HintHeight = 44f;
-    //건너뛰기 버튼은 결과 자리 맨 아래에 붙인다
+    //건너뛰기 · 확인 버튼은 결과 자리 맨 아래에 붙인다
+    private const string SkipLabel = "건너뛰기";
+    private const string ConfirmLabel = "확인";
     private const float SkipWidth = 320f;
     private const float SkipHeight = 96f;
     private const float SkipGap = 24f;
     //화살표가 왼쪽에서 나타나 오른쪽으로 흐르며 사라지는 한 번의 길이와 이동 거리(카드 폭 비율)
     private const float HintCycleSeconds = 1.6f;
     private const float HintTravel = 0.22f;
-    //뽑자마자 잠깐 뜸을 들인 뒤 카드를 한 장씩 나눠 준다
-    private const float DealPause = 0.18f;
+    //무대의 소환 빛이 모였다 터지는 순간까지 기다렸다가 카드를 한 장씩 나눠 준다 (GachaRevealStage 의 소환 플립북 절반)
+    private const float DealPause = 0.42f;
     private const float DealSeconds = 0.36f;
     private const float DealStagger = 0.07f;
     private const float SingleDealSeconds = 0.5f;
@@ -41,16 +54,25 @@ public sealed class GachaRevealView
     private readonly RectTransform _group;
     private readonly RectTransform _hint;
     private readonly Button _skipButton;
+    private readonly TextMeshProUGUI _skipLabel;
     private readonly List<GachaRevealCard> _multiCards = new List<GachaRevealCard>(MaxCards);
     private readonly List<GachaRevealCard> _shownCards = new List<GachaRevealCard>(MaxCards);
 
+    private readonly Action<GachaRevealCard> _onCardRevealed;
+
+    private Action _onConfirm;
     private GachaRevealCard _singleCard;
     private int _faceDownCount;
     private UiTween _hintTween;
     private UiTween _dealTween;
 
-    public GachaRevealView(RectTransform area)
+    /// <summary>
+    /// 결과 자리를 만든다. 카드가 한 장 뒤집힐 때마다 onCardRevealed(무대가 같은 색으로 반응한다)
+    /// </summary>
+    public GachaRevealView(RectTransform area, Action<GachaRevealCard> onCardRevealed)
     {
+        _onCardRevealed = onCardRevealed;
+
         RectTransform cardsArea = UiBuilder.CreateRect(area, "RevealArea");
         UiBuilder.Stretch(cardsArea, 0f, 0f, 0f, SkipHeight + SkipGap);
 
@@ -65,7 +87,7 @@ public sealed class GachaRevealView
         UiBuilder.Stretch(label.rectTransform, 0f, 0f, 0f, 0f);
         label.text = "카드를 누르거나 오른쪽으로 밀어서 뒤집기";
 
-        _skipButton = UiBuilder.CreateButton(area, "SkipButton", "건너뛰기", 34f, false, SkipAll);
+        _skipButton = UiBuilder.CreateButton(area, "SkipButton", SkipLabel, 34f, false, OnBottomClicked, out _skipLabel);
         RectTransform skipRect = _skipButton.GetComponent<RectTransform>();
 
         skipRect.anchorMin = new Vector2(0.5f, 0f);
@@ -79,16 +101,18 @@ public sealed class GachaRevealView
     }
 
     /// <summary>
-    /// 결과를 뒷면으로 나눠 깐다. 다 뒤집힌 뒤 카드를 누르면 onOpen(instanceId)
+    /// 결과를 뒷면으로 나눠 깐다. 다 뒤집힌 뒤 카드를 누르면 onOpen(instanceId), 확인을 누르면 onConfirm
     /// </summary>
-    public void Show(List<CardDisplayInfo> cards, Action<int> onOpen)
+    public void Show(List<CardDisplayInfo> cards, Action<int> onOpen, Action onConfirm)
     {
         UiAnimator.Cancel(_dealTween);
         _dealTween = null;
+        _onConfirm = onConfirm;
         _group.gameObject.SetActive(cards.Count > 0);
         _faceDownCount = cards.Count;
         SetHintVisible(false);
-        _skipButton.gameObject.SetActive(cards.Count > 0);
+        _skipLabel.text = cards.Count > 0 ? SkipLabel : ConfirmLabel;
+        _skipButton.gameObject.SetActive(true);
 
         if (cards.Count == 0)
             return;
@@ -204,7 +228,19 @@ public sealed class GachaRevealView
         UiBuilder.Place(_hint, 0f, cardsHeight + HintGap, width, HintHeight);
     }
 
-    //나눠 주던 중이면 마저 놓고, 남은 뒷면을 한꺼번에 뒤집는다
+    //뒷면이 남았으면 건너뛰기, 다 뒤집혔으면 확인
+    private void OnBottomClicked()
+    {
+        if (_faceDownCount > 0)
+        {
+            SkipAll();
+            return;
+        }
+
+        _onConfirm?.Invoke();
+    }
+
+    //나눠 주던 중이면 마저 놓고, 남은 뒷면을 한꺼번에 뒤집는다. 다 넘어가면 버튼이 확인으로 바뀐다
     private void SkipAll()
     {
         UiAnimator.Cancel(_dealTween);
@@ -222,12 +258,15 @@ public sealed class GachaRevealView
     private void OnCardRevealed(GachaRevealCard card)
     {
         _faceDownCount = Mathf.Max(0, _faceDownCount - 1);
+        _onCardRevealed?.Invoke(card);
 
         if (_faceDownCount > 0)
             return;
 
         SetHintVisible(false);
-        _skipButton.gameObject.SetActive(false);
+        _skipLabel.text = ConfirmLabel;
+        _skipButton.gameObject.SetActive(true);
+        UiEffects.Pop(_skipButton.transform, 0.7f, 0.24f);
     }
 
     private void SetHintVisible(bool visible)

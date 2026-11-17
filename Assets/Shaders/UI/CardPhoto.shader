@@ -12,6 +12,7 @@ Shader "BaseBallManager/UI/CardPhoto"
         _RimBias ("Rim Softness (mip bias)", Range(0, 4)) = 1.5
         _GradeColor ("Grade Color", Color) = (1,1,1,1)
         _GradeAmount ("Grade Amount", Range(0, 1)) = 0.14
+        _PhotoRect ("Photo Rect (카드 uv x, y, w, h)", Vector) = (0, 0, 1, 1)
 
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
@@ -57,6 +58,7 @@ Shader "BaseBallManager/UI/CardPhoto"
             half _RimBias;
             fixed4 _GradeColor;
             half _GradeAmount;
+            float4 _PhotoRect;
 
             fixed4 frag(CardV2F i) : SV_Target
             {
@@ -71,7 +73,10 @@ Shader "BaseBallManager/UI/CardPhoto"
                 half3 graded = lerp(color.rgb, luma * _GradeColor.rgb * 1.25, _GradeAmount);
 
                 color.rgb = graded + _RimColor.rgb * rim * _RimStrength;
-                color.a *= CardClip(i.mask);
+                // 사진 칸이 카드보다 크므로 카드 모양 밖은 지운다
+                float2 cardUv = _PhotoRect.xy + i.texcoord * _PhotoRect.zw;
+                float2 inside = step(0, cardUv) * step(cardUv, 1);
+                color.a *= CardClip(i.mask) * CardShapeAlpha(cardUv) * inside.x * inside.y;
                 color.rgb *= color.a;
                 return color;
             }

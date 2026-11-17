@@ -109,12 +109,10 @@ public class GoldenGloveCraftManager : SingletonBehaviour<GoldenGloveCraftManage
             return null;
         }
 
-        //골든글러브는 귀해서 처음부터 잠가 둔다. 분해 · 조합 재료로 실수로 쓰이지 않는다
         InventoryManager.Instance.SetLocked(instanceId, true);
 
         CardMasterData masterData = CardDataManager.Instance.GetCardMasterData(cardId);
 
-        //후보는 마스터 풀에서 뽑았으므로 여기서 실패하면 카드 데이터가 도중에 바뀐 것이다
         if (masterData == null)
         {
             Debug.LogError($"[GoldenGloveCraftManager] : 지급한 카드의 마스터 데이터를 찾지 못했습니다 (cardId {cardId})");

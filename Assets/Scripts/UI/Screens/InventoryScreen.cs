@@ -26,6 +26,8 @@ public class InventoryScreen : UiScreenBehaviour
     [SerializeField] private TextMeshProUGUI _expandLabel;
 
     private List<int> _visibleInstanceIds = new List<int>(64);
+    //칸 확장 확인 창. 처음 누를 때 런타임에 만든다
+    private ConfirmPopupView _expandConfirm;
 
     /// <summary>
     /// 프리팹 인스턴스에 콜백을 꽂는다. 생성 직후 한 번 호출한다
@@ -118,16 +120,25 @@ public class InventoryScreen : UiScreenBehaviour
     }
 
     /// <summary>
-    /// 필터 창이 열려 있으면 그것부터 닫는다
+    /// 확장 확인 창 → 필터 창 순으로 열려 있는 것부터 닫는다
     /// </summary>
     public override bool HandleBack()
     {
+        if (_expandConfirm != null && _expandConfirm.IsOpen)
+        {
+            _expandConfirm.Close();
+            return true;
+        }
+
         return _filterButton.ClosePanel();
     }
 
-    //다시 들어오면 필터 없이 맨 위부터
+    //다시 들어오면 필터 없이 맨 위부터. 열려 있던 확장 확인 창도 닫는다
     protected override void OnHidden()
     {
+        if (_expandConfirm != null)
+            _expandConfirm.CloseImmediately();
+
         _filterButton.ResetFilter();
         _grid.ScrollToTop();
     }
@@ -137,7 +148,25 @@ public class InventoryScreen : UiScreenBehaviour
         _onCardSelected?.Invoke(instanceId);
     }
 
+    //바로 늘리지 않고 늘어날 칸 · 비용 · 보유 골드를 보여 주며 묻는다
     private void OnExpandClicked()
+    {
+        if (InventoryManager.Instance == null)
+            return;
+
+        if (_expandConfirm == null)
+            _expandConfirm = ConfirmPopupView.Create(Root);
+
+        string message = $"보관함 +{InventoryManager.Instance.ExpandUnit}칸\n비용 : 골드 {InventoryManager.Instance.ExpandGoldCost:N0}";
+        string note = CurrencyManager.Instance != null
+            ? $"보유 골드 : {CurrencyManager.Instance.GetAmount(CurrencyType.Gold):N0}"
+            : null;
+
+        _expandConfirm.Show("정말 확장하시겠습니까?", message, note, ExpandWithGold);
+    }
+
+    //확인 창에서 확인을 눌렀을 때만 골드를 내고 늘린다
+    private void ExpandWithGold()
     {
         if (InventoryManager.Instance == null)
             return;

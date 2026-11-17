@@ -21,16 +21,13 @@ public class CardSearchDropdown : AdvancedDropdown
     {
         AdvancedDropdownItem root = new AdvancedDropdownItem("카드 선택");
 
-        // 비우기 항목 — 맨 위에 오도록 팀 노드보다 먼저 추가
         root.AddChild(new CardDropdownItem("(비어 있음)", 0));
 
-        // 팀명 → 팀 폴더 노드. 같은 팀 카드를 한 폴더로 모으기 위한 임시 색인
         Dictionary<string, AdvancedDropdownItem> teamNodes =
             new Dictionary<string, AdvancedDropdownItem>();
 
         foreach (CardEntry entry in _entries)
         {
-            // 해당 팀 폴더가 아직 없으면 만들어서 root에 붙인다
             if (!teamNodes.TryGetValue(entry.TeamName, out AdvancedDropdownItem teamNode))
             {
                 teamNode = new AdvancedDropdownItem(entry.TeamName);
@@ -38,7 +35,6 @@ public class CardSearchDropdown : AdvancedDropdown
                 teamNodes.Add(entry.TeamName, teamNode);
             }
 
-            // 카드 항목. cardId는 전용 항목 타입이 직접 들고 다닌다
             teamNode.AddChild(new CardDropdownItem(entry.Label, entry.CardId));
         }
 
@@ -47,7 +43,6 @@ public class CardSearchDropdown : AdvancedDropdown
 
     protected override void ItemSelected(AdvancedDropdownItem item)
     {
-        // 카드 항목이 아니면(팀 폴더 등) 무시
         if (item is CardDropdownItem cardItem)
         {
             _onSelected?.Invoke(cardItem.CardId);

@@ -166,7 +166,6 @@ public class CombineManager : SingletonBehaviour<CombineManager>
 
         int resultCardId = _candidateBuffer[Random.Range(0, _candidateBuffer.Count)];
 
-        //전부 검사 후 전부 제거한다. 순차 제거는 중간 실패 시 재료가 일부만 사라진다
         if (!InventoryManager.Instance.RemoveCards(materialInstanceIds))
             return null;
 
